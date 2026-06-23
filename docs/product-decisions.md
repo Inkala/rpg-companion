@@ -516,7 +516,7 @@ At every layer, the app should remain usable and testable.
 
 ---
 
-## Skateboard — Minimum Testable Product
+## v1: Core Party and Character Access
 
 **Goal:** A real party can join one campaign and add/view characters.
 
@@ -549,7 +549,7 @@ A real party can join the app and transfer enough character information to test 
 
 ---
 
-## Scooter — Useful During a Session
+## v2: In-Session Character Companion
 
 **Goal:** The app becomes a better at-the-table reference than a static PDF.
 
@@ -580,7 +580,7 @@ A player can answer “What does this ability do?” faster than by searching th
 
 ---
 
-## Bicycle — Guided Onboarding
+## v3: Guided Onboarding
 
 **Goal:** A new player can create a basic character without understanding every D&D term in advance.
 
@@ -604,7 +604,7 @@ A new player can begin making a character without first reading a rulebook cover
 
 ---
 
-## Motorcycle — Ongoing Character Companion
+## v4: Character Progression
 
 **Goal:** The app supports character progression and richer party use.
 
@@ -627,7 +627,7 @@ A player can level up with confidence and understand what changed.
 
 ---
 
-## Car — Expanded Future Product
+## v5: Advanced Guidance and Future Expansion
 
 **Goal:** Make the product more intelligent, flexible, and system-extensible.
 
@@ -655,12 +655,12 @@ The product becomes a broader tabletop companion platform rather than only a D&D
 
 # Current Priority Order
 
-1. Skateboard
-2. Scooter
-3. One narrow Bicycle feature
-4. Motorcycle features
+1. v1: Core party and character access
+2. v2: In-session character companion
+3. One feature from v3: guided onboarding
+4. v4: Character progression features
 5. AI enhancements
-6. Car/future platform features
+6. v5: Advanced guidance and future expansion
 
 The first real user test should prioritize:
 
