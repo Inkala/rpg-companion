@@ -1,0 +1,114 @@
+# ============================================================
+# Environment variables and secrets
+# ============================================================
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Common secret/config files
+*.pem
+*.key
+*.crt
+secrets/
+credentials/
+service-account*.json
+
+# ============================================================
+# Frontend / Next.js / Node
+# ============================================================
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local frontend env files
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+!frontend/.env.local.example
+
+# ============================================================
+# Go backend
+# ============================================================
+backend/bin/
+backend/tmp/
+backend/coverage/
+backend/*.test
+backend/*.out
+
+# Go workspace files
+go.work
+go.work.sum
+
+# Local backend env files
+backend/.env
+backend/.env.*
+!backend/.env.example
+!backend/.env.local.example
+
+# ============================================================
+# Docker / local infrastructure
+# ============================================================
+docker-data/
+volumes/
+postgres-data/
+supabase/.temp/
+supabase/.branches/
+
+# ============================================================
+# Course materials
+# Keep the useful generated docs, but do not commit large PDFs,
+# slides, or potentially copyrighted course content.
+# ============================================================
+content/**/*.pdf
+content/**/*.ppt
+content/**/*.pptx
+content/**/*.key
+content/**/*.pages
+
+# Optional: ignore extracted course text if it is generated locally
+content/extracted-text/
+
+# ============================================================
+# AI / local agent files
+# ============================================================
+.codex/
+.cursor/
+.claude/
+.agent/
+tmp/
+scratch/
+notes-private/
+
+# Keep shared project instructions if you create them
+!.cursor/rules/
+!.claude/commands/
+
+# ============================================================
+# OS and editor files
+# ============================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+.idea/
+*.swp
+*.swo
+*~
