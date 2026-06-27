@@ -48,6 +48,8 @@ color.feedback.error      #9B2C2C
 color.feedback.errorBg    #F8E3DE
 color.feedback.warning    #8A5A1F
 color.feedback.success    #2F5D46
+
+color.focus               #1F6F56  visible focus outline
 ```
 
 ## Dark semantic colour tokens
@@ -223,4 +225,4 @@ Use 16px page padding on mobile. Cards should generally use 12-16px internal pad
 - Render the light theme only.
 - Structure future CSS around semantic tokens.
 - Do not add a theme picker, persistence, or system-preference behaviour yet.
-- Do not implement React, CSS, or theme-switching changes as part of this design decision.
+- Do not implement React, CSS, or theme-switching changes as part of this design-documentation task.
