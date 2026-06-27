@@ -1,4 +1,5 @@
-# TBD
+# Hunin
+*Your party companion*
 
 ## Working Concept
 

@@ -1,6 +1,12 @@
 # RPG Companion
 
-Working name — final name TBD (direction: one-word fantasy/mythology guide animal, e.g. Munin, Strix, Mimir).
+## Product Name
+
+**Hunin**
+
+Tagline: *Your party companion.*
+
+The name is inspired by Odin’s ravens and is intended to suggest memory, guidance, and a helpful fantasy companion.
 
 ## Purpose
 
