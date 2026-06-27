@@ -409,10 +409,54 @@ Prefer a relational SQL direction conceptually.
 
 This is a category recommendation, not a vendor choice. The current domain is centered on ownership, membership, roles, and authorization queries. Those are relational concerns.
 
+## Provisional authentication decision
+
+Hunin v1 will use app-managed email/password authentication in the Go backend.
+
+### v1 scope
+
+The v1 authentication scope is limited to:
+
+- register
+- log in
+- log out
+- current authenticated-user/session check
+- migration of a local guest draft after successful register or login
+
+### Session direction
+
+Use a server-managed session represented by a cookie.
+
+- Do not store authentication tokens in browser localStorage.
+- The final session storage mechanism is deferred.
+- The final cookie, CORS, CSRF, and deployment topology details are deferred until deployment architecture is chosen.
+
+### Passwords
+
+- never store plaintext passwords
+- use a proven modern password-hashing library and algorithm
+- prefer Argon2id for new implementation, with parameters documented and tested
+- do not create custom cryptography or custom password hashing
+
+### Backend authorization
+
+- authentication identifies the user
+- authorization is enforced by the Go backend using ownership, party membership, and per-party role
+- protected endpoints return 401 for unauthenticated requests
+- forbidden ownership or cross-party access returns 403
+- frontend visibility must never be treated as authorization
+
+### v1 release caveat
+
+v1 authentication is suitable for closed testing and the Master's project, not broad public use until deferred protections are added.
+
+Before broader public availability, Hunin must add password reset, login-abuse protection, final production cookie/CSRF/CORS configuration, and deployment security review.
+
 ## Decisions ready to make now
 
 - Guests can explore the sample character without server identity.
 - Guest drafts are local to the current device.
+- Guest drafts migrate only after successful register or login.
 - Saved characters require an authenticated User owner.
 - Characters can exist without a party.
 - A v1 character can be linked to at most one party at a time.
@@ -425,14 +469,27 @@ This is a category recommendation, not a vendor choice. The current domain is ce
 - Authorization is enforced on the backend.
 - Anonymous server-side guest accounts are out of scope for v1 unless a later requirement changes that.
 - The database direction should support relational ownership and membership rules.
+- App-managed email/password authentication for v1.
+- Server-managed cookie-based session direction.
+- Avoid JWT unless a concrete future client requirement justifies it.
+- Use Argon2id or an equally strong modern password-hashing approach; do not use custom cryptography.
 
 ## Deferred decisions
 
 - Specific database vendor.
 - SQL migration tooling.
 - ORM, query builder, or direct SQL approach.
-- Auth provider or app-managed auth mechanism.
-- Session cookie versus token strategy.
+- Exact Go auth/session library.
+- Session storage mechanism.
+- Production cookie attributes and deployment topology.
+- CSRF protection strategy.
+- CORS policy.
+- Password reset.
+- Email verification.
+- Login rate limiting / abuse protection.
+- Account deletion.
+- Session/device management.
+- Social login, magic links, and MFA.
 - Invite mechanism: link, code, email, phone, or another narrow v1 approach.
 - Exact shape of character sheet storage.
 - Exact conflict behavior if a signed-in account already has characters when a guest draft is migrated.
@@ -444,4 +501,3 @@ This is a category recommendation, not a vendor choice. The current domain is ce
 - What is the minimum character data required for the first existing-character transfer slice?
 - What should happen if a guest draft migration is attempted after the same browser already has a saved account session?
 - Should party invites expire in v1, or is a non-expiring code acceptable for the first usable release?
-- Which auth approach best balances course evidence, implementation time, and security risk?
