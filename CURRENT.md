@@ -2,11 +2,10 @@
 
 Active task: T-001
 
-State: not started
+State: visual direction decided
 
-Next action: Begin T-001 — open `tasks/T-001/TASKS.md` and work through the Foundation checklist.
-Start with the first item: wireframes, user flows, and reusable component list.
+Next action: Turn the agreed visual direction into concrete high-fidelity screen specifications for the guest landing page, mobile Play View, and quick-reference bottom sheet.
 
 Task folder: `tasks/T-001/`
 
-Last updated: 2026-06-23
+Last updated: 2026-06-27
