@@ -71,7 +71,7 @@ Do not add marketing sections, feature lists, testimonials, artwork, screenshots
 
 - Badge: `Sample character`
 - Character name: `Mara Vale`
-- Character identity line: `Human Ranger 3`
+- Character identity line: `Human Ranger · Level 3`
 - Stat labels:
   - `HP`
   - `AC`
@@ -312,8 +312,8 @@ All interactive controls must use a visible focus state:
 
 - Use a single page-level `main` landmark.
 - Use `h1` for `Hunin`.
-- The Mara preview card should have a heading for `Mara Vale`.
-- The own-character action group should have a heading or accessible label: `Start your own`.
+- The Mara preview card should have a `h2` heading for `Mara Vale`.
+- The own-character action group should have a `h3` heading or accessible label: `Start your own`.
 - Quiet account links can live in a small navigation region or a labeled group.
 - Use real buttons or links according to behavior in the eventual app. For this static spec, visible entry points may be non-functional, but their intended semantics should remain clear.
 
