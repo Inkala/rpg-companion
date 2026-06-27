@@ -38,6 +38,7 @@ Mara demonstrates the parts of Hunin's first guest flow that matter most:
 - Passive Perception: 14
 - Concentration: none
 
+
 ## Ability scores
 
 - Strength: 10 (+0)
