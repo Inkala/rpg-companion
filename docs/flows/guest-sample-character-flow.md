@@ -2,7 +2,7 @@
 
 ## User goal
 
-Let a visitor try Hunin immediately, understand the value of the app without signing in, and inspect a sample character the same way they would during a session.
+Let a visitor try Hunin immediately, understand the value of the app without signing in, and inspect a read-only sample character that demonstrates clear character information and quick explanations.
 
 ## Entry point
 
@@ -55,7 +55,7 @@ Give the visitor a low-friction starting point and explain the three first actio
 
 ### Purpose
 
-Show the product’s core value on a phone: a compact, readable view of a character during play.
+Show a supporting product capability on a phone: a compact, readable character reference that helps a visitor understand Mara Vale and open quick explanations.
 
 ### Visible information
 
@@ -93,7 +93,7 @@ Show the product’s core value on a phone: a compact, readable view of a charac
 ### Notes
 
 - This view should be optimized for scan speed, not full sheet completeness.
-- The sample character should demonstrate what a real play session feels like, not a tutorial about the app.
+- The sample character should demonstrate clear character understanding and quick-reference explanations, not a turn-by-turn combat dashboard.
 - The sample character is strictly read-only in this first flow.
 - Grouped browsing uses Overview, Actions, Bonus Actions, Reactions, Features, and Spells.
 - Overview includes HP, temporary HP, AC, speed, active concentration, and trackable resources.
@@ -135,7 +135,7 @@ Answer the question: “How does this work again?”
 ### Notes
 
 - This detail view should be short and scannable by default.
-- It should support quick reads during play, not long-form rules browsing.
+- It should support quick reads when a player needs a reminder, not long-form rules browsing.
 - On mobile, this opens as a bottom sheet over the Play View.
 
 ## Decisions made

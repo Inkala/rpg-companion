@@ -10,18 +10,20 @@ The name is inspired by Odin’s ravens and is intended to suggest memory, guida
 
 ## Purpose
 
-A D&D 5E 2014 player companion app that helps busy, occasional, or new-to-D&D players join a
-party, understand their character, quickly look up what their abilities do, and manage progression
-over time.
+A D&D 5E 2014 player companion app that helps busy, occasional, or new-to-D&D players create or
+bring in a character, understand their options, join a party, and manage progression over time.
 
-Core value: help players spend less time decoding rules and character sheets, and more time playing.
+Core value: help players build, understand, and grow characters without decoding dense rules or
+character sheets. Character reference and quick explanations support that core experience when a
+player needs a reminder.
 
 Full product context: `docs/product-decisions.md`
 
 ## Users
 
-Primary: the player. Uses the app mostly on a phone during a session to check abilities, track
-resources, and understand their character.
+Primary: the player. Uses the app to create or bring in a character, understand abilities and
+options, manage progression, and occasionally check character details or quick explanations on a
+phone.
 
 Secondary: the GM. Creates a party, invites players, and can view all party member character sheets.
 
@@ -46,7 +48,7 @@ In scope (v2, if time allows after v1):
 
 - Abilities, spells, and features with quick-reference cards
 - Action type tags and resource tracking
-- Mobile Play View optimized for sessions
+- Mobile character reference view
 - Error tracking and structured logging
 - Accessibility audit
 
@@ -150,7 +152,7 @@ Build:
 
 - Player experience is the central product. GM features exist to support group onboarding.
 - The app must work well without AI. AI is an optional enhancement.
-- Mobile-first during sessions. Laptop/tablet for creation and editing.
+- Mobile-friendly character reference when needed. Laptop/tablet can support creation and editing.
 - Progressive disclosure: show the most useful information first, reveal detail on demand.
 - Clear over ornamental: fantasy-inspired but readable and calm.
 - Structured rules and character data first. AI explanation and guidance second.

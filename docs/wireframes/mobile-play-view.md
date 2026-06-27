@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Show the guest sample character in a fast, readable session view that answers the question: “How does this work again?”
+Show the guest sample character in a fast, readable mobile reference view that answers the question: “How does this work again?”
 
 This screen is read-only. It is for quick reference, not character editing.
 
@@ -26,7 +26,7 @@ Hierarchy:
 
 ### 2. Immediate stat row / overview
 
-Purpose: show the key facts the player checks first during a session.
+Purpose: show the key facts a player checks first when reviewing the character.
 
 Shown without scrolling:
 
@@ -86,11 +86,11 @@ Contains:
 
 - action abilities
 - attack entries
-- active combat actions that consume the character’s Action
+- actions and attacks that consume the character’s Action
 
 Use:
 
-- quick access to what the character can do on their turn
+- quick access to Mara's main actions and attacks
 - expanded by default for the read-only sample character
 - show one or more main action or attack cards immediately
 
@@ -102,7 +102,7 @@ Contains:
 
 Use:
 
-- fast access to off-turn or extra-turn options
+- fast access to abilities that use the Bonus Action economy
 - collapsed by default unless a user opens the section
 
 ### Reactions
@@ -125,7 +125,7 @@ Contains:
 
 Use:
 
-- long-lived traits that matter during a session
+- long-lived traits that matter when understanding the character
 - collapsed by default unless a user opens the section
 
 ### Spells

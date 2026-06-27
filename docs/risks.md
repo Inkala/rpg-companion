@@ -52,7 +52,7 @@ The project may become too large to complete or test properly before the deadlin
 ### Mitigation
 
 - Build through small, complete, user-testable releases.
-- Prioritise existing-character transfer and in-session quick reference first.
+- Prioritise existing-character transfer, character understanding, and quick reference first.
 - Support only D&D 5E 2014 for the MVP.
 - Use a curated, limited set of supported game content where needed.
 - Treat guided character creation, level-up, broad rules search, and AI advice as later stages.
@@ -114,7 +114,7 @@ AI may invent rules, misunderstand a character’s context, or give advice that 
 
 ### Consequence
 
-Players may lose trust in the app or make incorrect choices during play.
+Players may lose trust in the app or make incorrect character choices.
 
 ### Mitigation
 
@@ -279,7 +279,7 @@ Any proposed architectural layer or service must answer:
 
 ### Risk
 
-The party is willing to test the app, but they may not have time to enter character data, use the app during a session, or give detailed feedback before the deadline.
+The party is willing to test the app, but they may not have time to enter character data, use the app in real conditions, or give detailed feedback before the deadline.
 
 ### Consequence
 
@@ -318,7 +318,7 @@ Players may return to PDFs, screenshots, or external tools instead of using the 
 
 ### Mitigation
 
-- Prioritise in-session information:
+- Prioritise character-reference information:
   - HP,
   - AC,
   - attacks,
@@ -336,7 +336,7 @@ Players may return to PDFs, screenshots, or external tools instead of using the 
 ### Decision Trigger
 
 Before finalising mobile layouts, test whether a player can answer:
-> “What can I do, and what does this ability do?”  
+> “What does this character have, and what does this ability do?”  
 within a few seconds.
 
 ---
@@ -364,7 +364,7 @@ A non-core feature consumes time needed for the mobile player experience.
 
 ### Decision Trigger
 
-Add dedicated PDF generation only after the in-session Play View is usable.
+Add dedicated PDF generation only after the mobile character-reference Play View is usable.
 
 ---
 

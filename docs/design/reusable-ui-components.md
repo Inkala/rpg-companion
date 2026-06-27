@@ -164,7 +164,7 @@ It stays intentionally small. The goal is to support the current wireframes, not
 
 ### Sample character mobile Play View
 
-- Purpose: session-oriented read-only view for the sample character.
+- Purpose: read-only mobile character-reference view for the sample character.
 - Where it appears: mobile Play View wireframe.
 - Minimum responsibilities: combine the top summary, overview stats, default-open Actions section, and collapsed grouped sections for Bonus Actions, Reactions, Features, and Spells.
 - Should not handle yet: editing, search, Items, Notes, or full-sheet completeness.

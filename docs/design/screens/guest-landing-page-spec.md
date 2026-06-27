@@ -21,7 +21,7 @@ This specification applies the agreed **Tabletop Utility** foundation with **Fie
 2. Brand block
    - Page title: `Hunin`
    - Product tagline: `Your party companion.`
-   - Supporting sentence: `Understand your character quickly when it is time to play.`
+   - Supporting sentence: `Create, bring in, and understand a character without decoding the whole sheet.`
 3. Primary sample-character preview card
    - Small badge: `Sample character`
    - Character identity: `Mara Vale`
@@ -65,7 +65,7 @@ Do not add marketing sections, feature lists, testimonials, artwork, screenshots
 
 - Page title: `Hunin`
 - Tagline: `Your party companion.`
-- Supporting sentence: `Understand your character quickly when it is time to play.`
+- Supporting sentence: `Create, bring in, and understand a character without decoding the whole sheet.`
 
 ### Sample preview card
 
@@ -345,7 +345,7 @@ The visible controls can be wired later. This spec only defines the landing-page
 
 - The screen title is `Hunin`.
 - The tagline is `Your party companion.`
-- The supporting sentence is `Understand your character quickly when it is time to play.`
+- The supporting sentence is `Create, bring in, and understand a character without decoding the whole sheet.`
 - Mara Vale is the primary visual element.
 - The Mara card shows `Human Ranger 3`.
 - The Mara card shows `HP 26 / 26`, `AC 14`, and `Speed 30 ft.`

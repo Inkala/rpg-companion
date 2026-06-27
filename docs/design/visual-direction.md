@@ -4,7 +4,7 @@
 
 Hunin uses **Tabletop Utility** as its usability foundation, with **Field Journal** warmth.
 
-The interface should feel like a practical D&D session companion: fast to scan, calm under pressure, and clear enough for a player who only needs the next useful answer. It should also carry a little warmth from notebooks, table references, and old paper without becoming decorative.
+The interface should feel like a practical D&D character companion: fast to scan, calm, and clear enough for a player who needs to understand a character choice or recall how an option works. It should also carry a little warmth from notebooks, table references, and old paper without becoming decorative.
 
 The default visual mode is light. The light theme uses warm beige, old-paper, and parchment-inspired surfaces. The app should feel polished and modern, not like fake parchment, a medieval website, or a dense traditional character sheet.
 

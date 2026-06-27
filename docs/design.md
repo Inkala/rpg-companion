@@ -7,11 +7,11 @@
 
 ## Product Experience Goal
 
-The app should help D&D 5E players spend less time decoding a dense character sheet or searching rulebooks during a session.
+The app should help D&D 5E players create or bring in a character, understand their options, and manage progression without decoding dense character sheets or rulebooks.
 
 The experience should feel:
 
-* clear and quick during play
+* clear and quick when reviewing character information
 * friendly to people new to D&D
 * useful for occasional players returning after a few weeks
 * fantasy-inspired without becoming visually busy
@@ -23,20 +23,24 @@ The app should not require users to understand D&D terminology before they can b
 
 ## Primary Design Priorities
 
-1. **Fast in-session reference**
+1. **Character creation, transfer, and understanding**
+
+   * A player should be able to start from a new or existing character and understand what the character can do.
+
+2. **Mobile-friendly character reference**
 
    * A player should be able to find an ability, spell, or important stat within a few seconds.
 
-2. **Mobile-first Play View**
+3. **Guided progression**
 
-   * Character reference is primarily used on a phone during a session.
+   * Level-up support should help players understand what changed, what is automatic, and what requires a choice.
 
-3. **Progressive disclosure**
+4. **Progressive disclosure**
 
    * Show the most useful information first.
    * Reveal detailed rules, explanations, and editing controls only when needed.
 
-4. **Optional guidance**
+5. **Optional guidance**
 
    * During character creation, users can choose:
 
@@ -44,7 +48,7 @@ The app should not require users to understand D&D terminology before they can b
      * I know what I want
      * Decide later
 
-5. **Guest-first onboarding**
+6. **Guest-first onboarding**
 
    * Visitors can explore the app and begin a character without logging in.
    * An account is required only for saving across devices, joining a party, creating a party, or sharing with a GM.
@@ -114,7 +118,7 @@ Supporting text:
 
 ### 2. Sample Character — Mobile Play View
 
-Purpose: demonstrate the value of the app during an actual session.
+Purpose: demonstrate clear character information and quick explanations through a read-only sample character.
 
 Prioritise:
 
@@ -289,14 +293,14 @@ The app should support players who benefit from clear structure, low cognitive l
 
 ### Phone
 
-Primary use: during a session.
+Primary use: quick character review and reminders.
 
 Optimise for:
 
 * one-hand-friendly interaction
 * quick scanning
 * bottom sheets for detail
-* sticky access to important character information
+* clear access to important character information
 * clear action categories
 
 ### Tablet / Laptop

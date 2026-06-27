@@ -6,7 +6,7 @@
 
 **Release stages:**
 - **v1** — Core party and character access (must ship)
-- **v2** — In-session character companion
+- **v2** — Character reference and quick explanations
 - **v3** — Guided onboarding
 - **v4** — Character progression
 - **v5** — Advanced guidance and future expansion
@@ -61,7 +61,7 @@
 **Smallest sufficient implementation:**
 - Unit tests for all character rule calculations
 - Integration tests for the most important API endpoints: auth, add character, join party, get play view
-- At least one E2E test covering the primary user journey: sign in → join party → add character → view play view on mobile
+- At least one E2E test covering a critical integration journey: sign in → join party → add character → view play view on mobile
 - Coverage reported in CI (exact threshold TBD, but below 60% unit coverage should be flagged)
 - Pre-commit hook that prevents committing broken tests or failing the linter
 
@@ -165,7 +165,7 @@
 
 **Course expectation:** Accessibility is a design concern, not a post-implementation audit. The course covers a11y heuristics, form design, microcopy, and perceived performance — focused on practical minimums rather than exhaustive WCAG compliance. The course treats this as part of quality, not a separate specialist concern.
 
-**Why it matters here:** The Play View is used on a phone at a table, often in dim conditions. Contrast failures and unreadable touch targets will break the product's core use case. Character creation is a form-heavy flow where missing labels and unclear errors create friction for exactly the users the app is trying to help. These are not edge cases; they are the primary scenarios. `design.md` already establishes the accessibility expectations — the course confirms and formalizes them.
+**Why it matters here:** The Play View may be used on a phone when a player needs a quick reminder, often in dim conditions. Contrast failures and unreadable touch targets will break that supporting reference use case. Character creation is a form-heavy flow where missing labels and unclear errors create friction for exactly the users the app is trying to help. These are not edge cases; they are primary scenarios. `design.md` already establishes the accessibility expectations — the course confirms and formalizes them.
 
 **Smallest sufficient implementation:**
 - Semantic HTML throughout (headings, buttons, inputs, lists — not divs for everything)
@@ -191,7 +191,7 @@
 
 **Course expectation:** Error tracking and structured logging are prerequisites for knowing whether a deployed app is actually working. The course covers Sentry specifically — setup, error tracking, release health, performance monitoring, and alert playbooks. The framing is "less testing, more observing" for production: tests verify intent, observability reveals what actually happens.
 
-**Why it matters here:** The app will be tested by real users (the party) under real conditions. Without error tracking, any failure during a session will be invisible. Character load failures, party join failures, and auth errors are exactly the kind of problems that happen in real use and are hard to reproduce from memory. Play View load time is also user-critical — a slow response mid-session breaks the flow.
+**Why it matters here:** The app will be tested by real users (the party) under real conditions. Without error tracking, failures in character load, party join, auth, or quick-reference views are hard to reproduce from memory. Play View load time still matters because a slow reference view breaks trust when a player needs a reminder.
 
 **Smallest sufficient implementation:**
 - Sentry (or equivalent) on the React frontend for JavaScript errors

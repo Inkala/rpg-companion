@@ -4,7 +4,7 @@
 
 Answer the player’s question: “How does this work again?”
 
-This bottom sheet opens over the Play View so the player keeps their character context visible underneath. It is fast to scan during a session and read-only in the sample-character flow.
+This bottom sheet opens over the Play View so the player keeps their character context visible underneath. It is fast to scan when a player needs a reminder and read-only in the sample-character flow.
 
 ## Mobile-first structure
 

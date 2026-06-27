@@ -9,20 +9,22 @@
 
 ## 1. Product Concept
 
-A D&D 5E-first companion app that helps busy, occasional, or new-to-D&D players join a party, understand their character, quickly look up what their abilities do, and manage character progression over time.
+A D&D 5E-first companion app that helps busy, occasional, or new-to-D&D players create or bring in a character, understand their options, join a party, and manage character progression over time.
 
 The app is not intended to replace a complete rules platform, virtual tabletop, or official character-sheet service.
 
 Its core purpose is:
 
-> Help players spend less time decoding rules and character sheets, and more time playing.
+> Help players build, understand, and grow characters without decoding dense rules or character sheets.
+
+Character reference and quick explanations are supporting capabilities. A player may open Hunin when they forget how something works, but the product should not be framed primarily as a turn-by-turn combat assistant or a dashboard for continuous use during play.
 
 The product should be useful for:
 
 - people who are new to D&D but familiar with other RPG systems
 - players who do not want to read hundreds of pages before their first session
 - groups that play infrequently and forget how abilities work between sessions
-- players who already have a character but want a clearer, more practical reference during play
+- players who already have a character but want a clearer, more practical way to understand and reference it
 - game masters who need quick access to their party’s character sheets
 
 The app should not be framed only as a tool for “overwhelmed” or neurodivergent players. Clear onboarding, reduced rule friction, and memory support are useful for many busy adults and occasional players.
@@ -42,12 +44,12 @@ Example user journey:
    - Add an existing character
    - Create a new character with guidance
    - Finish later
-5. During sessions, the player uses the app mainly on their phone to:
-   - view their character
+5. The player uses the app to understand their character:
+   - review character information
    - check spells, features, and abilities
    - understand action economy, concentration, durations, and resources
-   - quickly remember what their character can do
-6. Between sessions, the player can update their character and later use guided level-up support.
+   - quickly remember how an option works when needed
+6. Over time, the player can update their character and later use guided level-up support.
 
 ### Guest-First Access
 
@@ -93,9 +95,9 @@ The product is mainly a player companion, not a GM campaign-management system.
 
 ## 4. Core User Problems
 
-### Problem A — Existing character information is hard to use at the table
+### Problem A — Existing character information is hard to understand and reference
 
-Traditional character sheets contain important information, but they can be dense and hard to scan quickly during a session.
+Traditional character sheets contain important information, but they can be dense, hard to understand, and hard to scan when a player needs a quick reminder.
 
 Examples:
 
@@ -155,21 +157,21 @@ During character creation, users should be able to choose:
 
 The app should guide, not force.
 
-### Mobile-first during sessions
+### Mobile-friendly character reference
 
-The most frequent real-world use case is checking a character during a session.
+The app should be easy to use on a phone when a player needs to review a character or check a quick explanation.
 
-The mobile experience should prioritize:
+The mobile reference experience should prioritize:
 
 - readable character summary
 - abilities
 - spells
 - actions / bonus actions / reactions
 - resources
-- quick search
+- quick lookup
 - short explanations
 
-Character creation and detailed editing can prioritize laptop/tablet layouts.
+Character creation, transfer, editing, and level-up guidance can prioritize laptop/tablet layouts while remaining usable on mobile.
 
 ### Progressive disclosure
 
@@ -249,7 +251,7 @@ For any decision, users should be able to browse, override, or skip guidance.
 
 ### Play View
 
-A simplified, mobile-first view for active sessions.
+A simplified, mobile-first character reference view.
 
 Should prioritize:
 
@@ -265,7 +267,7 @@ Should prioritize:
 - concentration status
 - trackable resources
 - important passive features
-- quick “what can I do?” reference
+- quick reminders for abilities, spells, and resources
 
 ### Sheet View
 
@@ -363,7 +365,7 @@ Creature search is useful but not required for the earliest version.
 
 ## 11. Level-Up Guidance
 
-Level-up support is an important future feature, though not the first priority because it is used less frequently than in-session ability lookup.
+Level-up support is an important future feature. It follows the first character access and reference slices, but remains part of the product's primary long-term value.
 
 The intended flow:
 
@@ -466,7 +468,7 @@ Reference mood:
 - clear panels and strong visual hierarchy
 - subtle fantasy borders, icons, creature/mascot details, or magical accents
 - modern readable card layouts
-- calm enough to scan quickly during play
+- calm enough to scan quickly when reviewing a character or checking a reminder
 
 Avoid:
 
@@ -549,9 +551,9 @@ A real party can join the app and transfer enough character information to test 
 
 ---
 
-## v2: In-Session Character Companion
+## v2: Character Reference and Quick Explanations
 
-**Goal:** The app becomes a better at-the-table reference than a static PDF.
+**Goal:** The app helps players understand and reference their character more clearly than a static PDF.
 
 ### Add
 
@@ -656,7 +658,7 @@ The product becomes a broader tabletop companion platform rather than only a D&D
 # Current Priority Order
 
 1. v1: Core party and character access
-2. v2: In-session character companion
+2. v2: Character reference and quick explanations
 3. One feature from v3: guided onboarding
 4. v4: Character progression features
 5. AI enhancements
@@ -695,6 +697,6 @@ Before expanding scope:
 1. Confirm the D&D rules version with the DM.
 2. Ask party members whether they would transfer their current sheets once for testing.
 3. Ask them which character details they look up most often.
-4. Test whether phone-first character reference is more useful than a PDF during a session.
+4. Test whether phone-first character reference is clearer and faster than finding the same information in a PDF.
 5. Validate whether “quick ability cards” solve the real problem better than a generic search page.
 6. Only then decide how much character-creation guidance and AI is worth building.

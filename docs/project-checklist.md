@@ -262,16 +262,16 @@ Goal: a real party can join the app, add their characters, and the GM can see th
 
 ---
 
-## v2: In-Session Character Companion
+## v2: Character Reference and Quick Explanations
 
-Goal: the app is more useful at the table than a static PDF.
+Goal: the app helps players understand and reference their character more clearly than a static PDF.
 
 ---
 
 ### Character content
 
 - [ ] **Abilities, features, and spells stored and displayed**
-  Why: These are the content a player actually needs during a session. Without them, the app is only a character header.
+  Why: These are the content a player needs to understand what their character can do. Without them, the app is only a character header.
   Evidence: Player can add abilities, class features, and spells to their character. All appear on the character view, organized by type.
   Course: M2/L2 (use cases, domain model), product-decisions.md
   Stage: v2
@@ -295,7 +295,7 @@ Goal: the app is more useful at the table than a static PDF.
 ---
 
 - [ ] **Resource tracking: HP, temp HP, spell slots, limited-use abilities**
-  Why: Tracking resources is the most active thing a player does with their character during a session. Without it, the app is a reference, not a companion.
+  Why: Resources are part of understanding and maintaining a usable character over time. Without them, the app cannot explain the character's current state clearly.
   Evidence: Player can adjust HP (up and down), set temp HP, mark spell slots as used and recover them, and toggle limited-use abilities. State persists across page refreshes.
   Course: product-decisions.md, M2/L2 (use cases with state)
   Stage: v2
@@ -305,7 +305,7 @@ Goal: the app is more useful at the table than a static PDF.
 ### Play View
 
 - [ ] **Mobile-optimized Play View**
-  Why: The primary use case is a player checking their phone at the table. The layout must be usable one-handed in dim light without zooming or horizontal scrolling.
+  Why: Players may check character information on a phone when they need a quick reminder. The layout must be usable one-handed in dim light without zooming or horizontal scrolling.
   Evidence: Play View loads the most important character information (HP, AC, attacks, actions, spells, resources) without requiring any scroll on a standard phone screen for the top-level summary. Detail is revealed on tap. Tested on a real phone, not only browser devtools.
   Course: design.md, M4/L7 (perceived performance, mobile usability)
   Stage: v2
@@ -355,7 +355,7 @@ Goal: the app is more useful at the table than a static PDF.
 ---
 
 - [ ] **Touch targets at least 44×44px**
-  Why: The Play View is used on a phone, often one-handed. Targets smaller than 44px cause mis-taps and frustration during a session.
+  Why: The Play View is used on a phone, often one-handed. Targets smaller than 44px cause mis-taps and frustration.
   Evidence: All interactive elements on the Play View meet the minimum touch target size. Verified with browser devtools or a manual size check on device.
   Course: M4/L7 (mobile usability), design.md
   Stage: v2
@@ -405,7 +405,7 @@ Goal: the app is more useful at the table than a static PDF.
 ---
 
 - [ ] **E2E test: log in → join party → link character → view Play View**
-  Why: This is the primary user journey. If it breaks, the app is not working for its main purpose.
+  Why: This is a critical integration journey across auth, party membership, character linking, and mobile reference. If it breaks, the app cannot support the first real party workflow.
   Evidence: Playwright test covering the full path end-to-end, running in CI against a real (test) environment. Includes the a11y audit check on the Play View.
   Course: M4/L1 (E2E testing), M4/L3 (quality gates)
   Stage: v2
