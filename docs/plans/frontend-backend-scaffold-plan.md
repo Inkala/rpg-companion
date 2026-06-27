@@ -23,6 +23,7 @@ This ticket creates the project shape for later work. It does not build product 
 ├── frontend/
 │   ├── .env.example
 │   ├── index.html
+│   ├── pnpm-lock.yaml
 │   ├── package.json
 │   ├── tsconfig.json
 │   ├── vite.config.ts
@@ -49,7 +50,7 @@ The frontend is responsible for:
 - hosting the React + TypeScript app
 - providing a minimal visible app shell so the Vite dev server and build can be validated
 - preparing environment-based configuration for later API base URL use
-- using npm as the frontend package manager
+- using pnpm as the frontend package manager through Corepack
 - including Vitest with one minimal smoke test for the React App shell
 - keeping the standard ESLint setup included by the chosen Vite React + TypeScript scaffold
 - supporting later UI implementation for the guest landing page, sample Play View, and quick-reference bottom sheet
@@ -92,25 +93,34 @@ The backend is not responsible yet for:
 Expected command shape:
 
 ```sh
+corepack enable
 cd frontend
-npm run dev
-npm run build
-npm run typecheck
-npm run lint
-npm test
+pnpm install
+pnpm dev
+pnpm build
+pnpm typecheck
+pnpm lint
+pnpm test
 ```
+
+Repository and CI expectations:
+
+- `package.json` should include a `packageManager` field for the chosen pnpm version.
+- `pnpm-lock.yaml` should be committed.
+- CI should use Corepack and `pnpm install --frozen-lockfile` when the CI workflow is added.
+- Do not commit `package-lock.json`, `npm-shrinkwrap.json`, or `yarn.lock`.
 
 Testing:
 
 - include Vitest in this scaffold
 - add one minimal smoke test for the React App shell
-- `npm test` must be a real, runnable command
+- `pnpm test` must be a real, runnable command
 - do not add browser E2E testing or component-library testing
 
 Linting:
 
 - keep the standard ESLint setup included by the chosen Vite React + TypeScript scaffold
-- `npm run lint` must be a real, runnable command
+- `pnpm lint` must be a real, runnable command
 - do not spend time designing custom lint rules beyond sensible scaffold defaults
 
 ### Backend

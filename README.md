@@ -46,3 +46,57 @@ The final name and visual style are still undecided.
 - Backend: Go.
 - The backend should be designed as a learning opportunity and broadly follow the architectural concepts used in the user's professional environment, without copying any work code, internal practices, or proprietary information.
 - Infrastructure, Docker, cloud deployment, CI/CD, security, observability, and service boundaries are intentionally undecided until the course materials have been reviewed.
+
+## Local Development
+
+The scaffold runs the frontend and backend as separate local processes. Docker, a database, authentication, persistence, and cloud deployment are not part of this slice.
+
+### Frontend
+
+```sh
+cd frontend
+npm install
+npm run dev
+```
+
+Useful checks:
+
+```sh
+cd frontend
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
+
+Configuration example: `frontend/.env.example`.
+
+### Backend
+
+```sh
+cd backend
+go run ./cmd/server
+```
+
+The backend health endpoint is available at:
+
+```sh
+curl http://localhost:8080/healthz
+```
+
+Expected response:
+
+```json
+{"status":"ok","service":"hunin-backend"}
+```
+
+Useful checks:
+
+```sh
+cd backend
+go test ./...
+go vet ./...
+go build ./cmd/server
+```
+
+Configuration example: `backend/.env.example`. The backend reads environment variables from the shell and uses safe local defaults for this scaffold.

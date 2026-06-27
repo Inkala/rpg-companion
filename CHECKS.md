@@ -1,48 +1,80 @@
 # Checks
 
-Commands will be filled in once the technology stack is confirmed (T-001).
-See `DECISIONS.md` for tool choices as they are made.
+These checks cover the current frontend and backend scaffold. Run the smaller service-specific checks while working, then the full relevant service checks before handing off changes.
 
 ---
 
 ## Quick Checks
 
 ```sh
-# TBD after stack decisions
+# Frontend
+cd frontend
+npm run typecheck
+npm run lint
+npm test
+
+# Backend
+cd backend
+go test ./...
+go vet ./...
 ```
 
 ## Tests
 
 ```sh
-# Frontend (TBD: Vitest or Jest)
-# npm test
+# Frontend
+cd frontend
+npm test
 
-# Backend (Go standard library)
-# go test ./...
+# Backend
+cd backend
+go test ./...
 ```
 
 ## Type Check and Lint
 
 ```sh
 # Frontend
-# npx tsc --noEmit
-# npx eslint .
+cd frontend
+npm run typecheck
+npm run lint
 
 # Backend
-# go vet ./...
+cd backend
+go vet ./...
 ```
 
 ## Build
 
 ```sh
-# Docker (all services)
-docker compose build
+# Frontend
+cd frontend
+npm run build
 
-# Frontend only (TBD)
-# npm run build
+# Backend
+cd backend
+go build ./cmd/server
+```
 
-# Backend only
-# go build ./...
+## Backend Health Check
+
+Start the backend:
+
+```sh
+cd backend
+go run ./cmd/server
+```
+
+Then verify the health endpoint from another terminal:
+
+```sh
+curl http://localhost:8080/healthz
+```
+
+Expected JSON:
+
+```json
+{"status":"ok","service":"hunin-backend"}
 ```
 
 ## Manual Smoke Test
