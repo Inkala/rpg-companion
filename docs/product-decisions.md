@@ -249,9 +249,13 @@ For any decision, users should be able to browse, override, or skip guidance.
 
 ## 8. Character Views
 
-### Play View
+### Character Reference
 
 A simplified, mobile-first character reference view.
+
+The mobile screen opened from `Explore Mara` is named `Character Reference`. Its purpose is to provide a compact, mobile-friendly, read-only way to understand a character and open quick explanations.
+
+Character Reference is a supporting capability within Hunin. It is not a turn-by-turn combat dashboard and not the whole character-management experience. It may later coexist with character creation, editing, level-up guidance, and party features.
 
 Should prioritize:
 
@@ -573,7 +577,7 @@ A real party can join the app and transfer enough character information to test 
   - temporary HP
   - limited-use abilities
 - Search within the user’s own character
-- Mobile-first Play View
+- Mobile-first Character Reference
 - Printable/exportable original character-sheet layout
 
 ### Success condition
@@ -680,7 +684,7 @@ Character creation guidance is important, but comes after the existing-character
 - [ ] Confirm whether the current party uses D&D 2014 rules, D&D 2024 rules, or a mixed/house-rule version.
 - [ ] Choose final app name.
 - [ ] Decide whether invite links, invite codes, or both are needed.
-- [ ] Decide the minimum character fields required before a player can use Play View.
+- [ ] Decide the minimum character fields required before a player can use Character Reference.
 - [ ] Decide which class/race/background options are supported in guided creation first.
 - [ ] Decide whether character PDF export is required for MVP or Scooter stage.
 - [ ] Decide which open/SRD rules source will support search and quick-reference content.

@@ -74,7 +74,7 @@ Docker status: required from this point forward.
 
 ### After one working vertical slice: cloud deployment
 
-Trigger: one complete user-testable journey works locally, such as guest/sample exploration through Play View, or the first authenticated party/character slice.
+Trigger: one complete user-testable journey works locally, such as guest/sample exploration through Character Reference, or the first authenticated party/character slice.
 
 Expected work:
 

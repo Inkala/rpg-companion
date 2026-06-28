@@ -4,7 +4,7 @@
 
 Answer the player’s question: “How does this work again?”
 
-This bottom sheet opens over the Play View so the player keeps their character context visible underneath. It is fast to scan when a player needs a reminder and read-only in the sample-character flow.
+This bottom sheet opens over the Character Reference so the player keeps their character context visible underneath. It is fast to scan when a player needs a reminder and read-only in the sample-character flow.
 
 ## Mobile-first structure
 
@@ -88,7 +88,7 @@ In that case, optionally show a small fallback note such as `No additional detai
 Primary actions:
 
 - dismiss the sheet
-- return to the Play View context underneath
+- return to the Character Reference context underneath
 
 Secondary actions:
 
@@ -99,7 +99,7 @@ The sheet must be easy to dismiss and must not trap keyboard or screen-reader us
 While the bottom sheet is open as a modal, keyboard focus must remain within the sheet.
 The user must be able to dismiss it with the close control and Escape key where supported.
 When dismissed, focus returns to the ability, feature, attack, or spell card that opened it.
-Do not allow keyboard focus to move to the Play View underneath while the modal sheet is open.
+Do not allow keyboard focus to move to the Character Reference underneath while the modal sheet is open.
 
 ## Behavior by content type
 
@@ -162,7 +162,7 @@ Expanded detail example:
 
 - Make the sheet readable on a narrow phone without horizontal scrolling.
 - Keep the close action obvious and reachable.
-- Ensure focus moves into the sheet and returns to the Play View cleanly when dismissed.
+- Ensure focus moves into the sheet and returns to the Character Reference cleanly when dismissed.
 - Keep keyboard focus within the modal sheet while it is open, while always providing a clear close control and Escape-key dismissal where supported.
 - Use semantic heading structure for the name and major content groups.
 - Keep the summary short enough that the first answer fits quickly on screen.
@@ -192,7 +192,7 @@ Expanded detail example:
 │                                  │
 │ [ Show more details ]            │
 └──────────────────────────────────┘
-     Play View remains visible
+     Character Reference remains visible
      underneath the sheet
 ```
 

@@ -24,12 +24,12 @@ in `tasks/TASK_ID/`. The stage order in `docs/project-checklist.md` is the prior
 
 ---
 
-## v2: In-Session Character Companion
+## v2: Character Reference and Quick Explanations
 
 - [ ] T-010: Abilities, features, and spells (storage and display)
 - [ ] T-011: Quick-reference card (tap to open, effect, action type, resource, duration)
 - [ ] T-012: Action type tags and resource tracking (HP, temp HP, spell slots, limited-use)
-- [ ] T-013: Mobile Play View
+- [ ] T-013: Mobile Character Reference
 - [ ] T-014: Character search within own character
 - [ ] T-015: Accessibility (semantic HTML, ARIA, contrast, touch targets, keyboard nav, axe-core CI)
 - [ ] T-016: Observability (Sentry on frontend, structured logging on backend, one alert)

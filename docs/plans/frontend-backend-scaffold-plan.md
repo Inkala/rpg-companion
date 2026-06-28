@@ -53,7 +53,7 @@ The frontend is responsible for:
 - using pnpm as the frontend package manager through Corepack
 - including Vitest with one minimal smoke test for the React App shell
 - keeping the standard ESLint setup included by the chosen Vite React + TypeScript scaffold
-- supporting later UI implementation for the guest landing page, sample Play View, and quick-reference bottom sheet
+- supporting later UI implementation for the guest landing page, sample Character Reference, and quick-reference bottom sheet
 
 The frontend is not responsible yet for:
 

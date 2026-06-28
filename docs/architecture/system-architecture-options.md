@@ -9,7 +9,7 @@ This is a proposal for issue #2, not a final ADR. It captures the concrete needs
 - React + TypeScript frontend.
 - Go backend.
 - Guest-first flow: a visitor can explore the app before sign-up.
-- Future authentication, parties, permissions, characters, and mobile Play View.
+- Future authentication, parties, permissions, characters, and mobile Character Reference.
 - A public educational project that should be easy to explain and review.
 - Likely course expectations around testing, security, CI/CD, containers, deployment, observability, and documentation.
 
@@ -18,7 +18,7 @@ The core domain is not huge yet, but it is already structured:
 - party membership is role-based and per-party
 - characters have derived values and state changes
 - guest drafts may live locally before sign-up
-- mobile Play View needs fast read access, not a full editor
+- mobile Character Reference needs fast read access, not a full editor
 
 ## Decisions needed now versus later
 
@@ -44,7 +44,7 @@ The core domain is not huge yet, but it is already structured:
 
 ### Frontend structure
 
-- Route-level feature areas for guest flow, party flow, character view, and Play View.
+- Route-level feature areas for guest flow, party flow, character view, and Character Reference.
 - Shared UI primitives and domain-specific components reused across screens.
 - Keep state local to the feature where practical, with shared app state only where needed.
 
@@ -95,7 +95,7 @@ The core domain is not huge yet, but it is already structured:
 
 ### Frontend structure
 
-- Feature folders by user journey: guest, character, party, play view.
+- Feature folders by user journey: guest, character, party, character reference.
 - Shared components kept small and explicit.
 - Less emphasis on pure domain layers, more on screen and flow ownership.
 
@@ -144,7 +144,7 @@ The core domain is not huge yet, but it is already structured:
 ### Frontend structure
 
 - Strong feature and state management in React.
-- Frontend coordinates some view-model shaping for guest flow and Play View.
+- Frontend coordinates some view-model shaping for guest flow and Character Reference.
 - Shared components and hooks carry more of the orchestration load.
 
 ### Backend structure
@@ -196,14 +196,14 @@ This is the best balance for Hunin because it:
 - keeps the backend educational without becoming a science project
 - fits the structured character and permissions domain
 - supports early testing of rules and access control
-- scales from the guest flow to party access and Play View without forcing a rewrite
+- scales from the guest flow to party access and Character Reference without forcing a rewrite
 - does not require microservices, which would be premature here
 
 Keep the frontend practical rather than overly abstract:
 
 - route or screen-level feature folders
 - shared component primitives only where they are clearly reused
-- enough structure to support mobile Play View and guest exploration, but not a full design system too early
+- enough structure to support mobile Character Reference and guest exploration, but not a full design system too early
 
 ## Provisional architecture decisions
 
@@ -261,4 +261,4 @@ v1 testing will include:
 
 - What is the first domain slice that should define the initial package boundaries?
 - Which backend boundaries need interfaces immediately for testing, and which can stay as direct calls?
-- What API DTOs are needed for the guest sample character and first Play View without leaking persistence shapes?
+- What API DTOs are needed for the guest sample character and first Character Reference without leaking persistence shapes?

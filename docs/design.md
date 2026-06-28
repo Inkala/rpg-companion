@@ -116,7 +116,7 @@ Supporting text:
 
 ---
 
-### 2. Sample Character — Mobile Play View
+### 2. Sample Character — Mobile Character Reference
 
 Purpose: demonstrate clear character information and quick explanations through a read-only sample character.
 
@@ -321,7 +321,7 @@ Primary use:
 * [ ] Final color palette
 * [ ] Mascot, animal, or familiar motif
 * [ ] Exact fantasy-vs-modern visual balance
-* [ ] Whether Play View has light and dark modes
+* [ ] Whether Character Reference has light and dark modes
 * [ ] Whether printable character sheets use a parchment-inspired appearance
 * [ ] Which sample character to use for guest exploration
 * [ ] Whether the app uses illustration, icons only, or both

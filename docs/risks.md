@@ -292,7 +292,7 @@ Product decisions may rely too heavily on assumptions.
 - Ask short, specific questions after testing.
 - Focus first feedback on:
   - ease of transferring a character,
-  - usefulness of mobile play view,
+  - usefulness of mobile Character Reference,
   - clarity of ability quick-reference cards.
 - Do not wait for a full party session before validating individual flows.
 
@@ -302,7 +302,7 @@ Before each test, define one question the test should answer.
 
 ---
 
-## R-010 — Mobile play view becomes too dense or hard to use
+## R-010 — Mobile Character Reference becomes too dense or hard to use
 
 **Status:** Open  
 **Impact:** Medium  
@@ -331,7 +331,7 @@ Players may return to PDFs, screenshots, or external tools instead of using the 
 - Use progressive disclosure rather than a full character sheet on one screen.
 - Validate with real players on phones early.
 - Keep detailed editing for laptop/tablet.
-- Treat the “Play View” and “Sheet View” as separate experiences.
+- Treat the Character Reference and Sheet View as separate experiences.
 
 ### Decision Trigger
 
@@ -364,7 +364,7 @@ A non-core feature consumes time needed for the mobile player experience.
 
 ### Decision Trigger
 
-Add dedicated PDF generation only after the mobile character-reference Play View is usable.
+Add dedicated PDF generation only after the mobile Character Reference is usable.
 
 ---
 

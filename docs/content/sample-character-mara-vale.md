@@ -48,11 +48,11 @@ Mara demonstrates the parts of Hunin's first guest flow that matter most:
 - Wisdom: 14 (+2)
 - Charisma: 8 (-1)
 
-## First Play View content
+## First Character Reference content
 
 ### Actions
 
-Actions are shown and expanded by default in the first sample Play View.
+Actions are shown and expanded by default in the first sample Character Reference.
 
 #### Longbow
 
@@ -72,7 +72,7 @@ Actions are shown and expanded by default in the first sample Play View.
 
 ### Features
 
-Features are shown as an expandable section in the first sample Play View.
+Features are shown as an expandable section in the first sample Character Reference.
 
 #### Archery
 
@@ -90,7 +90,7 @@ Features are shown as an expandable section in the first sample Play View.
 
 ### Spells
 
-Spells are shown as an expandable section in the first sample Play View.
+Spells are shown as an expandable section in the first sample Character Reference.
 
 #### Hunter's Mark
 
@@ -125,7 +125,7 @@ Spells are shown as an expandable section in the first sample Play View.
 - Quick-reference summary: Heal an adjacent ally or yourself if allowed by the situation.
 - Spell slot: 1st-level spell slot
 
-## Section visibility in the first sample Play View
+## Section visibility in the first sample Character Reference
 
 Show:
 

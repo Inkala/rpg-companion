@@ -1,10 +1,14 @@
-# Mobile Play View Wireframe
+# Mobile Character Reference Wireframe
 
 ## Purpose
 
 Show the guest sample character in a fast, readable mobile reference view that answers the question: “How does this work again?”
 
 This screen is read-only. It is for quick reference, not character editing.
+
+The mobile screen opened from `Explore Mara` is named `Character Reference`. It provides a compact, mobile-friendly, read-only way to understand a character and open quick explanations.
+
+It is a supporting capability within Hunin. It is not a turn-by-turn combat dashboard and not the whole character-management experience. It may later coexist with character creation, editing, level-up guidance, and party features.
 
 ## Mobile-first structure
 
@@ -204,8 +208,8 @@ In this first flow there is no search, no edit action, and no account prompt on 
 
 ### No content in a section
 
-- hide the section entirely in the normal Play View
-- if the whole play view would otherwise be sparse, show a calm empty state rather than a broken list
+- hide the section entirely in the normal Character Reference
+- if the whole Character Reference would otherwise be sparse, show a calm empty state rather than a broken list
 
 ### Sample content cannot load
 

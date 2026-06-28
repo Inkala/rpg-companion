@@ -43,7 +43,7 @@
 
 **Evidence for submission:**
 - Domain model documented (entities, value objects, relationships, key derived values)
-- Use cases explicitly named and scoped (e.g. `AddCharacterToParty`, `GetCharacterPlayView`, `UpdateHP`)
+- Use cases explicitly named and scoped (e.g. `AddCharacterToParty`, `GetCharacterReference`, `UpdateHP`)
 - Character calculations implemented as testable functions, not inline in handlers or components
 
 **When:** v1 — domain model before implementing character storage
@@ -60,8 +60,8 @@
 
 **Smallest sufficient implementation:**
 - Unit tests for all character rule calculations
-- Integration tests for the most important API endpoints: auth, add character, join party, get play view
-- At least one E2E test covering a critical integration journey: sign in → join party → add character → view play view on mobile
+- Integration tests for the most important API endpoints: auth, add character, join party, get character reference
+- At least one E2E test covering a critical integration journey: sign in -> join party -> add character -> view Character Reference on mobile
 - Coverage reported in CI (exact threshold TBD, but below 60% unit coverage should be flagged)
 - Pre-commit hook that prevents committing broken tests or failing the linter
 
@@ -165,7 +165,7 @@
 
 **Course expectation:** Accessibility is a design concern, not a post-implementation audit. The course covers a11y heuristics, form design, microcopy, and perceived performance — focused on practical minimums rather than exhaustive WCAG compliance. The course treats this as part of quality, not a separate specialist concern.
 
-**Why it matters here:** The Play View may be used on a phone when a player needs a quick reminder, often in dim conditions. Contrast failures and unreadable touch targets will break that supporting reference use case. Character creation is a form-heavy flow where missing labels and unclear errors create friction for exactly the users the app is trying to help. These are not edge cases; they are primary scenarios. `design.md` already establishes the accessibility expectations — the course confirms and formalizes them.
+**Why it matters here:** Character Reference may be used on a phone when a player needs a quick reminder, often in dim conditions. Contrast failures and unreadable touch targets will break that supporting reference use case. Character creation is a form-heavy flow where missing labels and unclear errors create friction for exactly the users the app is trying to help. These are not edge cases; they are primary scenarios. `design.md` already establishes the accessibility expectations — the course confirms and formalizes them.
 
 **Smallest sufficient implementation:**
 - Semantic HTML throughout (headings, buttons, inputs, lists — not divs for everything)
@@ -177,11 +177,11 @@
 - Automated a11y audit integrated into E2E tests (axe-core works with Playwright)
 
 **Evidence for submission:**
-- Play View passes a Lighthouse or axe-core a11y audit with no critical violations
+- Character Reference passes a Lighthouse or axe-core a11y audit with no critical violations
 - Character creation form is navigable by keyboard
 - No critical a11y violations in CI output
 
-**When:** Build in from the start of v2 (Play View). Character creation a11y by v3. Do not retrofit.
+**When:** Build in from the start of v2 (Character Reference). Character creation a11y by v3. Do not retrofit.
 
 **Source:** M4/L7 (a11y heuristics, forms that don't frustrate, microcopy with AI, measuring perceived performance), M7/L1 prompts 26–29 (heuristics-a11y, forms-usability, microcopy-ia, performance-percibida)
 
@@ -191,7 +191,7 @@
 
 **Course expectation:** Error tracking and structured logging are prerequisites for knowing whether a deployed app is actually working. The course covers Sentry specifically — setup, error tracking, release health, performance monitoring, and alert playbooks. The framing is "less testing, more observing" for production: tests verify intent, observability reveals what actually happens.
 
-**Why it matters here:** The app will be tested by real users (the party) under real conditions. Without error tracking, failures in character load, party join, auth, or quick-reference views are hard to reproduce from memory. Play View load time still matters because a slow reference view breaks trust when a player needs a reminder.
+**Why it matters here:** The app will be tested by real users (the party) under real conditions. Without error tracking, failures in character load, party join, auth, or quick-reference views are hard to reproduce from memory. Character Reference load time still matters because a slow reference view breaks trust when a player needs a reminder.
 
 **Smallest sufficient implementation:**
 - Sentry (or equivalent) on the React frontend for JavaScript errors

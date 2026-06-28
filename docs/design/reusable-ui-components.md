@@ -3,7 +3,7 @@
 This document identifies the first reusable components needed to build the currently documented guest flow:
 
 - guest landing page
-- sample character mobile Play View
+- sample character mobile Character Reference
 - ability quick-reference bottom sheet
 
 It stays intentionally small. The goal is to support the current wireframes, not to define a general-purpose design system.
@@ -13,7 +13,7 @@ It stays intentionally small. The goal is to support the current wireframes, not
 ### Button
 
 - Purpose: primary action control for clear commands.
-- Where it appears: guest landing primary actions, sample Play View section controls, bottom-sheet expand action.
+- Where it appears: guest landing primary actions, sample Character Reference section controls, bottom-sheet expand action.
 - Minimum responsibilities: render a clear action, support enabled and disabled states, support compact and full-width variants when needed.
 - Should not handle yet: icons as a requirement, loading orchestration, routing, form submission logic, or styling decisions beyond basic behavior.
 - First implementation slice: needed.
@@ -36,8 +36,8 @@ It stays intentionally small. The goal is to support the current wireframes, not
 
 ### Expandable section
 
-- Purpose: vertically stacked disclosure container for grouped Play View sections.
-- Where it appears: Actions, Bonus Actions, Reactions, Features, and Spells on the mobile Play View.
+- Purpose: vertically stacked disclosure container for grouped Character Reference sections.
+- Where it appears: Actions, Bonus Actions, Reactions, Features, and Spells on the mobile Character Reference.
 - Minimum responsibilities: show a section header, expand or collapse vertically, hide itself when it has no content.
 - Should not handle yet: horizontal tab behavior, search, filtering, or section-specific business rules.
 - First implementation slice: needed.
@@ -45,7 +45,7 @@ It stays intentionally small. The goal is to support the current wireframes, not
 ### Stat display
 
 - Purpose: small, consistent presentation of a single stat or stat pair.
-- Where it appears: guest sample preview, Play View overview, bottom-sheet summary fields.
+- Where it appears: guest sample preview, Character Reference overview, bottom-sheet summary fields.
 - Minimum responsibilities: show label, value, and compact layout for things like HP, AC, temporary HP, duration, or cost.
 - Should not handle yet: derived-value calculation, editing, or any game-rule interpretation.
 - First implementation slice: can wait.
@@ -63,14 +63,14 @@ It stays intentionally small. The goal is to support the current wireframes, not
 
 - Purpose: modal presentation behavior for the quick-reference sheet.
 - Where it appears: ability quick-reference bottom sheet.
-- Minimum responsibilities: open over the current Play View, trap focus while open, support dismiss and return-focus behavior, and preserve the underlying context.
+- Minimum responsibilities: open over the current Character Reference, trap focus while open, support dismiss and return-focus behavior, and preserve the underlying context.
 - Should not handle yet: nested modals, complex stacks, or unrelated overlay systems.
 - First implementation slice: needed.
 
 ### Empty state
 
 - Purpose: calm fallback when a section or sample content has nothing to show.
-- Where it appears: sample Play View empty section states and sample-load failure fallback.
+- Where it appears: sample Character Reference empty section states and sample-load failure fallback.
 - Minimum responsibilities: explain the absence of content without breaking the layout.
 - Should not handle yet: retry orchestration, account messaging, or product-level onboarding.
 - First implementation slice: can wait.
@@ -88,7 +88,7 @@ It stays intentionally small. The goal is to support the current wireframes, not
 ### Error message
 
 - Purpose: clear fallback when sample content or detail content cannot load.
-- Where it appears: guest landing sample preview load failure, Play View sample load failure, bottom-sheet load failure.
+- Where it appears: guest landing sample preview load failure, Character Reference sample load failure, bottom-sheet load failure.
 - Minimum responsibilities: explain the failure and offer retry where appropriate.
 - Should not handle yet: logging, alerting, or recovery policy.
 - First implementation slice: needed.
@@ -105,8 +105,8 @@ It stays intentionally small. The goal is to support the current wireframes, not
 
 ### Character summary
 
-- Purpose: top-of-screen identity and stat summary for the sample Play View.
-- Where it appears: mobile Play View top summary block and stat row.
+- Purpose: top-of-screen identity and stat summary for the sample Character Reference.
+- Where it appears: mobile Character Reference top summary block and stat row.
 - Minimum responsibilities: show character identity, current HP, temporary HP, AC, concentration state, and the few stats that must be seen immediately.
 - Should not handle yet: full character sheet rendering, search, or progression.
 - First implementation slice: needed.
@@ -114,7 +114,7 @@ It stays intentionally small. The goal is to support the current wireframes, not
 ### Ability row
 
 - Purpose: compact preview line or card for an ability, feature, attack, or spell.
-- Where it appears: the expandable sections of the mobile Play View.
+- Where it appears: the expandable sections of the mobile Character Reference.
 - Minimum responsibilities: show the name, a one-line effect hint, and any brief type or usage hint needed to decide whether to open it.
 - Should not handle yet: full rules text, editing, or detailed calculations.
 - First implementation slice: needed.
@@ -137,8 +137,8 @@ It stays intentionally small. The goal is to support the current wireframes, not
 
 ### Resource tracker
 
-- Purpose: show compact status for trackable resources in the Play View overview.
-- Where it appears: Play View overview area.
+- Purpose: show compact status for trackable resources in the Character Reference overview.
+- Where it appears: Character Reference overview area.
 - Minimum responsibilities: show current state for simple trackable resources relevant to the sample character.
 - Should not handle yet: full resource management, persistence rules, or leveling logic.
 - First implementation slice: can wait.
@@ -147,7 +147,7 @@ It stays intentionally small. The goal is to support the current wireframes, not
 ### Concentration indicator
 
 - Purpose: show whether concentration is active.
-- Where it appears: Play View overview and quick-reference sheet when relevant.
+- Where it appears: Character Reference overview and quick-reference sheet when relevant.
 - Minimum responsibilities: state whether concentration is active or absent.
 - Should not handle yet: concentration rules enforcement or state changes.
 - First implementation slice: needed.
@@ -162,10 +162,10 @@ It stays intentionally small. The goal is to support the current wireframes, not
 - Should not handle yet: account prompts during sample exploration, party management, or full character creation.
 - First implementation slice: needed.
 
-### Sample character mobile Play View
+### Sample character mobile Character Reference
 
 - Purpose: read-only mobile character-reference view for the sample character.
-- Where it appears: mobile Play View wireframe.
+- Where it appears: mobile Character Reference wireframe.
 - Minimum responsibilities: combine the top summary, overview stats, default-open Actions section, and collapsed grouped sections for Bonus Actions, Reactions, Features, and Spells.
 - Should not handle yet: editing, search, Items, Notes, or full-sheet completeness.
 - First implementation slice: needed.
@@ -174,14 +174,14 @@ It stays intentionally small. The goal is to support the current wireframes, not
 
 - Purpose: modal quick answer for one selected ability, feature, attack, or spell.
 - Where it appears: ability quick-reference bottom-sheet wireframe.
-- Minimum responsibilities: combine the title, quick summary, optional expandable detail, and dismiss behavior while preserving the Play View context underneath.
+- Minimum responsibilities: combine the title, quick summary, optional expandable detail, and dismiss behavior while preserving the Character Reference context underneath.
 - Should not handle yet: persistent navigation, account flows, or any edit state.
 - First implementation slice: needed.
 
 ## Component boundaries and anti-patterns
 
 - Prefer small, visible components that map directly to the guest flow instead of inventing a universal content renderer.
-- Keep the Play View grouped sections separate from the ability rows they contain.
+- Keep the Character Reference grouped sections separate from the ability rows they contain.
 - Do not merge the sample preview, top summary, and ability detail into one generic “character card” abstraction.
 - Do not create a universal modal system just because the quick-reference sheet needs one modal-like behavior.
 - Do not add components for Items, Notes, search, party management, account prompts, or full-sheet editing until those screens exist.
@@ -193,7 +193,7 @@ It stays intentionally small. The goal is to support the current wireframes, not
 Build only the components needed to ship this path:
 
 1. Guest landing page
-2. Sample character mobile Play View
+2. Sample character mobile Character Reference
 3. Ability quick-reference bottom sheet
 
 Minimum component set:
@@ -211,7 +211,7 @@ Minimum component set:
 - Action type indicator
 - Concentration indicator
 - Guest landing page composition
-- Sample character mobile Play View composition
+- Sample character mobile Character Reference composition
 - Error message
 
 Deferred for a later slice:

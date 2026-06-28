@@ -97,9 +97,9 @@ Expected JSON:
 - [ ] Log back in as GM and confirm the player and their character appear on the roster.
 - [ ] Open the player's character sheet as GM.
 
-### In-session flow (v2)
+### Character reference flow (v2)
 - [ ] Log in as a player.
-- [ ] Open the Play View for a character with abilities and spells.
+- [ ] Open the Character Reference for a character with abilities and spells.
 - [ ] Confirm the layout is usable on a phone screen (no horizontal scroll, readable text).
 - [ ] Tap an ability and confirm the quick-reference card opens with the correct information.
 - [ ] Adjust HP and confirm it persists after page refresh.

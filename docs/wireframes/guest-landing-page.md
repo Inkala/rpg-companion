@@ -96,7 +96,7 @@ Hierarchy:
 - `Add an existing character`: starts the transfer flow for a guest.
 - `Sign in`: opens the sign-in path.
 - `I have a party invite`: opens the party-join path.
-- `Explore [character name]`: opens the sample character in the guest Play View.
+- `Explore [character name]`: opens the sample character in the guest Character Reference.
 
 Important:
 

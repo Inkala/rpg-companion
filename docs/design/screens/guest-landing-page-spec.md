@@ -131,7 +131,7 @@ Rationale:
 - `Longbow` communicates that Mara has a clear primary combat action.
 - `Colossus Slayer` previews the quick-reference value of the app and connects to the first bottom-sheet example later in the flow.
 
-Do not show `Hunter's Mark`, `Fog Cloud`, or `Cure Wounds` on the landing card. Spells are useful in the Play View, but the landing preview should stay compact.
+Do not show `Hunter's Mark`, `Fog Cloud`, or `Cure Wounds` on the landing card. Spells are useful in the Character Reference, but the landing preview should stay compact.
 
 ### Primary visual treatment
 
@@ -337,7 +337,7 @@ For the first implementation slice:
 - do not add account creation UI beyond the visible non-functional entry points;
 - do not add theme switching;
 - do not add image generation prompts, portraits, artwork, or visual assets;
-- do not create Play View or bottom-sheet details from this document.
+- do not create Character Reference or bottom-sheet details from this document.
 
 The visible controls can be wired later. This spec only defines the landing-page visual and content target.
 
@@ -361,4 +361,4 @@ The visible controls can be wired later. This spec only defines the landing-page
 - The page uses semantic headings and a `main` landmark.
 - No icon-only meaning is required.
 - The layout avoids horizontal scrolling on narrow mobile screens.
-- The implementation boundary remains static: no auth, persistence, API, routing requirement, theme picker, app code, or Play View specification.
+- The implementation boundary remains static: no auth, persistence, API, routing requirement, theme picker, app code, or Character Reference specification.

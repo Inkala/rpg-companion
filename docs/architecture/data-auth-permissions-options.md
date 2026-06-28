@@ -46,7 +46,7 @@ Likely responsibilities:
 
 - character identity and sheet data
 - abilities, features, attacks, and spells over time
-- derived values and play-view data
+- derived values and character-reference data
 - ownership by one authenticated user after save/migration
 
 Plain-language rules:
@@ -380,7 +380,7 @@ Use a relational core model:
 - Party has invites created by a GM.
 - Guest drafts stay outside the backend until account migration.
 
-Do not model the full future character sheet yet. Start with fields required for existing-character transfer, guest sample display, party linking, and Play View reference.
+Do not model the full future character sheet yet. Start with fields required for existing-character transfer, guest sample display, party linking, and Character Reference.
 
 ### Guest/account boundary
 

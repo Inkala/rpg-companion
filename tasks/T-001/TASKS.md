@@ -9,10 +9,10 @@ Record decisions in `DECISIONS.md` as they are made.
 
 ## Design and planning
 
-- [ ] Wireframes for priority screens: guest landing, mobile Play View, ability quick-reference
+- [ ] Wireframes for priority screens: guest landing, mobile Character Reference, ability quick-reference
       card, party roster (GM view). Does not need to be pixel-perfect — flow and layout are enough.
 - [ ] User flow diagram covering: guest arrival, guest draft creation, sign-up/login, join party,
-      link character, view Play View.
+      link character, view Character Reference.
 - [ ] Reusable component list derived from the wireframes.
 
 ## Architecture decisions (ADRs)

@@ -14,7 +14,7 @@ Engineering and design decisions that everything else depends on. Not a stage �
 
 - [ ] **Design: wireframes, user flows, and reusable component list**
   Why: Architecture and data model decisions should be informed by what you're actually building. Knowing the screens and flows upfront prevents rework later.
-  Evidence: Wireframes (Figma or equivalent) for at minimum: guest landing, mobile Play View, party roster, ability quick-reference card. A user flow covering the primary paths (guest → register → join party → view character). A list of reusable UI components the screens require.
+  Evidence: Wireframes (Figma or equivalent) for at minimum: guest landing, mobile Character Reference, party roster, ability quick-reference card. A user flow covering the primary paths (guest -> register -> join party -> view character). A list of reusable UI components the screens require.
   Course: M1/L2 (requirements), M4/L7 (usability heuristics), M7/L1 prompt 27 (forms-usability)
   Stage: Foundation
 
@@ -54,7 +54,7 @@ Engineering and design decisions that everything else depends on. Not a stage �
 
 - [ ] **Domain model documented**
   Why: Character is the richest entity in the project — it has derived values (ability modifiers, proficiency bonus, spell save DC), relationships (party membership, class, spells), and state that changes through named operations. Treating it as a flat JSON blob from the start causes correctness bugs and untestable code.
-  Evidence: Written description (markdown is enough) of: core entities (User, Character, Party, PartyMembership), key derived values and how they're calculated, and the primary use cases (AddCharacterToParty, GetCharacterPlayView, UpdateHP, etc.).
+  Evidence: Written description (markdown is enough) of: core entities (User, Character, Party, PartyMembership), key derived values and how they're calculated, and the primary use cases (AddCharacterToParty, GetCharacterReference, UpdateHP, etc.).
   Course: M2/L2 (entities, value objects, use cases), M1/L5 (Spec Driven Development)
   Stage: Foundation
 
@@ -302,11 +302,11 @@ Goal: the app helps players understand and reference their character more clearl
 
 ---
 
-### Play View
+### Character Reference
 
-- [ ] **Mobile-optimized Play View**
+- [ ] **Mobile-optimized Character Reference**
   Why: Players may check character information on a phone when they need a quick reminder. The layout must be usable one-handed in dim light without zooming or horizontal scrolling.
-  Evidence: Play View loads the most important character information (HP, AC, attacks, actions, spells, resources) without requiring any scroll on a standard phone screen for the top-level summary. Detail is revealed on tap. Tested on a real phone, not only browser devtools.
+  Evidence: Character Reference loads the most important character information (HP, AC, attacks, actions, spells, resources) without requiring any scroll on a standard phone screen for the top-level summary. Detail is revealed on tap. Tested on a real phone, not only browser devtools.
   Course: design.md, M4/L7 (perceived performance, mobile usability)
   Stage: v2
 
@@ -322,7 +322,7 @@ Goal: the app helps players understand and reference their character more clearl
 
 ### Accessibility
 
-- [ ] **Semantic HTML throughout Play View and character creation**
+- [ ] **Semantic HTML throughout Character Reference and character creation**
   Why: Screen readers and keyboard navigation depend on correct HTML structure. Divs styled as buttons are invisible to assistive technology.
   Evidence: Headings are in logical order. Buttons are `<button>` elements. Forms use `<label>` for every input. Lists use `<ul>` or `<ol>`. No critical semantic violations in axe-core audit.
   Course: M4/L7 (a11y heuristics), M7/L1 prompt 26 (heuristics-a11y)
@@ -340,7 +340,7 @@ Goal: the app helps players understand and reference their character more clearl
 
 - [ ] **Visible keyboard focus states on all interactive elements**
   Why: Keyboard users and players who cannot use a touchscreen need to know where focus is at all times.
-  Evidence: Tab through the Play View and character creation — focus is clearly visible on every focusable element. No `outline: none` without a custom focus style replacement.
+  Evidence: Tab through the Character Reference and character creation: focus is clearly visible on every focusable element. No `outline: none` without a custom focus style replacement.
   Course: M4/L7, design.md (accessibility requirements)
   Stage: v2
 
@@ -355,8 +355,8 @@ Goal: the app helps players understand and reference their character more clearl
 ---
 
 - [ ] **Touch targets at least 44×44px**
-  Why: The Play View is used on a phone, often one-handed. Targets smaller than 44px cause mis-taps and frustration.
-  Evidence: All interactive elements on the Play View meet the minimum touch target size. Verified with browser devtools or a manual size check on device.
+  Why: The Character Reference is used on a phone, often one-handed. Targets smaller than 44px cause mis-taps and frustration.
+  Evidence: All interactive elements on the Character Reference meet the minimum touch target size. Verified with browser devtools or a manual size check on device.
   Course: M4/L7 (mobile usability), design.md
   Stage: v2
 
@@ -404,9 +404,9 @@ Goal: the app helps players understand and reference their character more clearl
 
 ---
 
-- [ ] **E2E test: log in → join party → link character → view Play View**
+- [ ] **E2E test: log in -> join party -> link character -> view Character Reference**
   Why: This is a critical integration journey across auth, party membership, character linking, and mobile reference. If it breaks, the app cannot support the first real party workflow.
-  Evidence: Playwright test covering the full path end-to-end, running in CI against a real (test) environment. Includes the a11y audit check on the Play View.
+  Evidence: Playwright test covering the full path end-to-end, running in CI against a real (test) environment. Includes the a11y audit check on the Character Reference.
   Course: M4/L1 (E2E testing), M4/L3 (quality gates)
   Stage: v2
 

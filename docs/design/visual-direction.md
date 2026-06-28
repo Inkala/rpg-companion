@@ -159,7 +159,7 @@ space.6  24px
 space.8  32px
 ```
 
-Use 16px page padding on mobile. Cards should generally use 12-16px internal padding. Keep Play View dense, but not cramped.
+Use 16px page padding on mobile. Cards should generally use 12-16px internal padding. Keep Character Reference dense, but not cramped.
 
 ## Component guidance
 
@@ -201,7 +201,7 @@ Use 16px page padding on mobile. Cards should generally use 12-16px internal pad
 
 ### Quick-reference bottom sheet
 
-- Use a raised parchment surface over a dimmed Play View.
+- Use a raised parchment surface over a dimmed Character Reference.
 - Use a top handle in muted border colour.
 - Put a close icon button in the top-right with an accessible label.
 - Show the name and action-type badge immediately.
