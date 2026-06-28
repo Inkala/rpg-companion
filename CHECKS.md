@@ -55,8 +55,19 @@ pnpm build
 
 # Backend
 cd backend
-go build ./cmd/server
+go build ./...
 ```
+
+## Continuous Integration
+
+GitHub Actions runs the frontend and backend checks automatically on pushes to `main` and pull
+requests targeting `main`.
+
+The frontend job uses Node 20 and pnpm 10.17.1, installs from `frontend/` with
+`pnpm install --frozen-lockfile`, then runs lint, typecheck, test, and build.
+
+The backend job uses the Go version declared in `backend/go.mod`, then runs test, vet, and build
+from `backend/`.
 
 ## Backend Health Check
 
@@ -117,4 +128,4 @@ Expected JSON:
 Run the smallest check first. Run the full suite before any commit that touches shared logic,
 auth, permissions, database schema, or user-facing flows.
 
-CI runs all checks automatically on push. See `.github/workflows/` once configured.
+CI runs the checks listed above automatically. See `.github/workflows/ci.yml`.

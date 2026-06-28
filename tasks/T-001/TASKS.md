@@ -41,7 +41,7 @@ Record decisions in `DECISIONS.md` as they are made.
       and `.env.example` committed with all required variable names and no values.
 - [ ] Docker Compose created covering all services: Go backend, PostgreSQL, React frontend.
       `docker compose up` reaches a working local environment.
-- [ ] CI pipeline configured: GitHub Actions workflow running on push to main and on PRs.
+- [x] CI pipeline configured: GitHub Actions workflow running on push to main and on PRs.
       Steps: lint + type-check (both services) then tests then build.
 - [ ] Cloud deployment pipeline configured: app accessible at a real URL, auto-deploys on merge
       to main, environment variables managed via the cloud provider's config.

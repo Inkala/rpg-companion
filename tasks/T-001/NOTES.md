@@ -12,7 +12,8 @@
 
 ## Decisions made
 
-(none yet — record here as they are made, then copy to DECISIONS.md)
+- CI uses GitHub Actions with separate frontend and backend jobs on Ubuntu. Frontend uses Node 20
+  and pnpm 10.17.1. Backend uses the Go version declared in `backend/go.mod`.
 
 ## Blockers
 

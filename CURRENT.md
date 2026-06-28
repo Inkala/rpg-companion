@@ -2,9 +2,9 @@
 
 Active task: T-001
 
-State: visual direction decided; Mara Vale agreed as the static sample character for the first guest flow; guest landing-page specification complete; Character Reference naming decision recorded in product documentation; Mara Vale mobile Character Reference specification complete; Colossus Slayer quick-reference bottom-sheet specification complete.
+State: CI workflow implemented for frontend and backend checks; local validation passed.
 
-Next action: Review and commit the Colossus Slayer quick-reference bottom-sheet specification.
+Next action: Review CI workflow changes and GitHub Actions run result.
 
 Task folder: `tasks/T-001/`
 
