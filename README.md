@@ -53,20 +53,22 @@ The scaffold runs the frontend and backend as separate local processes. Docker, 
 
 ### Frontend
 
+Requires Node 20+ and pnpm 10.x.
+
 ```sh
 cd frontend
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Useful checks:
 
 ```sh
 cd frontend
-npm run typecheck
-npm run lint
-npm test
-npm run build
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
 ```
 
 Configuration example: `frontend/.env.example`.

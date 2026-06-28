@@ -707,10 +707,28 @@ a:focus-visible,
   }
 
   .landing-stat-strip,
-  .primary-stats,
-  .secondary-stats,
   .sheet-meta {
     grid-template-columns: 1fr;
+  }
+
+  .reference-summary {
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+
+  .primary-stats,
+  .secondary-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-1);
+  }
+
+  .primary-stats .stat,
+  .secondary-stats .stat {
+    padding: var(--space-2);
+  }
+
+  .reference-sections {
+    margin-top: var(--space-3);
   }
 
   .sheet-header {

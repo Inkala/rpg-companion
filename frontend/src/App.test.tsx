@@ -79,7 +79,9 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Colossus Slayer/ }))
 
-    const sheet = screen.getByRole('dialog', { name: 'Colossus Slayer' })
+    const sheet = screen.getByRole('dialog', {
+      name: 'Colossus Slayer quick reference',
+    })
 
     expect(sheet).toBeInTheDocument()
     expect(

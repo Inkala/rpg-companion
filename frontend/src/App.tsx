@@ -479,7 +479,9 @@ function ColossusSlayerSheet({ onClose }: { onClose: () => void }) {
         <div className="sheet-header">
           <div>
             <p className="eyebrow">Quick reference</p>
-            <h2 id="colossus-sheet-title">Colossus Slayer</h2>
+            <h2 id="colossus-sheet-title">
+              Colossus Slayer<span className="sr-only"> quick reference</span>
+            </h2>
           </div>
           <button
             ref={closeButtonRef}

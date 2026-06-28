@@ -2,6 +2,8 @@
 
 These checks cover the current frontend and backend scaffold. Run the smaller service-specific checks while working, then the full relevant service checks before handing off changes.
 
+Frontend checks require Node 20+ and pnpm 10.x.
+
 ---
 
 ## Quick Checks
@@ -9,9 +11,9 @@ These checks cover the current frontend and backend scaffold. Run the smaller se
 ```sh
 # Frontend
 cd frontend
-npm run typecheck
-npm run lint
-npm test
+pnpm typecheck
+pnpm lint
+pnpm test
 
 # Backend
 cd backend
@@ -24,7 +26,7 @@ go vet ./...
 ```sh
 # Frontend
 cd frontend
-npm test
+pnpm test
 
 # Backend
 cd backend
@@ -36,8 +38,8 @@ go test ./...
 ```sh
 # Frontend
 cd frontend
-npm run typecheck
-npm run lint
+pnpm typecheck
+pnpm lint
 
 # Backend
 cd backend
@@ -49,7 +51,7 @@ go vet ./...
 ```sh
 # Frontend
 cd frontend
-npm run build
+pnpm build
 
 # Backend
 cd backend
