@@ -53,7 +53,7 @@ The scaffold runs the frontend and backend as separate local processes. Docker, 
 
 ### Frontend
 
-Requires Node 20+ and pnpm 10.x.
+Requires Node 24 LTS and pnpm 10.17.1.
 
 ```sh
 cd frontend
