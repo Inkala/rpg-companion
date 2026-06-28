@@ -2,10 +2,10 @@
 
 Active task: T-001
 
-State: visual direction decided; Mara Vale agreed as the static sample character for the first guest flow; guest landing-page specification complete; mobile screen name decided as Character Reference
+State: visual direction decided; Mara Vale agreed as the static sample character for the first guest flow; guest landing-page specification complete; Character Reference naming decision recorded in product documentation; Mara Vale mobile Character Reference specification complete and awaiting final refinement review.
 
-Next action: Create Mara Vale's mobile Character Reference specification.
+Next action: Review the final Character Reference refinements, then commit the specification.
 
 Task folder: `tasks/T-001/`
 
-Last updated: 2026-06-27
+Last updated: 2026-06-28
