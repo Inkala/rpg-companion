@@ -59,7 +59,7 @@ Give the visitor a low-friction starting point and explain the three first actio
 
 ### Purpose
 
-Show a supporting product capability on a phone: a compact, readable character reference that helps a visitor understand Mara Vale and open quick explanations.
+Show a supporting product capability on a phone: a compact, readable character reference that helps a visitor understand Mara Velard and open quick explanations.
 
 This screen is a supporting capability within Hunin. It is not a turn-by-turn combat dashboard and not the whole character-management experience.
 

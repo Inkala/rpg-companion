@@ -1,21 +1,21 @@
-import { useEffect, useRef, useState, type RefObject } from 'react'
-import huninLogo from './assets/brand/hunin-logo.svg'
-import maraPortrait from './assets/characters/mara-vale-portrait.webp'
-import './App.css'
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import huninLogo from './assets/brand/hunin-logo.svg';
+import maraPortrait from './assets/characters/mara-vale-portrait.webp';
+import './App.css';
 
-type View = 'landing' | 'reference'
-type SectionId = 'actions' | 'features' | 'spells'
+type View = 'landing' | 'reference';
+type SectionId = 'actions' | 'features' | 'spells';
 
 type ReferenceItem = {
-  id: string
-  name: string
-  hint: string
-  meta: string[]
-  opensSheet?: boolean
-}
+  id: string;
+  name: string;
+  hint: string;
+  meta: string[];
+  opensSheet?: boolean;
+};
 
 const mara = {
-  name: 'Mara Vale',
+  name: 'Mara Velard',
   identity: 'Human Ranger · Level 3',
   landingIdentity: 'Human Ranger 3',
   supportingIdentity: 'Hunter · Outlander',
@@ -30,7 +30,7 @@ const mara = {
     proficiency: '+2',
     concentration: 'No concentration',
   },
-}
+};
 
 const referenceSections: Record<SectionId, ReferenceItem[]> = {
   actions: [
@@ -82,54 +82,54 @@ const referenceSections: Record<SectionId, ReferenceItem[]> = {
       meta: ['1st-level spell', 'Action', 'Instantaneous'],
     },
   ],
-}
+};
 
 const sectionLabels: Record<SectionId, string> = {
   actions: 'Actions',
   features: 'Features',
   spells: 'Spells',
-}
+};
 
 const futureActionDescription =
-  'Planned for a later slice. This control is visible for product context but is not available yet.'
+  'Planned for a later slice. This control is visible for product context but is not available yet.';
 
 export function App() {
-  const [view, setView] = useState<View>('landing')
+  const [view, setView] = useState<View>('landing');
   const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>({
     actions: true,
     features: false,
     spells: false,
-  })
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const colossusRowRef = useRef<HTMLButtonElement>(null)
+  });
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const colossusRowRef = useRef<HTMLButtonElement>(null);
 
   function showReference() {
-    setView('reference')
-    setOpenSections({ actions: true, features: false, spells: false })
-    setIsSheetOpen(false)
+    setView('reference');
+    setOpenSections({ actions: true, features: false, spells: false });
+    setIsSheetOpen(false);
   }
 
   function showLanding() {
-    setView('landing')
-    setIsSheetOpen(false)
+    setView('landing');
+    setIsSheetOpen(false);
   }
 
   function toggleSection(sectionId: SectionId) {
     setOpenSections((current) => ({
       ...current,
       [sectionId]: !current[sectionId],
-    }))
+    }));
   }
 
   function openColossusSheet() {
-    setIsSheetOpen(true)
+    setIsSheetOpen(true);
   }
 
   function closeColossusSheet() {
-    setIsSheetOpen(false)
+    setIsSheetOpen(false);
     window.setTimeout(() => {
-      colossusRowRef.current?.focus()
-    }, 0)
+      colossusRowRef.current?.focus();
+    }, 0);
   }
 
   return (
@@ -150,10 +150,10 @@ export function App() {
         <ColossusSlayerSheet onClose={closeColossusSheet} />
       ) : null}
     </>
-  )
+  );
 }
 
-function GuestLanding({ onExploreMara }: { onExploreMara: () => void }) {
+function GuestLanding({ onExploreMara }: { onExploreMara: () => void; }) {
   return (
     <main className="app-shell landing-page">
       <p id="future-entry-description" className="sr-only">
@@ -178,7 +178,7 @@ function GuestLanding({ onExploreMara }: { onExploreMara: () => void }) {
           <img
             className="portrait portrait--landing"
             src={maraPortrait}
-            alt="Portrait of Mara Vale"
+            alt="Portrait of Mara Velard"
           />
           <div>
             <p className="eyebrow">Sample character</p>
@@ -189,7 +189,7 @@ function GuestLanding({ onExploreMara }: { onExploreMara: () => void }) {
           </div>
         </div>
 
-        <dl className="landing-stat-strip" aria-label="Mara Vale quick stats">
+        <dl className="landing-stat-strip" aria-label="Mara Velard quick stats">
           <Stat label="HP" value={mara.stats.hp} />
           <Stat label="AC" value={mara.stats.ac} />
           <Stat label="Speed" value={mara.stats.speed} />
@@ -220,20 +220,20 @@ function GuestLanding({ onExploreMara }: { onExploreMara: () => void }) {
         <FutureEntryPoint label="I have a party invite" variant="quiet" />
       </nav>
     </main>
-  )
+  );
 }
 
 function FutureEntryPoint({
   label,
   variant = 'secondary',
 }: {
-  label: string
-  variant?: 'secondary' | 'quiet'
+  label: string;
+  variant?: 'secondary' | 'quiet';
 }) {
   const className =
     variant === 'quiet'
       ? 'future-link'
-      : 'button button--secondary future-button'
+      : 'button button--secondary future-button';
 
   return (
     <button
@@ -247,7 +247,7 @@ function FutureEntryPoint({
         Planned
       </span>
     </button>
-  )
+  );
 }
 
 function CharacterReference({
@@ -257,11 +257,11 @@ function CharacterReference({
   onOpenColossusSheet,
   colossusRowRef,
 }: {
-  openSections: Record<SectionId, boolean>
-  onBack: () => void
-  onToggleSection: (sectionId: SectionId) => void
-  onOpenColossusSheet: () => void
-  colossusRowRef: RefObject<HTMLButtonElement | null>
+  openSections: Record<SectionId, boolean>;
+  onBack: () => void;
+  onToggleSection: (sectionId: SectionId) => void;
+  onOpenColossusSheet: () => void;
+  colossusRowRef: RefObject<HTMLButtonElement | null>;
 }) {
   return (
     <main className="app-shell reference-page">
@@ -286,7 +286,7 @@ function CharacterReference({
           <img
             className="portrait portrait--reference"
             src={maraPortrait}
-            alt="Portrait of Mara Vale"
+            alt="Portrait of Mara Velard"
           />
           <div>
             <h2 className="character-name reference-character">{mara.name}</h2>
@@ -323,7 +323,7 @@ function CharacterReference({
         ))}
       </div>
     </main>
-  )
+  );
 }
 
 function ReferenceSection({
@@ -333,15 +333,15 @@ function ReferenceSection({
   onOpenColossusSheet,
   colossusRowRef,
 }: {
-  sectionId: SectionId
-  isOpen: boolean
-  onToggle: () => void
-  onOpenColossusSheet: () => void
-  colossusRowRef: RefObject<HTMLButtonElement | null>
+  sectionId: SectionId;
+  isOpen: boolean;
+  onToggle: () => void;
+  onOpenColossusSheet: () => void;
+  colossusRowRef: RefObject<HTMLButtonElement | null>;
 }) {
-  const label = sectionLabels[sectionId]
-  const items = referenceSections[sectionId]
-  const panelId = `${sectionId}-section-panel`
+  const label = sectionLabels[sectionId];
+  const items = referenceSections[sectionId];
+  const panelId = `${sectionId}-section-panel`;
 
   return (
     <section className="reference-section">
@@ -371,7 +371,7 @@ function ReferenceSection({
         </div>
       ) : null}
     </section>
-  )
+  );
 }
 
 function AbilityRow({
@@ -379,12 +379,12 @@ function AbilityRow({
   onOpenColossusSheet,
   rowRef,
 }: {
-  item: ReferenceItem
-  onOpenColossusSheet: () => void
-  rowRef?: RefObject<HTMLButtonElement | null>
+  item: ReferenceItem;
+  onOpenColossusSheet: () => void;
+  rowRef?: RefObject<HTMLButtonElement | null>;
 }) {
-  const canOpen = item.opensSheet === true
-  const descriptionId = `${item.id}-detail-state`
+  const canOpen = item.opensSheet === true;
+  const descriptionId = `${item.id}-detail-state`;
 
   return (
     <button
@@ -415,53 +415,53 @@ function AbilityRow({
         </span>
       ) : null}
     </button>
-  )
+  );
 }
 
-function ColossusSlayerSheet({ onClose }: { onClose: () => void }) {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const dialogRef = useRef<HTMLDivElement>(null)
-  const closeButtonRef = useRef<HTMLButtonElement>(null)
+function ColossusSlayerSheet({ onClose }: { onClose: () => void; }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    closeButtonRef.current?.focus()
+    closeButtonRef.current?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        event.preventDefault()
-        onClose()
-        return
+        event.preventDefault();
+        onClose();
+        return;
       }
 
       if (event.key !== 'Tab' || dialogRef.current === null) {
-        return
+        return;
       }
 
-      const focusable = getFocusableElements(dialogRef.current)
+      const focusable = getFocusableElements(dialogRef.current);
 
       if (focusable.length === 0) {
-        event.preventDefault()
-        return
+        event.preventDefault();
+        return;
       }
 
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
 
       if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
+        event.preventDefault();
+        last.focus();
       } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
+        event.preventDefault();
+        first.focus();
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [onClose])
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
   return (
     <div className="sheet-layer" onMouseDown={onClose}>
@@ -535,7 +535,7 @@ function ColossusSlayerSheet({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function Stat({
@@ -543,40 +543,40 @@ function Stat({
   value,
   emphasis,
 }: {
-  label: string
-  value: string
-  emphasis?: 'hp' | 'ac'
+  label: string;
+  value: string;
+  emphasis?: 'hp' | 'ac';
 }) {
   return (
     <div className={emphasis ? `stat stat--${emphasis}` : 'stat'}>
       <dt>{label}</dt>
       <dd>{value}</dd>
     </div>
-  )
+  );
 }
 
 function badgeClassName(label: string) {
   if (label === 'Action') {
-    return 'badge badge--action'
+    return 'badge badge--action';
   }
 
   if (label === 'Bonus Action') {
-    return 'badge badge--bonus'
+    return 'badge badge--bonus';
   }
 
   if (label === 'Concentration') {
-    return 'badge badge--concentration'
+    return 'badge badge--concentration';
   }
 
   if (label.includes('spell')) {
-    return 'badge badge--spell'
+    return 'badge badge--spell';
   }
 
   if (label === 'Passive') {
-    return 'badge badge--passive'
+    return 'badge badge--passive';
   }
 
-  return 'badge badge--neutral'
+  return 'badge badge--neutral';
 }
 
 function getFocusableElements(container: HTMLElement) {
@@ -584,5 +584,5 @@ function getFocusableElements(container: HTMLElement) {
     container.querySelectorAll<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     ),
-  ).filter((element) => !element.hasAttribute('disabled'))
+  ).filter((element) => !element.hasAttribute('disabled'));
 }

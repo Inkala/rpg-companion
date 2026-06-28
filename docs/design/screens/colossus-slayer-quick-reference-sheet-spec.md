@@ -2,7 +2,7 @@
 
 ## Purpose and Role
 
-This specification covers the first quick-reference bottom sheet opened from Mara Vale's `Colossus Slayer` row in Character Reference.
+This specification covers the first quick-reference bottom sheet opened from Mara Velard's `Colossus Slayer` row in Character Reference.
 
 The sheet answers:
 
@@ -17,7 +17,7 @@ The sheet is not:
 - a rules encyclopedia;
 - a damage roller;
 - a usage tracker;
-- a place to edit Mara Vale;
+- a place to edit Mara Velard;
 - a substitute for the full feature text.
 
 It opens as an overlay from Character Reference rather than navigating away so the user keeps Mara's character context visible underneath. Closing the sheet should return the user to the same `Colossus Slayer` row and section state they came from.
@@ -76,13 +76,13 @@ Do not add extra examples, edge cases, official rules text, damage calculations,
 
 ### Character Reference behind the sheet
 
-The Character Reference remains visible behind a dim overlay. The visible background should preserve context, especially that the sheet came from Mara Vale's `Features` section and the `Colossus Slayer` row.
+The Character Reference remains visible behind a dim overlay. The visible background should preserve context, especially that the sheet came from Mara Velard's `Features` section and the `Colossus Slayer` row.
 
 The background is visually present but not interactive while the sheet is open. Keyboard focus must stay inside the sheet until it closes.
 
 ## 2. Exact Colossus Slayer Content
 
-Use Mara Vale's canonical sample content as the factual basis.
+Use Mara Velard's canonical sample content as the factual basis.
 
 ### Title
 
@@ -224,7 +224,7 @@ Use semantic tokens from `docs/design/visual-direction.md`:
 
 ### Opening behavior
 
-- The sheet opens when the user activates Mara Vale's `Colossus Slayer` row in the `Features` section of Character Reference.
+- The sheet opens when the user activates Mara Velard's `Colossus Slayer` row in the `Features` section of Character Reference.
 - Opening the sheet does not navigate away from Character Reference.
 - The Character Reference remains visible underneath a dim overlay.
 - Initial focus moves into the sheet.
@@ -340,7 +340,7 @@ The user should be able to reach:
 For the first implementation slice:
 
 - use static Colossus Slayer content only;
-- open this sheet only from Mara Vale's `Colossus Slayer` row;
+- open this sheet only from Mara Velard's `Colossus Slayer` row;
 - keep the sheet read-only;
 - do not call an API;
 - do not add persistence;
@@ -359,7 +359,7 @@ Other ability, feature, attack, and spell rows may later reuse this pattern, but
 
 ## Implementation Acceptance Checklist
 
-- The sheet opens from Mara Vale's `Colossus Slayer` row in Character Reference.
+- The sheet opens from Mara Velard's `Colossus Slayer` row in Character Reference.
 - The sheet appears as a bottom modal overlay, not a new page.
 - Character Reference remains visible but inactive behind the sheet.
 - The title is `Colossus Slayer`.

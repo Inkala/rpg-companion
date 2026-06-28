@@ -7,7 +7,7 @@ The Guest Landing Page is the first screen for a visitor who is not signed in an
 It should:
 
 - communicate what Hunin is without becoming a marketing site;
-- make exploring Mara Vale the obvious first action;
+- make exploring Mara Velard the obvious first action;
 - keep account-related actions present but quiet;
 - feel like the beginning of an app, not a generic product homepage.
 
@@ -24,7 +24,7 @@ This specification applies the agreed **Tabletop Utility** foundation with **Fie
    - Supporting sentence: `Create, bring in, and understand a character without decoding the whole sheet.`
 3. Primary sample-character preview card
    - Small badge: `Sample character`
-   - Character identity: `Mara Vale`
+   - Character identity: `Mara Velard`
    - Character summary: `Human Ranger 3`
    - Stat strip: `HP 26 / 26`, `AC 14`, `Speed 30 ft.`
    - Ability badges: `Longbow`, `Colossus Slayer`
@@ -43,7 +43,7 @@ This specification applies the agreed **Tabletop Utility** foundation with **Fie
 On a typical phone viewport, the first screen should show:
 
 - the full brand block;
-- the full Mara Vale preview card;
+- the full Mara Velard preview card;
 - the `Explore Mara` CTA;
 - at least the beginning of the `Start your own` action group.
 
@@ -70,7 +70,7 @@ Do not add marketing sections, feature lists, testimonials, artwork, screenshots
 ### Sample preview card
 
 - Badge: `Sample character`
-- Character name: `Mara Vale`
+- Character name: `Mara Velard`
 - Character identity line: `Human Ranger · Level 3`
 - Stat labels:
   - `HP`
@@ -103,7 +103,7 @@ Do not add marketing sections, feature lists, testimonials, artwork, screenshots
 
 Show only:
 
-- `Mara Vale`
+- `Mara Velard`
 - `Human Ranger 3`
 - `Outlander` may be omitted from the card to keep the preview compact.
 
@@ -211,7 +211,7 @@ Hierarchy:
 
 ### Why these actions must not interrupt sample exploration
 
-The sample flow is guest-first. A visitor should be able to inspect Mara Vale without creating an account, signing in, acknowledging guest-storage behavior, or choosing a party path.
+The sample flow is guest-first. A visitor should be able to inspect Mara Velard without creating an account, signing in, acknowledging guest-storage behavior, or choosing a party path.
 
 Account-related actions should remain visible for users who need them, but they must not appear as dialogs, banners, popovers, blockers, or prompts before or during sample exploration.
 
@@ -250,7 +250,7 @@ Use semantic tokens:
 - Button labels: body font, 16px, semibold.
 - Quiet links: body font, 15-16px, medium.
 
-Use `Fraunces` only for `Hunin` and `Mara Vale`. Use the body font for all functional copy.
+Use `Fraunces` only for `Hunin` and `Mara Velard`. Use the body font for all functional copy.
 
 ### Spacing
 
@@ -312,7 +312,7 @@ All interactive controls must use a visible focus state:
 
 - Use a single page-level `main` landmark.
 - Use `h1` for `Hunin`.
-- The Mara preview card should have a `h2` heading for `Mara Vale`.
+- The Mara preview card should have a `h2` heading for `Mara Velard`.
 - The own-character action group should have a `h3` heading or accessible label: `Start your own`.
 - Quiet account links can live in a small navigation region or a labeled group.
 - Use real buttons or links according to behavior in the eventual app. For this static spec, visible entry points may be non-functional, but their intended semantics should remain clear.
@@ -329,7 +329,7 @@ All interactive controls must use a visible focus state:
 
 For the first implementation slice:
 
-- use static Mara Vale sample content only;
+- use static Mara Velard sample content only;
 - do not add authentication;
 - do not add persistence;
 - do not call an API;
@@ -346,7 +346,7 @@ The visible controls can be wired later. This spec only defines the landing-page
 - The screen title is `Hunin`.
 - The tagline is `Your party companion.`
 - The supporting sentence is `Create, bring in, and understand a character without decoding the whole sheet.`
-- Mara Vale is the primary visual element.
+- Mara Velard is the primary visual element.
 - The Mara card shows `Human Ranger 3`.
 - The Mara card shows `HP 26 / 26`, `AC 14`, and `Speed 30 ft.`
 - The Mara card shows `Longbow` and `Colossus Slayer`.

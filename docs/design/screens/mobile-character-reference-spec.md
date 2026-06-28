@@ -6,7 +6,7 @@ The Character Reference is the read-only mobile screen opened from:
 
 `Explore Mara` -> `Character Reference`
 
-Its job is to help a visitor quickly find and understand something about Mara Vale when needed. It should answer practical questions such as what Mara can do, what her key stats are, and which abilities or spells are worth opening for a quick explanation.
+Its job is to help a visitor quickly find and understand something about Mara Velard when needed. It should answer practical questions such as what Mara can do, what her key stats are, and which abilities or spells are worth opening for a quick explanation.
 
 Character Reference is a supporting capability within Hunin. Hunin's primary product value remains character creation, adding an existing character, understanding character options, party onboarding, and later level-up guidance.
 
@@ -30,7 +30,7 @@ Later, this screen can coexist with character creation, character editing, level
    - Back action: `Back`.
    - Screen label or route title: `Character Reference`.
 2. Character summary block
-   - Character name: `Mara Vale`
+   - Character name: `Mara Velard`
    - Identity line: `Human Ranger · Level 3`
    - Supporting line: `Hunter · Outlander`
 3. Primary stat area
@@ -54,7 +54,7 @@ Later, this screen can coexist with character creation, character editing, level
 The first viewport should show:
 
 - the back action and `Character Reference` context;
-- `Mara Vale`;
+- `Mara Velard`;
 - `Human Ranger · Level 3`;
 - primary stats: `HP 26 / 26`, `AC 14`, `Speed 30 ft.`;
 - the quiet `No concentration` state;
@@ -88,7 +88,7 @@ Do not show a sign-in prompt when the visitor opens, browses, or leaves the samp
 
 Show:
 
-- Character name: `Mara Vale`
+- Character name: `Mara Velard`
 - Identity line: `Human Ranger · Level 3`
 - Supporting line: `Hunter · Outlander`
 
@@ -372,7 +372,7 @@ Use semantic tokens from `docs/design/visual-direction.md`:
 ### Typography hierarchy
 
 - Navigation label `Character Reference`: body font, 14-16px, medium, `color.text.secondary`.
-- Character name `Mara Vale`: display font, 28-34px, semibold, `color.text.primary`.
+- Character name `Mara Velard`: display font, 28-34px, semibold, `color.text.primary`.
 - Identity line `Human Ranger · Level 3`: body font, 15-16px, medium, `color.text.secondary`.
 - Supporting line `Hunter · Outlander`: body font, 14-15px, regular, `color.text.muted`.
 - Primary stat values: body font with tabular numbers, 24-32px, semibold or bold.
@@ -382,7 +382,7 @@ Use semantic tokens from `docs/design/visual-direction.md`:
 - Row effect hints: body font, 14-15px, regular, `color.text.secondary`.
 - Badges and compact metadata: body font, 12-13px, medium.
 
-Use `Fraunces` only for `Mara Vale`. Use the body font for rules text, labels, stats, buttons, and metadata.
+Use `Fraunces` only for `Mara Velard`. Use the body font for rules text, labels, stats, buttons, and metadata.
 
 ### Density and spacing
 
@@ -466,7 +466,7 @@ Rows and section headers must be real buttons or links according to final routin
 
 - Back control accessible name: `Back to guest landing page`.
 - Page `h1`: `Character Reference`.
-- Prominent character heading within the page hierarchy: `Mara Vale`.
+- Prominent character heading within the page hierarchy: `Mara Velard`.
 - Section header names:
   - `Actions, 2 items, expanded`
   - `Features, 2 items, collapsed`
@@ -499,7 +499,7 @@ Do not expose decorative icons as meaningful text.
 
 For the first implementation slice:
 
-- use static Mara Vale sample content only;
+- use static Mara Velard sample content only;
 - keep the screen read-only;
 - do not add authentication;
 - do not add persistence;
@@ -522,7 +522,7 @@ The first interactive implementation only needs to wire `Colossus Slayer` to the
 - The screen is titled `Character Reference`.
 - The screen is opened by `Explore Mara`.
 - The screen has a `Back` action intended to return to the guest landing page.
-- The character name is `Mara Vale`.
+- The character name is `Mara Velard`.
 - The identity line is `Human Ranger · Level 3`.
 - The supporting line is `Hunter · Outlander`.
 - Primary stat trio shows `HP 26 / 26`, `AC 14`, and `Speed 30 ft.`
@@ -547,7 +547,7 @@ The first interactive implementation only needs to wire `Colossus Slayer` to the
 - Section headers and rows have at least 44px tap targets.
 - Collapsed rows are not focusable.
 - `Character Reference` is the page `h1`.
-- `Mara Vale` is the prominent character heading within the page hierarchy.
+- `Mara Velard` is the prominent character heading within the page hierarchy.
 - Accessible names include useful row and section context.
 - No icon-only meaning is required.
 - No horizontal scrolling is introduced.

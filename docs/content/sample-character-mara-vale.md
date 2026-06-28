@@ -1,12 +1,12 @@
-# Sample Character: Mara Vale
+# Sample Character: Mara Velard
 
-This is the canonical static sample character for Hunin's first guest flow. Mara Vale is original, setting-neutral, and safe to include in a public repository.
+This is the canonical static sample character for Hunin's first guest flow. Mara Velard is original, setting-neutral, and safe to include in a public repository.
 
 Treat this as display content for the first static guest experience, not as the final canonical character-data model.
 
 ## Character identity
 
-- Name: Mara Vale
+- Name: Mara Velard
 - Ancestry: Human
 - Class: Ranger
 - Subclass: Hunter
