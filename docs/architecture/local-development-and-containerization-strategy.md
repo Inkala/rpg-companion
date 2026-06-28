@@ -64,13 +64,14 @@ Trigger: Hunin adds real backend persistence for authenticated users, characters
 
 Expected work:
 
-- add Docker Compose for frontend, backend, and database
-- add service-level Dockerfiles where needed
+- add Docker Compose for the database first
+- keep frontend and backend as local processes until service containers are needed
 - document how to start the full local stack
 - ensure the app can run from copied example environment variables plus local-only secret values
 - support repeatable database setup and migrations
 
-Docker status: required from this point forward.
+Docker status: required for local PostgreSQL from this point forward. Frontend and backend
+Dockerfiles remain deferred.
 
 ### After one working vertical slice: cloud deployment
 
@@ -120,7 +121,9 @@ Do not add implementation commands before the relevant tools and services exist.
 - Docker is not required for the first static guest/sample-character slice.
 - Docker Compose is required before real user testing and final submission.
 - Docker Compose should be introduced when the backend and relational database are both meaningful local services.
-- The first Compose stack should include frontend, backend, and database.
+- The first Compose stack includes PostgreSQL only for the persistence foundation.
+- Frontend and backend Dockerfiles remain deferred until there is a full local service stack to run.
+- Persistence tests use an explicit `TEST_DATABASE_URL` and do not start Docker or Compose.
 - Kubernetes is out of scope.
 - Microservices are out of scope.
 - Environment-based configuration and secret hygiene are required from the beginning.
@@ -128,9 +131,8 @@ Do not add implementation commands before the relevant tools and services exist.
 ## Deferred decisions
 
 - Docker Desktop or alternate container runtime choice.
-- Database vendor.
-- Database image and local database configuration.
-- Exact Dockerfile and Compose file details.
+- Backend and frontend Dockerfiles.
+- Full-service Compose topology.
 - Cloud provider.
 - Deployment topology.
 - Observability vendor.

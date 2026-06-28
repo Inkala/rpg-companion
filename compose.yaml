@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: hunin
+      POSTGRES_USER: hunin
+      POSTGRES_PASSWORD: hunin
+    ports:
+      - "5432:5432"
+    volumes:
+      - hunin-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hunin -d hunin"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  hunin-postgres-data:

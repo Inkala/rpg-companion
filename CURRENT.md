@@ -2,9 +2,9 @@
 
 Active task: T-001
 
-State: CI workflow implemented for frontend and backend checks; local validation passed.
+State: Persistence-foundation implementation in progress for GitHub issue #17.
 
-Next action: Review CI workflow changes and GitHub Actions run result.
+Next action: Review the changed files, migration SQL, API behavior, and validation results before any commit.
 
 Task folder: `tasks/T-001/`
 

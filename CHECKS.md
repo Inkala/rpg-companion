@@ -3,6 +3,8 @@
 These checks cover the current frontend and backend scaffold. Run the smaller service-specific checks while working, then the full relevant service checks before handing off changes.
 
 Frontend checks require Node 24 LTS and pnpm 10.17.1.
+Local PostgreSQL requires Docker Desktop or another Docker-compatible runtime. Database migrations
+use the golang-migrate CLI.
 
 ---
 
@@ -21,6 +23,9 @@ go test ./...
 go vet ./...
 ```
 
+Backend persistence integration tests require PostgreSQL and use `TEST_DATABASE_URL` only. If
+`TEST_DATABASE_URL` is not set, those tests skip locally and unit tests still run.
+
 ## Tests
 
 ```sh
@@ -32,6 +37,18 @@ pnpm test
 cd backend
 go test ./...
 ```
+
+To run backend persistence integration tests locally, create or choose a disposable PostgreSQL
+database separate from the normal `hunin` development database, apply no manual schema changes to it,
+and run:
+
+```sh
+cd backend
+TEST_DATABASE_URL="postgres://hunin:hunin@localhost:5432/hunin_test?sslmode=disable" go test ./...
+```
+
+The test suite resets the `public` schema for `TEST_DATABASE_URL`. Never point it at the normal
+development database.
 
 ## Type Check and Lint
 
@@ -66,8 +83,9 @@ requests targeting `main`.
 The frontend job uses Node 24 LTS and pnpm 10.17.1, installs from `frontend/` with
 `pnpm install --frozen-lockfile`, then runs lint, typecheck, test, and build.
 
-The backend job uses the Go version declared in `backend/go.mod`, then runs test, vet, and build
-from `backend/`.
+The backend job uses the Go version declared in `backend/go.mod`, starts a PostgreSQL service
+container with database `hunin_test`, sets `TEST_DATABASE_URL`, then runs test, vet, and build from
+`backend/`.
 
 ## Backend Health Check
 

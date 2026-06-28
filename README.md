@@ -49,7 +49,9 @@ The final name and visual style are still undecided.
 
 ## Local Development
 
-The scaffold runs the frontend and backend as separate local processes. Docker, a database, authentication, persistence, and cloud deployment are not part of this slice.
+The scaffold runs the frontend and backend as separate local processes. PostgreSQL runs through
+Docker Compose for the persisted-character foundation. Authentication, character lists, parties,
+and cloud database deployment are not part of this slice.
 
 ### Frontend
 
@@ -75,9 +77,27 @@ Configuration example: `frontend/.env.example`.
 
 ### Backend
 
+Requires Docker Desktop or another Docker-compatible runtime for local PostgreSQL. Database
+migrations use the golang-migrate CLI.
+
+Start PostgreSQL:
+
+```sh
+docker compose up -d postgres
+```
+
+Apply database migrations from the repository root:
+
+```sh
+migrate -path backend/migrations \
+  -database "postgres://hunin:hunin@localhost:5432/hunin?sslmode=disable" up
+```
+
+Run the backend:
+
 ```sh
 cd backend
-go run ./cmd/server
+DATABASE_URL="postgres://hunin:hunin@localhost:5432/hunin?sslmode=disable" go run ./cmd/server
 ```
 
 The backend health endpoint is available at:
@@ -100,5 +120,10 @@ go test ./...
 go vet ./...
 go build ./cmd/server
 ```
+
+Persistence integration tests use `TEST_DATABASE_URL` only. They never fall back to `DATABASE_URL`.
+For local integration tests, point `TEST_DATABASE_URL` at a disposable test database, not the normal
+`hunin` development database. If `TEST_DATABASE_URL` is absent, integration tests skip and unit tests
+still run.
 
 Configuration example: `backend/.env.example`. The backend reads environment variables from the shell and uses safe local defaults for this scaffold.

@@ -51,6 +51,9 @@ Likely responsibilities:
 
 Plain-language rules:
 
+- the first persistence foundation stores character records in PostgreSQL
+- `owner_subject_id` is nullable and reserved for future authenticated ownership
+- the current persistence foundation does not create fake users, sessions, or ownership enforcement
 - a saved character has exactly one owner
 - a user can own multiple characters
 - a character may exist without a party
