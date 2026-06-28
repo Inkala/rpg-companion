@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { App } from './App';
+import { App, HitPointValue } from './App';
 
 function openCharacterReference() {
   render(<App />);
@@ -43,6 +43,38 @@ describe('App', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Mara Velard' })).toBeInTheDocument();
     expect(screen.getByText('Human Ranger · Level 3')).toBeInTheDocument();
+  });
+
+  it('shows only maximum HP when Mara is at full HP', () => {
+    openCharacterReference();
+
+    const primaryStats = screen.getByLabelText('Primary stats');
+    const fullHp = within(primaryStats).getByText('26');
+
+    expect(fullHp).toBeInTheDocument();
+    expect(fullHp).toHaveClass('hp-value--full');
+    expect(within(primaryStats).queryByText('26 / 26')).not.toBeInTheDocument();
+  });
+
+  it('renders reduced HP as muted current HP before primary maximum HP', () => {
+    const { container } = render(
+      <HitPointValue hitPoints={{ current: 22, max: 26 }} />,
+    );
+
+    const currentHp = screen.getByText('22');
+    const separator = screen.getByText('/');
+    const maxHp = screen.getByText('26');
+
+    expect(container.textContent).toBe('22 / 26');
+    expect(currentHp.compareDocumentPosition(separator)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(separator.compareDocumentPosition(maxHp)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(currentHp).toHaveClass('hp-value__current');
+    expect(separator).toHaveClass('hp-value__separator');
+    expect(maxHp).toHaveClass('hp-value__max');
   });
 
   it('starts with Actions expanded', () => {

@@ -14,6 +14,11 @@ type ReferenceItem = {
   opensSheet?: boolean;
 };
 
+type HitPoints = {
+  current: number;
+  max: number;
+};
+
 const mara = {
   name: 'Mara Velard',
   identity: 'Human Ranger · Level 3',
@@ -22,7 +27,10 @@ const mara = {
   concept:
     'A steady wilderness scout with a clear attack, useful spells, and quick rules reminders.',
   stats: {
-    hp: '26 / 26',
+    hp: {
+      current: 26,
+      max: 26,
+    },
     ac: '14',
     speed: '30 ft.',
     initiative: '+3',
@@ -190,7 +198,7 @@ function GuestLanding({ onExploreMara }: { onExploreMara: () => void; }) {
         </div>
 
         <dl className="landing-stat-strip" aria-label="Mara Velard quick stats">
-          <Stat label="HP" value={mara.stats.hp} />
+          <HitPointStat hitPoints={mara.stats.hp} />
           <Stat label="AC" value={mara.stats.ac} />
           <Stat label="Speed" value={mara.stats.speed} />
         </dl>
@@ -296,7 +304,7 @@ function CharacterReference({
         </div>
 
         <dl className="primary-stats" aria-label="Primary stats">
-          <Stat label="HP" value={mara.stats.hp} emphasis="hp" />
+          <HitPointStat hitPoints={mara.stats.hp} />
           <Stat label="AC" value={mara.stats.ac} emphasis="ac" />
           <Stat label="Speed" value={mara.stats.speed} />
         </dl>
@@ -535,6 +543,37 @@ function ColossusSlayerSheet({ onClose }: { onClose: () => void; }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function HitPointStat({ hitPoints }: { hitPoints: HitPoints }) {
+  const hpStateClass =
+    hitPoints.current === hitPoints.max ? 'stat--hp-full' : 'stat--hp-reduced';
+
+  return (
+    <div className={`stat stat--hp ${hpStateClass}`}>
+      <dt>HP</dt>
+      <dd>
+        <HitPointValue hitPoints={hitPoints} />
+      </dd>
+    </div>
+  );
+}
+
+export function HitPointValue({ hitPoints }: { hitPoints: HitPoints }) {
+  if (hitPoints.current === hitPoints.max) {
+    return <span className="hp-value hp-value--full">{hitPoints.max}</span>;
+  }
+
+  return (
+    <span className="hp-value hp-value--split">
+      <span className="hp-value__current">{hitPoints.current}</span>
+      <span className="hp-value__separator" aria-hidden="true">
+        {' '}
+        /{' '}
+      </span>
+      <span className="hp-value__max">{hitPoints.max}</span>
+    </span>
   );
 }
 
