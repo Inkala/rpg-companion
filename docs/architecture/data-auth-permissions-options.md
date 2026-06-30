@@ -414,7 +414,8 @@ This is a category recommendation, not a vendor choice. The current domain is ce
 
 ## Provisional authentication decision
 
-Hunin v1 will use app-managed email/password authentication in the Go backend.
+Hunin v1 will use app-managed username/email/password authentication in the Go backend. Username is
+the public in-app identity. Email is a private, unverified contact/recovery foundation.
 
 ### v1 scope
 
@@ -425,6 +426,9 @@ The v1 authentication scope is limited to:
 - log out
 - current authenticated-user/session check
 - migration of a local guest draft after successful register or login
+
+Registration requires username, email, and password. Login accepts username or email plus password.
+No confirmation email is sent and password reset is deferred.
 
 ### Session direction
 
@@ -472,7 +476,7 @@ Before broader public availability, Hunin must add password reset, login-abuse p
 - Authorization is enforced on the backend.
 - Anonymous server-side guest accounts are out of scope for v1 unless a later requirement changes that.
 - The database direction should support relational ownership and membership rules.
-- App-managed email/password authentication for v1.
+- App-managed username/email/password authentication for v1.
 - Server-managed cookie-based session direction.
 - Avoid JWT unless a concrete future client requirement justifies it.
 - Use Argon2id or an equally strong modern password-hashing approach; do not use custom cryptography.

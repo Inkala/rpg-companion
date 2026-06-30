@@ -50,8 +50,12 @@ The final name and visual style are still undecided.
 ## Local Development
 
 The scaffold runs the frontend and backend as separate local processes. PostgreSQL runs through
-Docker Compose for the persisted-character foundation. Authentication, character lists, parties,
-and cloud database deployment are not part of this slice.
+Docker Compose for the persisted-character foundation and local authentication. Character lists,
+parties, and backend cloud deployment are not part of this slice.
+
+The deployed static frontend at `https://hunin.marceramirez.com` currently has no deployed backend.
+The Mara Velard guest demo remains usable there, but registration and sign-in are intentionally not
+shown as live public features until the backend is deployed.
 
 ### Frontend
 
@@ -75,6 +79,15 @@ pnpm build
 
 Configuration example: `frontend/.env.example`.
 
+For local authentication UI, configure:
+
+```sh
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+If `VITE_API_BASE_URL` is absent, the frontend keeps the guest demo usable and presents accounts as
+unavailable instead of submitting forms to a missing backend.
+
 ### Backend
 
 Requires Docker Desktop or another Docker-compatible runtime for local PostgreSQL. Database
@@ -97,7 +110,9 @@ Run the backend:
 
 ```sh
 cd backend
-DATABASE_URL="postgres://hunin:hunin@localhost:5432/hunin?sslmode=disable" go run ./cmd/server
+DATABASE_URL="postgres://hunin:hunin@localhost:5432/hunin?sslmode=disable" \
+ALLOWED_ORIGINS="http://localhost:5173" \
+go run ./cmd/server
 ```
 
 The backend health endpoint is available at:
@@ -127,3 +142,12 @@ For local integration tests, point `TEST_DATABASE_URL` at a disposable test data
 still run.
 
 Configuration example: `backend/.env.example`. The backend reads environment variables from the shell and uses safe local defaults for this scaffold.
+
+Local authentication uses an HttpOnly `hunin_session` cookie, PostgreSQL-backed server sessions, and
+an explicit CORS allowlist. Registration requires username, email, and password. Username is the
+public in-app identity. Email is stored as a private, unverified contact/recovery foundation; this
+milestone does not send confirmation email or implement password reset. Users may sign in with
+username or email. Future production shape is expected to be:
+
+- Frontend: `https://hunin.marceramirez.com`
+- Backend: `https://api.hunin.marceramirez.com`

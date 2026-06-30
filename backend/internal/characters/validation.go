@@ -61,16 +61,6 @@ func characterFromRequest(request createCharacterRequest, now time.Time) (Charac
 		}
 	}
 
-	var ownerSubjectID *uuid.UUID
-	if request.OwnerSubjectID != nil {
-		parsed, err := uuid.Parse(strings.TrimSpace(*request.OwnerSubjectID))
-		if err != nil {
-			validationErrors = append(validationErrors, "ownerSubjectId must be a valid UUID when provided")
-		} else {
-			ownerSubjectID = &parsed
-		}
-	}
-
 	referencePayload := json.RawMessage(nil)
 	if request.ReferencePayload == nil {
 		validationErrors = append(validationErrors, "referencePayload is required")
@@ -86,7 +76,6 @@ func characterFromRequest(request createCharacterRequest, now time.Time) (Charac
 
 	return Character{
 		ID:               uuid.New(),
-		OwnerSubjectID:   ownerSubjectID,
 		Name:             name,
 		ClassName:        className,
 		SubclassName:     subclassName,

@@ -44,7 +44,7 @@ and run:
 
 ```sh
 cd backend
-TEST_DATABASE_URL="postgres://hunin:hunin@localhost:5432/hunin_test?sslmode=disable" go test ./...
+TEST_DATABASE_URL="postgres://hunin:hunin@localhost:5432/hunin_test?sslmode=disable" go test -p 1 ./...
 ```
 
 The test suite resets the `public` schema for `TEST_DATABASE_URL`. Never point it at the normal
@@ -110,7 +110,22 @@ Expected JSON:
 
 ## Manual Smoke Test
 
-### Guest flow
+### Local auth flow
+- [x] Start PostgreSQL with `docker compose up -d postgres`.
+- [x] Apply migrations to the local `hunin` database.
+- [x] Start the backend with `ALLOWED_ORIGINS=http://localhost:5173`.
+- [x] Start the frontend with `VITE_API_BASE_URL=http://localhost:8080`.
+- [x] Register with username, email, and a password using 8–128 characters with an uppercase letter, lowercase letter, number, and special character. Confirm no confirmation email is sent.
+- [x] Try a weak registration password and confirm the inline password error appears without a browser-native validation popup.
+- [x] Refresh and confirm the signed-in state is restored.
+- [x] Sign out and confirm the signed-out account actions return.
+- [x] Sign in with username and confirm the session is restored.
+- [x] Sign in with email and confirm the session is restored.
+- [x] Try an invalid username/email/password combination and confirm the sign-in error is understandable.
+- [x] Confirm the Mara guest flow still works while signed out.
+- [x] Open the public/static no-backend mode with no `VITE_API_BASE_URL` and confirm the Mara demo still works while account forms are not shown.
+
+### Future guest draft flow (not part of the current auth milestone)
 - [ ] Open the app without logging in.
 - [ ] Start creating a character.
 - [ ] Confirm the save button is disabled and a popover appears explaining sign-in is required.
@@ -118,7 +133,7 @@ Expected JSON:
 - [ ] Register a new account.
 - [ ] Confirm the draft is migrated to the new account.
 
-### Party flow (v1)
+### Future party flow (not part of the current auth milestone)
 - [ ] Log in as a GM.
 - [ ] Create a party.
 - [ ] Generate an invite link or code.
@@ -128,7 +143,7 @@ Expected JSON:
 - [ ] Log back in as GM and confirm the player and their character appear on the roster.
 - [ ] Open the player's character sheet as GM.
 
-### Character reference flow (v2)
+### Future character reference persistence flow (not part of the current auth milestone)
 - [ ] Log in as a player.
 - [ ] Open the Character Reference for a character with abilities and spells.
 - [ ] Confirm the layout is usable on a phone screen (no horizontal scroll, readable text).
@@ -136,7 +151,7 @@ Expected JSON:
 - [ ] Adjust HP and confirm it persists after page refresh.
 - [ ] Mark a spell slot as used and confirm it persists.
 
-### Permission checks
+### Future permission checks
 - [ ] Attempt to access another player's character URL directly. Confirm 403.
 - [ ] Attempt to access a party the user has not joined. Confirm 403.
 - [ ] Attempt an API request with no auth token. Confirm 401.

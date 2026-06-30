@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Inkala/rpg-companion/backend/internal/auth"
 	"github.com/Inkala/rpg-companion/backend/internal/characters"
 	"github.com/Inkala/rpg-companion/backend/internal/config"
 	"github.com/Inkala/rpg-companion/backend/internal/server"
@@ -33,10 +34,15 @@ func main() {
 	}
 
 	characterRepository := characters.NewRepository(pool)
+	authRepository := auth.NewRepository(pool)
+	serverOptions := server.Options{
+		AllowedOrigins: cfg.AllowedOrigins,
+		CookieSecure:   cfg.CookieSecure,
+	}
 
 	addr := ":" + cfg.Port
 	log.Printf("starting hunin backend on %s in %s mode", addr, cfg.AppEnv)
-	if err := http.ListenAndServe(addr, server.New(characterRepository)); err != nil {
+	if err := http.ListenAndServe(addr, server.New(characterRepository, authRepository, serverOptions)); err != nil {
 		log.Fatal(err)
 	}
 }

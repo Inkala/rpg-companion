@@ -400,6 +400,85 @@ a:focus-visible,
   margin-top: var(--space-4);
 }
 
+.account-card {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.account-card--quiet {
+  background: rgba(255, 252, 244, 0.72);
+}
+
+.account-card__text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+.account-actions,
+.account-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.account-page {
+  padding-top: var(--space-4);
+}
+
+.account-title {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-family: Fraunces, Georgia, serif;
+  font-size: 1.75rem;
+  line-height: 1.12;
+}
+
+.form-field {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  font-weight: 800;
+}
+
+.form-field input {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface-raised);
+  color: var(--color-text-primary);
+  padding: 0 var(--space-3);
+  font: inherit;
+}
+
+.form-field input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.form-error {
+  margin: 0;
+  color: var(--color-state-hp);
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.account-switch {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--color-accent-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
 .future-link {
   display: inline-flex;
   align-items: center;

@@ -107,6 +107,45 @@ WHERE id = $1::uuid`
 	return character, nil
 }
 
+func (repository *Repository) GetByIDForOwner(ctx context.Context, id uuid.UUID, ownerID uuid.UUID) (Character, error) {
+	const query = `
+SELECT
+  id::text,
+  owner_subject_id::text,
+  name,
+  class_name,
+  subclass_name,
+  level,
+  ancestry,
+  background,
+  strength_score,
+  dexterity_score,
+  constitution_score,
+  intelligence_score,
+  wisdom_score,
+  charisma_score,
+  hp_current,
+  hp_max,
+  armor_class,
+  speed_ft,
+  reference_payload,
+  created_at,
+  updated_at
+FROM characters
+WHERE id = $1::uuid
+  AND owner_subject_id = $2::uuid`
+
+	character, err := scanCharacter(repository.pool.QueryRow(ctx, query, id.String(), ownerID.String()))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Character{}, ErrNotFound
+	}
+	if err != nil {
+		return Character{}, err
+	}
+
+	return character, nil
+}
+
 type rowScanner interface {
 	Scan(dest ...any) error
 }

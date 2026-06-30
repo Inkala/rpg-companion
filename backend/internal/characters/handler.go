@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Inkala/rpg-companion/backend/internal/auth"
 	"github.com/google/uuid"
 )
 
@@ -23,6 +24,11 @@ func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "character persistence is not configured")
 		return
 	}
+	ownerID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 
 	defer r.Body.Close()
 
@@ -35,6 +41,10 @@ func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
 		writeError(w, http.StatusBadRequest, "request body must contain one JSON object")
+		return
+	}
+	if request.OwnerSubjectID != nil {
+		writeError(w, http.StatusBadRequest, "ownerSubjectId is assigned by the authenticated session")
 		return
 	}
 
@@ -50,6 +60,7 @@ func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "character validation failed")
 		return
 	}
+	character.OwnerSubjectID = &ownerID
 
 	created, err := handler.repository.Create(r.Context(), character)
 	if err != nil {
@@ -65,6 +76,11 @@ func (handler Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "character persistence is not configured")
 		return
 	}
+	ownerID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
 
 	id, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
@@ -72,7 +88,7 @@ func (handler Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	character, err := handler.repository.GetByID(r.Context(), id)
+	character, err := handler.repository.GetByIDForOwner(r.Context(), id, ownerID)
 	if errors.Is(err, ErrNotFound) {
 		writeError(w, http.StatusNotFound, "character not found")
 		return

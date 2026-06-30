@@ -1,11 +1,11 @@
 # Current Work
 
-Active task: T-001
+Active task: T-002
 
-State: Persistence-foundation implementation in progress for GitHub issue #17.
+State: T-002 authentication and owner-scoped character implementation complete and validated for GitHub issue #7.
 
-Next action: Review the changed files, migration SQL, API behavior, and validation results before any commit.
+Next action: Review the final validation output and approve the T-002 commit.
 
-Task folder: `tasks/T-001/`
+Task folder: `tasks/T-002/`
 
-Last updated: 2026-06-28
+Last updated: 2026-06-30

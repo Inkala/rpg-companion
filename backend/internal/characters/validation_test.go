@@ -40,18 +40,16 @@ func TestCharacterFromRequestValidatesRequiredFields(t *testing.T) {
 	}
 }
 
-func TestCharacterFromRequestRejectsMalformedOwnerSubjectID(t *testing.T) {
+func TestCharacterFromRequestDoesNotAssignOwnerFromRequest(t *testing.T) {
 	request := validCreateCharacterRequest()
 	request.OwnerSubjectID = stringPtr("not-a-uuid")
 
-	_, err := characterFromRequest(request, time.Now())
-
-	validationErr, ok := isValidationError(err)
-	if !ok {
-		t.Fatalf("expected validation error, got %v", err)
+	character, err := characterFromRequest(request, time.Now())
+	if err != nil {
+		t.Fatalf("expected owner field to be ignored by request validation, got %v", err)
 	}
-	if !contains(validationErr.Messages, "ownerSubjectId must be a valid UUID when provided") {
-		t.Fatalf("expected ownerSubjectId validation message, got %v", validationErr.Messages)
+	if character.OwnerSubjectID != nil {
+		t.Fatalf("expected nil owner from request validation, got %v", character.OwnerSubjectID)
 	}
 }
 

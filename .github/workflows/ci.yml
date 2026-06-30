@@ -86,7 +86,7 @@ jobs:
         working-directory: backend
         env:
           TEST_DATABASE_URL: postgres://hunin:hunin@localhost:5432/hunin_test?sslmode=disable
-        run: go test ./...
+        run: go test -p 1 ./...
 
       - name: Vet backend
         working-directory: backend

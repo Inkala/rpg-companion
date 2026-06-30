@@ -10,12 +10,15 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/Inkala/rpg-companion/backend/internal/auth"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 )
@@ -26,9 +29,12 @@ func TestCharacterHTTPPersistence(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /characters", handler.Create)
 	mux.HandleFunc("GET /characters/{id}", handler.GetByID)
+	ownerID := uuid.New()
+	insertTestUser(t, pool, ownerID, "mara")
 
 	createRecorder := httptest.NewRecorder()
 	createRequest := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(validCharacterJSON()))
+	createRequest = withAuthenticatedUser(createRequest, ownerID)
 	mux.ServeHTTP(createRecorder, createRequest)
 
 	if createRecorder.Code != http.StatusCreated {
@@ -42,6 +48,7 @@ func TestCharacterHTTPPersistence(t *testing.T) {
 
 	getRecorder := httptest.NewRecorder()
 	getRequest := httptest.NewRequest(http.MethodGet, "/characters/"+created.ID, nil)
+	getRequest = withAuthenticatedUser(getRequest, ownerID)
 	mux.ServeHTTP(getRecorder, getRequest)
 
 	if getRecorder.Code != http.StatusOK {
@@ -56,8 +63,8 @@ func TestCharacterHTTPPersistence(t *testing.T) {
 	if loaded.ID != created.ID {
 		t.Errorf("expected id %q, got %q", created.ID, loaded.ID)
 	}
-	if loaded.OwnerSubjectID != nil {
-		t.Errorf("expected nil ownerSubjectId, got %v", *loaded.OwnerSubjectID)
+	if loaded.OwnerSubjectID == nil || *loaded.OwnerSubjectID != ownerID.String() {
+		t.Fatalf("expected ownerSubjectId %q, got %v", ownerID.String(), loaded.OwnerSubjectID)
 	}
 	if loaded.Name != "Mara Vale" {
 		t.Errorf("expected name Mara Vale, got %q", loaded.Name)
@@ -68,6 +75,15 @@ func TestCharacterHTTPPersistence(t *testing.T) {
 	if string(loaded.ReferencePayload) == "" {
 		t.Error("expected referencePayload to be present")
 	}
+
+	otherUserRecorder := httptest.NewRecorder()
+	otherUserRequest := httptest.NewRequest(http.MethodGet, "/characters/"+created.ID, nil)
+	otherUserRequest = withAuthenticatedUser(otherUserRequest, uuid.New())
+	mux.ServeHTTP(otherUserRecorder, otherUserRequest)
+
+	if otherUserRecorder.Code != http.StatusNotFound {
+		t.Fatalf("expected other user status %d, got %d with body %s", http.StatusNotFound, otherUserRecorder.Code, otherUserRecorder.Body.String())
+	}
 }
 
 func TestCharacterHTTPValidation(t *testing.T) {
@@ -76,6 +92,7 @@ func TestCharacterHTTPValidation(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /characters", handler.Create)
 	mux.HandleFunc("GET /characters/{id}", handler.GetByID)
+	ownerID := uuid.New()
 
 	tests := []struct {
 		name   string
@@ -83,6 +100,7 @@ func TestCharacterHTTPValidation(t *testing.T) {
 		path   string
 		body   []byte
 		want   int
+		auth   bool
 	}{
 		{
 			name:   "malformed JSON",
@@ -90,6 +108,7 @@ func TestCharacterHTTPValidation(t *testing.T) {
 			path:   "/characters",
 			body:   []byte(`{"name":`),
 			want:   http.StatusBadRequest,
+			auth:   true,
 		},
 		{
 			name:   "invalid character fields",
@@ -108,18 +127,48 @@ func TestCharacterHTTPValidation(t *testing.T) {
 				"referencePayload": {"actions":[]}
 			}`),
 			want: http.StatusBadRequest,
+			auth: true,
+		},
+		{
+			name:   "client owner is rejected",
+			method: http.MethodPost,
+			path:   "/characters",
+			body: []byte(`{
+				"ownerSubjectId": "00000000-0000-0000-0000-000000000001",
+				"name": "Mara Vale",
+				"className": "Ranger",
+				"level": 3,
+				"ancestry": "Human",
+				"background": "Outlander",
+				"abilityScores": {"strength":10,"dexterity":16,"constitution":14,"intelligence":10,"wisdom":14,"charisma":8},
+				"hitPoints": {"current": 26, "max": 26},
+				"armorClass": 14,
+				"speedFt": 30,
+				"referencePayload": {"actions":[]}
+			}`),
+			want: http.StatusBadRequest,
+			auth: true,
 		},
 		{
 			name:   "malformed UUID path",
 			method: http.MethodGet,
 			path:   "/characters/not-a-uuid",
 			want:   http.StatusBadRequest,
+			auth:   true,
 		},
 		{
 			name:   "missing character",
 			method: http.MethodGet,
 			path:   "/characters/00000000-0000-0000-0000-000000000000",
 			want:   http.StatusNotFound,
+			auth:   true,
+		},
+		{
+			name:   "unauthenticated create",
+			method: http.MethodPost,
+			path:   "/characters",
+			body:   validCharacterJSON(),
+			want:   http.StatusUnauthorized,
 		},
 	}
 
@@ -127,12 +176,44 @@ func TestCharacterHTTPValidation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(tt.method, tt.path, bytes.NewReader(tt.body))
+			if tt.auth {
+				request = withAuthenticatedUser(request, ownerID)
+			}
 			mux.ServeHTTP(recorder, request)
 
 			if recorder.Code != tt.want {
 				t.Fatalf("expected status %d, got %d with body %s", tt.want, recorder.Code, recorder.Body.String())
 			}
 		})
+	}
+}
+
+func withAuthenticatedUser(request *http.Request, userID uuid.UUID) *http.Request {
+	user := auth.AuthenticatedUser{ID: userID, UsernameCanonical: "mara", Username: "Mara"}
+	return request.WithContext(auth.WithAuthenticatedUser(request.Context(), user))
+}
+
+func insertTestUser(t *testing.T, pool *pgxpool.Pool, userID uuid.UUID, username string) {
+	t.Helper()
+
+	now := time.Now().UTC()
+	usernameCanonical := strings.ToLower(username)
+	_, err := pool.Exec(context.Background(), `
+INSERT INTO users (
+  id, username, username_canonical, email_canonical, password_hash, password_hash_algorithm, created_at, updated_at
+) VALUES (
+  $1::uuid, $2, $3, $4, $5, 'argon2id', $6, $7
+	)`,
+		userID.String(),
+		username,
+		usernameCanonical,
+		usernameCanonical+"@example.com",
+		"$argon2id$v=19$m=1024,t=1,p=1$c2FsdHNhbHRzYWx0MTIzNA$P9NQ0eZR7qLIr+TQe+P+2cWcYqvD4m+agytRM4pVr+0",
+		now,
+		now,
+	)
+	if err != nil {
+		t.Fatalf("insert test user: %v", err)
 	}
 }
 
