@@ -14,6 +14,26 @@ TASKS.md
 NOTES.md
 ```
 
+## Parallel-Work Assessment
+
+Every new task `PLAN.md` must include:
+
+```text
+## Parallel-work assessment
+- Classification: Green / Yellow / Red
+- Can start in a separate worktree now: Yes / No
+- Required base branch or commit:
+- Files/folders this task owns:
+- Shared files it must not modify:
+- Dependencies or tasks that must merge first:
+- Planned integration point:
+- Intended merge order:
+```
+
+Fill this in from `docs/WORKTREE_POLICY.md`. Use Green for isolated work, Yellow when parallel work
+needs declared ownership and merge order, and Red when overlap is active or unknown. List concrete
+paths where possible. If a field does not apply, write `None`.
+
 ## Requirements
 
 Write `REQUIREMENTS.md` before design or implementation. Include the problem, goals, non-goals,

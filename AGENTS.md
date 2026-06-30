@@ -51,6 +51,20 @@ Lazy-load detail only when needed:
 
 See `docs/sdd.md` for the full workflow.
 
+## Parallel Worktrees
+
+Before proposing or starting a new implementation task, read `docs/WORKTREE_POLICY.md`. Before any
+coding task starts, state:
+
+```text
+## Parallel-work assessment
+- Classification: Green / Yellow / Red
+- Recommendation: current worktree / separate worktree / planning only
+- Reason:
+- Expected owned files or folders:
+- Shared files or dependencies:
+```
+
 ## Project-specific rules
 
 - Every architectural or tooling decision goes in `DECISIONS.md` immediately.

@@ -9,6 +9,16 @@ Use this structure for new task folders.
 
 Status: planning
 
+## Parallel-work assessment
+- Classification: Green / Yellow / Red
+- Can start in a separate worktree now: Yes / No
+- Required base branch or commit:
+- Files/folders this task owns:
+- Shared files it must not modify:
+- Dependencies or tasks that must merge first:
+- Planned integration point:
+- Intended merge order:
+
 ## Goal
 
 ## Context
