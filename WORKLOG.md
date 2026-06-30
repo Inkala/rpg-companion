@@ -47,3 +47,11 @@ What changed: Completed the username/email/password auth milestone with inline r
 Validation: Local PostgreSQL-backed backend tests, backend vet/build, frontend lint/typecheck/test/build, diff checks, and manual browser smoke testing passed.
 Decisions: No confirmation email, password reset, OAuth, phone number, account settings, parties, or character-creation UI were added.
 Next action: Review final changed files and approve the T-002 commit.
+
+## 2026-06-30
+
+Task: T-003 guided character creation MVP requirements and design
+What changed: Created and approved planning documents for the Fighter-only guided creation MVP and made T-003 the active task.
+Validation: `git diff --check` passed.
+Decisions: First creation slice is D&D 5E 2014, level 1, Fighter-only, Human-only, Soldier or Outlander, with Strength melee and Dexterity archer guided builds.
+Next action: Extract reusable Character Reference foundation. Implementation has not started.

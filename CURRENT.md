@@ -1,11 +1,13 @@
 # Current Work
 
-Active task: T-002
+Active task: T-003
 
-State: T-002 authentication and owner-scoped character implementation complete and validated for GitHub issue #7.
+State: T-003 guided character creation MVP requirements and design is complete and approved. Implementation has not started.
 
-Next action: Review the final validation output and approve the T-002 commit.
+T-002 status: authentication and owner-scoped character implementation completed, committed, and validated.
 
-Task folder: `tasks/T-002/`
+Next action: Extract reusable Character Reference foundation.
+
+Task folder: `tasks/T-003/`
 
 Last updated: 2026-06-30
