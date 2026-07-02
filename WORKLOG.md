@@ -55,3 +55,11 @@ What changed: Created and approved planning documents for the Fighter-only guide
 Validation: `git diff --check` passed.
 Decisions: First creation slice is D&D 5E 2014, level 1, Fighter-only, Human-only, Soldier or Outlander, with Strength melee and Dexterity archer guided builds.
 Next action: Extract reusable Character Reference foundation. Implementation has not started.
+
+## 2026-07-02
+
+Task: T-005 UI direction for home, account, Character Reference, and guided creation
+What changed: Created documentation-only planning for the next Hunin UI direction and updated stale status references after Character Reference extraction merged.
+Validation: Pending `git diff --check`.
+Decisions: Keep the current warm visual direction, refine hierarchy and form/button polish, design signed-in home as target IA, keep creation desktop-first, keep Character Reference mobile-first, and defer Figma work until MCP is available.
+Next action: Review and approve T-005 before starting implementation tasks.

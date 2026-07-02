@@ -2,7 +2,7 @@
 
 Status: approved
 
-Implementation has not started. Begin with the first unchecked task only.
+Implementation has started. The reusable Character Reference extraction has merged into main.
 
 ## 1. Extract reusable Character Reference foundation
 
@@ -16,7 +16,7 @@ Implementation has not started. Begin with the first unchecked task only.
 - Planned integration point: `frontend/src/App.tsx` switches from inline Mara/reference rendering to reusable reference components.
 - Intended merge order: Merge before guided UI and save integration tasks.
 
-- [ ] Move reusable Character Reference types and rendering toward `frontend/src/characters/` while keeping Mara behavior unchanged.
+- [x] Move reusable Character Reference types and rendering toward `frontend/src/characters/` while keeping Mara behavior unchanged.
 
 ## 2. Add draft types, option data, and derivation
 

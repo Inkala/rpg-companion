@@ -1,13 +1,15 @@
 # Current Work
 
-Active task: T-003
+Active task: T-005
 
-State: T-003 guided character creation MVP requirements and design is complete and approved. Implementation has not started.
+State: T-005 UI direction planning documents are being prepared for review.
 
 T-002 status: authentication and owner-scoped character implementation completed, committed, and validated.
 
-Next action: Extract reusable Character Reference foundation.
+T-004 status: reusable Character Reference extraction has merged into main.
 
-Task folder: `tasks/T-003/`
+Next action: Review and approve the T-005 design direction before starting implementation tasks.
 
-Last updated: 2026-06-30
+Task folder: `tasks/T-005/`
+
+Last updated: 2026-07-02
