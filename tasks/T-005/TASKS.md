@@ -72,6 +72,8 @@ This is a design/documentation task. No application implementation should happen
 - Shared files or dependencies: `frontend/src/App.tsx`, `frontend/src/App.css`,
   `frontend/src/characters/`
 
+- [ ] Before or during guided creation, create a near-term architecture/design task: Add lightweight
+  frontend routing for app views.
 - [ ] Implement Help me choose vs I know what I want entry using the approved Fighter-only scope.
 
 ## 6. Guided preference questions

@@ -105,6 +105,21 @@ Recommended mobile-first order:
 8. Spells, when applicable
 9. Notes
 
+### Frontend Routing And Navigation
+
+Current behavior: Explore Mara changes React view state and opens Character Reference, but the
+browser URL does not change. That was acceptable for the early static demo, but Hunin should add
+meaningful frontend routes before or during guided character creation.
+
+Future routes should likely include `/`, `/sample/mara`, `/characters/new`, `/characters/:id`, and
+possibly `/account`.
+
+Reason: browser Back behavior, refresh without losing location, shareable/debuggable URLs, clearer
+navigation, and future saved-character and character-creation flows.
+
+Scope boundary: do not implement routing in T-005. Track this as a near-term architecture/design
+task or open question titled "Add lightweight frontend routing for app views."
+
 ### Guided Character Creation
 
 Purpose: help a player make a valid level-1 Human Fighter without learning every D&D term first.
