@@ -8,7 +8,9 @@ companion.
 
 This task should not lead to a full redesign. The needed change is hierarchy:
 
-- account actions move up and become lighter,
+- account actions become lightweight header/menu affordances,
+- home main actions become Create character, Create party, and Join party,
+- Add existing character moves inside Create character as Fill the sheet myself,
 - user-owned content outranks Mara when signed in,
 - desktop and tablet actions become less full-width,
 - error text becomes smaller and calmer,
@@ -26,19 +28,24 @@ Recommended order:
 
 1. Header
    - Hunin mark or compact logo.
-   - Account actions on the top/right when space allows: Sign in and Create account.
-   - Account unavailable message can be quiet when the backend is not configured.
+   - Desktop/web: inline Sign in and Create account actions.
+   - Mobile: compact burger or account menu.
+   - Do not use a large "Accounts" content card.
 2. Intro block
    - Short value statement.
-   - One primary action: Create a character.
-   - One secondary action: Add an existing character.
+   - Main action group:
+     - Create character.
+     - Create party.
+     - Join party.
+   - Create party and Join party can be visible while signed out, but must be disabled/planned and
+     explain that login is required.
 3. Mara demo
    - Compact sample card.
    - Keep Explore Mara as a demo action.
-   - Do not let Mara visually outrank the user's own start actions.
-4. Secondary support
-   - Party invite action when in scope.
-   - Low-emphasis account or backend availability note.
+   - Do not let Mara visually outrank the main action group.
+
+Important hierarchy rule: Add existing character is not a top-level home action. It belongs inside
+Create character as the Fill the sheet myself path.
 
 ### Signed-in Empty Home
 
@@ -53,10 +60,9 @@ Recommended order:
 2. My characters
    - Empty state copy.
    - Primary action: Create character.
-   - Secondary action: Add existing character.
 3. My parties
    - Empty state.
-   - Join party with invite or create party when that slice is in scope.
+   - Create party and Join party affordances when that slice is in scope.
 4. Mara demo
    - Lower page example content.
    - Smaller than user-owned empty states.
@@ -70,9 +76,10 @@ Recommended order:
 1. My characters
    - Character cards with name, ancestry/class/level, party association, and status summary.
    - Quick open to Character Reference.
-   - Create/add actions remain available but secondary.
+   - Create character remains available but secondary.
 2. My parties
    - Party cards with role, linked character, and invite/join status when available.
+   - Create party and Join party remain available but secondary.
 3. Suggested next actions
    - Finish a draft.
    - Link character to party.
@@ -120,14 +127,68 @@ navigation, and future saved-character and character-creation flows.
 Scope boundary: do not implement routing in T-005. Track this as a near-term architecture/design
 task or open question titled "Add lightweight frontend routing for app views."
 
-### Guided Character Creation
+### Create Character Flow
 
 Purpose: help a player make a valid level-1 Human Fighter without learning every D&D term first.
 
 Recommended flow:
 
 1. Creation entry
-   - Choose Help me choose or I know what I want.
+   - User clicks the single top-level Create character action.
+2. Creation mode choice
+   - Fill the sheet myself.
+   - Help me choose.
+3. Basics
+   - Name.
+   - Short concept.
+   - Optional image placeholder.
+4. Build path
+   - Fill the sheet myself: manual entry or direct selectors for users who already know their
+     character, including users transferring a paper sheet like Ninea.
+   - Help me choose: preference questions that recommend Strength melee or Dexterity archer for the
+     first MVP.
+5. Background
+   - Soldier or Outlander with descriptions.
+6. Story and image
+   - Background story textarea.
+   - Visible image upload placeholder, with actual upload deferred.
+7. Review
+   - Derived summary.
+   - Guest preview.
+   - Authenticated save.
+
+The previous "I know what I want" idea is now expressed as Fill the sheet myself.
+
+### Party Actions
+
+Create party and Join party belong in the main home action group.
+
+Signed-out behavior:
+
+- visible but disabled/planned;
+- explain login is required through hover/focus help text or accessible helper copy;
+- do not look functional yet.
+
+Signed-in behavior:
+
+- visible in home/party empty states when in scope;
+- still planned until party implementation exists.
+
+### Account/Header Direction
+
+Desktop/web:
+
+- brand/logo on the left;
+- Sign in and Create account inline on the right when signed out;
+- account identity and a compact sign-out/account menu when signed in;
+- no large "Accounts" title or heavy account content card.
+
+Mobile:
+
+- compact header;
+- burger or account menu affordance;
+- sign-in/create-account lives inside the menu;
+- account controls must not dominate the home content.
 2. Basics
    - Name.
    - Short concept.
@@ -152,6 +213,8 @@ Recommended flow:
 Use for the main forward action:
 
 - Create character.
+- Create party when party creation exists.
+- Join party when party joining exists.
 - Continue.
 - Save character.
 - Open guest preview when save is unavailable.
@@ -166,8 +229,7 @@ Rules:
 
 Use for available alternatives:
 
-- Add existing character.
-- I know what I want when Help me choose is primary, or the reverse depending on screen intent.
+- Fill the sheet myself when Help me choose is primary, or the reverse depending on screen intent.
 - Back to review.
 - Explore Mara when it is demo content below primary start actions.
 
@@ -185,12 +247,15 @@ Use for low-emphasis actions:
 - Switch account mode.
 - Back.
 - Sign out.
-- I have a party invite before that flow is primary.
+- Account menu actions on mobile.
 
 ### Planned Or Disabled Actions
 
 Use disabled styling or quiet planned tags. Do not present planned actions as strong primary calls to
 action.
+
+For signed-out party actions, include login-required helper text. Help must work on focus/touch, not
+only hover.
 
 ## Form And Error-text Rules
 
@@ -346,11 +411,12 @@ Mobile default: collapsed.
 
 Use two clear mode cards:
 
+- Fill the sheet myself
 - Help me choose
-- I know what I want
 
-Help me choose should feel friendly and playful. I know what I want should feel efficient and direct.
-Neither path should trap the user.
+Fill the sheet myself should feel efficient and direct for users who already know their character or
+are transferring a sheet. Help me choose should feel friendly and playful. Neither path should trap
+the user.
 
 ### Help Me Choose
 
@@ -372,9 +438,9 @@ Trouble starts across the room. What sounds more like you?
 - Find the best angle and end the threat from range.
 ```
 
-### I Know What I Want
+### Fill The Sheet Myself
 
-Use direct selectors for the approved option set:
+Use direct entry and selectors for the approved option set:
 
 - build preset,
 - background,
@@ -385,6 +451,9 @@ Each option should have:
 - one-line summary,
 - "good if you want..." description,
 - accessible details disclosure for extra explanation.
+
+Long term, this path should support manual transfer of an existing paper or PDF sheet, such as the
+Ninea reference sheet, through dropdowns, textareas, and section-by-section entry.
 
 ### Descriptions, Tooltips, And Disclosures
 
@@ -508,11 +577,13 @@ Figma MCP status:
 
 Shows:
 
-- top account actions,
+- desktop header with inline Sign in and Create account,
+- mobile header with compact burger/account menu,
 - brand/value statement,
-- create/add actions,
+- main action group: Create character, Create party, Join party,
+- signed-out disabled/planned party actions with login-required help,
 - Mara sample as demo,
-- party invite as secondary.
+- no large Accounts content card.
 
 #### Signed-in Empty Home
 
@@ -520,8 +591,9 @@ Shows:
 
 - account identity,
 - My characters empty state,
-- create/add actions,
+- Create character action,
 - My parties empty state,
+- Create party and Join party planned affordances,
 - Mara sample lower down.
 
 #### Signed-in Populated Home Placeholder
@@ -530,7 +602,7 @@ Shows:
 
 - example character cards,
 - example party cards,
-- create/add secondary actions,
+- Create character, Create party, and Join party secondary actions,
 - Mara reduced or lower-priority.
 
 #### Character Reference Mobile
@@ -562,11 +634,13 @@ Shows:
 - reminder,
 - optional details.
 
-#### Creation Entry: Help Me Choose vs I Know What I Want
+#### Create Character Mode Choice
 
 Shows:
 
 - two mode cards,
+- Fill the sheet myself,
+- Help me choose,
 - short descriptions,
 - clear primary/secondary choice.
 
@@ -578,12 +652,13 @@ Shows:
 - answer options,
 - recommendation preview.
 
-#### Manual Selection
+#### Fill The Sheet Myself / Manual Entry
 
 Shows:
 
 - build selector,
 - background selector,
+- direct entry fields or placeholders,
 - descriptions/disclosures.
 
 #### Story And Image Step
@@ -616,7 +691,9 @@ Shows:
 
 - Button variants
 - Text field + inline error
-- Account action row
+- Header account action row
+- Mobile burger/account menu
+- Main home action group
 - Character card
 - Party card
 - Stat tile
@@ -651,15 +728,18 @@ Shows:
 ### Home Hierarchy Changes
 
 - Move account actions into a top/header area.
-- Reorder signed-out home so create/add actions appear before Mara.
+- Replace separate Create/Add top-level actions with main home actions: Create character, Create
+  party, Join party.
+- Move Fill the sheet myself inside the Create character flow.
+- Keep signed-out party actions disabled/planned with login-required help.
 - Add target signed-in empty home structure when implementation scope allows.
 - Keep Mara sample lower for signed-in users.
 
 ### Guided Creation Design And Implementation
 
-- Build creation entry with Help me choose and I know what I want.
+- Build Create character mode choice with Fill the sheet myself and Help me choose.
 - Implement narrow Help me choose recommendation between the two Fighter presets.
-- Add manual selection with descriptions/disclosures.
+- Add Fill the sheet myself manual entry with descriptions/disclosures.
 - Add story textarea.
 - Add image placeholder without upload/storage.
 - Add review and guest preview/sign in to save state.
@@ -683,3 +763,5 @@ Shows:
    future upload slot?
 3. For signed-in populated home, should character cards prioritize party association or next
    session/reference readiness?
+4. Should the mobile header use a generic burger menu, an account avatar/menu, or a combined menu
+   until profile pictures exist?

@@ -47,7 +47,15 @@ Read before creating this task:
 
 - Keep the current visual direction.
 - Refine hierarchy and polish rather than redesigning from scratch.
-- Move account actions upward.
+- Move account actions into lightweight desktop header actions or a compact mobile account/menu
+  affordance.
+- Do not show account state as a large content card titled "Accounts."
+- Group main home actions as Create character, Create party, and Join party.
+- Do not show Add existing character as a top-level home action.
+- Put Add existing character/manual transfer inside Create character as Fill the sheet myself.
+- Create character opens a choice between Fill the sheet myself and Help me choose.
+- Party actions belong with the main home actions, not below Mara.
+- Signed-out party actions may be visible but disabled/planned and should explain login is required.
 - Prioritize signed-in user content over Mara.
 - Design signed-in home now as target IA, even if implementation waits.
 - Make creation desktop/browser-first and Character Reference mobile-first.
@@ -61,3 +69,10 @@ Read before creating this task:
 The Ninea Crowny character sheet is used only for information architecture. It informs future
 sections and data coverage, but Hunin should not copy official sheet visuals or build a full
 all-sections sheet for the MVP.
+
+## T-006 Pause Note
+
+The first uncommitted T-006 implementation made the home screen better visually but revealed a
+conceptual IA mismatch. It should pause before further code polish. Future T-006 work should be
+revised against the corrected T-005 model or wait until Figma/wireframes make the updated home IA
+explicit.

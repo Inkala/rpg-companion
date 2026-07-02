@@ -10,6 +10,9 @@ Current observed issues:
 - Account actions feel too low in the landing hierarchy.
 - Too many actions are full-width on desktop and tablet.
 - Form error text is visually too large and heavy.
+- Home top-level actions need clearer grouping. Create character, Create party, and Join party are
+  peers, while manual character entry belongs inside Create character.
+- Account UI should not appear as a large content card titled "Accounts."
 - Signed-in home does not yet have target information architecture.
 - Character Reference is good enough for now, but it needs a scalable section model for future
   character data.
@@ -57,18 +60,35 @@ Current observed issues:
 ## Signed-out Home Requirements
 
 - Show Hunin brand and product promise first.
-- Place account actions near the top or header area.
+- Place account actions in a lightweight header or account menu.
 - Keep account actions visually lighter than the main product actions.
+- Do not use a large content card titled "Accounts" for normal account actions.
 - Keep Mara as sample/demo content.
-- Prioritize starting a user-owned character journey over exploring Mara.
+- Prioritize the main home action group over exploring Mara.
 - Keep the page welcoming without making every action a large full-width button on wider screens.
 
 Required signed-out hierarchy:
 
-1. Header with brand and compact account actions.
-2. Primary product actions: create a character and add an existing character.
+1. Header with brand and lightweight account actions.
+2. Main action group:
+   - Create character.
+   - Create party.
+   - Join party.
 3. Mara sample/demo preview.
-4. Party invite or other secondary actions.
+
+Signed-out party actions:
+
+- Create party and Join party may be visible while signed out.
+- They must be disabled, planned, or otherwise clearly unavailable.
+- They should explain that login is required through hover/focus help text or an accessible
+  disclosure.
+- They must not look functional until the party flows exist.
+
+Create character requirement:
+
+- Create character is the single top-level character action.
+- Add existing character must not be a separate top-level home action.
+- Manual character entry belongs inside the Create character flow as Fill the sheet myself.
 
 ## Signed-in Home Requirements
 
@@ -83,8 +103,8 @@ Required signed-out hierarchy:
 Required signed-in empty hierarchy:
 
 1. Header with account identity and compact account controls.
-2. My characters empty state with create/add actions.
-3. My parties empty state with join/create party affordance when in scope.
+2. My characters empty state with a Create character action.
+3. My parties empty state with Create party and Join party affordances when in scope.
 4. Mara sample as secondary demo content.
 
 Required future signed-in populated hierarchy:
@@ -113,6 +133,17 @@ Required future signed-in populated hierarchy:
 - Desktop and tablet layouts should use intrinsic-width or side-by-side actions when appropriate.
 - Narrow mobile can keep stacked full-width actions for tap comfort.
 - Disabled or planned actions must not look like available primary actions.
+- Main home actions should be grouped together instead of split above and below the sample card.
+- Signed-out party actions must communicate login-required and planned states.
+
+## Header And Account Requirements
+
+- Desktop/web header should show inline account actions such as Sign in and Create account.
+- Signed-in desktop/web header should show compact account identity and sign-out or account menu.
+- Mobile should use a compact burger or account menu affordance.
+- Mobile account menu should contain sign-in/create-account or account controls.
+- Account UI must not dominate the home content.
+- Account state should not appear as a large content card titled "Accounts."
 
 ## Character Reference Requirements
 
@@ -158,10 +189,19 @@ The scalable Character Reference model should leave room for:
 - Creation is mostly desktop/browser-first because it contains lots of information.
 - The mobile version must remain usable, but it does not need to be the ideal creation environment.
 - The first implementation remains narrow and must not imply broad D&D creation support.
+- Create character is the only top-level character action on home.
+- After selecting Create character, ask the user to choose between:
+  - Fill the sheet myself,
+  - Help me choose.
+- Fill the sheet myself is for users who already know their character or are transferring a paper
+  sheet such as Ninea.
+- Fill the sheet myself eventually supports direct entry, dropdowns, and textareas.
 - Help me choose can initially choose only between:
   - Strength melee Fighter,
   - Dexterity archer Fighter.
-- I know what I want should support direct selection of approved options.
+- Help me choose uses fun preference questions and recommendations.
+- "I know what I want" language is replaced by Fill the sheet myself for the top creation-mode
+  choice.
 - Manual choices should have helpful descriptions, tooltips, or disclosures.
 - Include space for:
   - background story textarea,

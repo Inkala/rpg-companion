@@ -29,7 +29,8 @@ This is a design/documentation task. No application implementation should happen
   changes
 - Shared files or dependencies: `frontend/src/App.tsx`, `frontend/src/characters/`
 
-- [ ] Plan and implement smaller/lighter form errors and less full-width desktop/tablet buttons.
+- [ ] Plan and implement smaller/lighter form errors and less full-width desktop/tablet buttons
+  after the corrected home IA is reflected in Figma or approved wireframes.
 
 ## 3. Home and account hierarchy redesign
 
@@ -44,8 +45,8 @@ This is a design/documentation task. No application implementation should happen
 - Shared files or dependencies: auth API client, Character Reference entry point, future creation
   entry point
 
-- [ ] Move account actions toward the top/header and make signed-out home prioritize create/add
-  actions before Mara.
+- [ ] Move account actions into a lightweight header/menu, group home actions as Create character,
+  Create party, and Join party, and keep Mara secondary.
 
 ## 4. Signed-in home target IA planning
 
@@ -74,7 +75,7 @@ This is a design/documentation task. No application implementation should happen
 
 - [ ] Before or during guided creation, create a near-term architecture/design task: Add lightweight
   frontend routing for app views.
-- [ ] Implement Help me choose vs I know what I want entry using the approved Fighter-only scope.
+- [ ] Implement Create character mode choice: Fill the sheet myself vs Help me choose.
 
 ## 6. Guided preference questions
 
@@ -89,7 +90,7 @@ This is a design/documentation task. No application implementation should happen
 - [ ] Add the first Help me choose question(s) that recommend Strength melee Fighter or Dexterity
   archer Fighter.
 
-## 7. Manual selection descriptions and disclosures
+## 7. Fill the sheet myself descriptions and disclosures
 
 ## Parallel-work assessment
 
@@ -99,7 +100,8 @@ This is a design/documentation task. No application implementation should happen
 - Expected owned files or folders: `frontend/src/character-creation/`
 - Shared files or dependencies: creation option data
 
-- [ ] Add manual selectors with accessible descriptions/disclosures for approved choices.
+- [ ] Add Fill the sheet myself manual entry/selectors with accessible descriptions/disclosures for
+  approved choices.
 
 ## 8. Story textarea and image placeholder
 
@@ -141,3 +143,17 @@ This is a design/documentation task. No application implementation should happen
 
 - [ ] Create Figma pages, frames, and components later from `DESIGN.md` when Figma access is
   available.
+
+## 11. T-006 pause and revision
+
+## Parallel-work assessment
+
+- Classification: Red
+- Recommendation: planning only until Figma or updated wireframes approve the corrected IA
+- Reason: The current uncommitted T-006 implementation improved hierarchy but still follows the
+  superseded model where Create character and Add existing character are separate top-level actions.
+- Expected owned files or folders: `frontend/src/App.tsx`, `frontend/src/App.css`,
+  `frontend/src/App.test.tsx`, `tasks/T-006/`
+- Shared files or dependencies: active task bookkeeping, home IA, future creation entry flow
+
+- [ ] Pause T-006 implementation and revise or replace it after the corrected T-005 IA is approved.

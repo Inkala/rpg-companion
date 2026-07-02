@@ -63,3 +63,19 @@ What changed: Created documentation-only planning for the next Hunin UI directio
 Validation: Pending `git diff --check`.
 Decisions: Keep the current warm visual direction, refine hierarchy and form/button polish, design signed-in home as target IA, keep creation desktop-first, keep Character Reference mobile-first, and defer Figma work until MCP is available.
 Next action: Review and approve T-005 before starting implementation tasks.
+
+## 2026-07-02
+
+Task: T-006 Home and form UI polish
+What changed: Started the approved home hierarchy and form polish implementation task.
+Validation: Frontend lint, typecheck, test, build, and `git diff --check` passed.
+Decisions: Keep future character, party, and creation actions as planned empty-state affordances only.
+Next action: Validate the T-006 UI polish and review before staging or committing.
+
+## 2026-07-02
+
+Task: T-005 UI direction update after T-006 review
+What changed: Updated the design direction to group home actions as Create character, Create party, and Join party; moved manual character transfer inside Create character as Fill the sheet myself; and clarified lightweight header/account menu direction.
+Validation: Pending `git diff --check`.
+Decisions: Pause T-006 code polish until the corrected home IA is approved in design or Figma-ready wireframes.
+Next action: Review the revised T-005 IA and decide whether to revise or replace the uncommitted T-006 implementation.
