@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import type { QuickReferenceSheetContent } from './types';
 
-export function QuickReferenceSheet({
-  content,
-  onClose,
-}: {
+interface QuickReferenceSheetProps {
   content: QuickReferenceSheetContent;
   onClose: () => void;
-}) {
+}
+
+export const QuickReferenceSheet = ({
+  content,
+  onClose,
+}: QuickReferenceSheetProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -19,7 +21,7 @@ export function QuickReferenceSheet({
   useEffect(() => {
     closeButtonRef.current?.focus();
 
-    function handleKeyDown(event: KeyboardEvent) {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
         onClose();
@@ -47,7 +49,7 @@ export function QuickReferenceSheet({
         event.preventDefault();
         first.focus();
       }
-    }
+    };
 
     document.addEventListener('keydown', handleKeyDown);
 
@@ -132,12 +134,12 @@ export function QuickReferenceSheet({
       </div>
     </div>
   );
-}
+};
 
-function getFocusableElements(container: HTMLElement) {
+const getFocusableElements = (container: HTMLElement) => {
   return Array.from(
     container.querySelectorAll<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     ),
   ).filter((element) => !element.hasAttribute('disabled'));
-}
+};

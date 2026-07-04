@@ -1,8 +1,10 @@
 import { PlannedActionCard } from './PlannedActionCard';
 import { partyLoginRequiredMessage } from './HomeActions';
-import { SampleCharacterCard } from './SampleCharacterCard';
+import { SampleCharacterCard } from '../../characters/SampleCharacterCard';
 
-export function SignedInHomeContent({ onExploreMara }: { onExploreMara: () => void }) {
+export const SignedInHomeContent = (
+  { onExploreCharacter }: { onExploreCharacter: () => void; }
+) => {
   return (
     <>
       <section className="home-stack" aria-label="Your Hunin home">
@@ -43,7 +45,7 @@ export function SignedInHomeContent({ onExploreMara }: { onExploreMara: () => vo
         </section>
       </section>
 
-      <SampleCharacterCard onExploreMara={onExploreMara} />
+      <SampleCharacterCard onExploreCharacter={onExploreCharacter} />
     </>
   );
-}
+};

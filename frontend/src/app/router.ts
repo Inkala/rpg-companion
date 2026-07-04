@@ -7,7 +7,7 @@ export const appPaths = {
   sampleCharacter: '/characters/sample',
 } as const;
 
-export function parseAppRoute(pathname: string): AppRoute {
+export const parseAppRoute = (pathname: string): AppRoute => {
   switch (normalizePathname(pathname)) {
     case appPaths.home:
       return { name: 'home' };
@@ -20,13 +20,13 @@ export function parseAppRoute(pathname: string): AppRoute {
     default:
       return { name: 'not-found' };
   }
-}
+};
 
-export function pathForAccountMode(mode: AccountMode) {
+export const pathForAccountMode = (mode: AccountMode) => {
   return mode === 'register' ? appPaths.signUp : appPaths.login;
-}
+};
 
-export function pathForRoute(route: AppRoute) {
+export const pathForRoute = (route: AppRoute) => {
   switch (route.name) {
     case 'home':
       return appPaths.home;
@@ -37,11 +37,11 @@ export function pathForRoute(route: AppRoute) {
     case 'not-found':
       return appPaths.home;
   }
-}
+};
 
-function normalizePathname(pathname: string) {
+const normalizePathname = (pathname: string) => {
   if (pathname.length > 1 && pathname.endsWith('/')) {
     return pathname.slice(0, -1);
   }
   return pathname;
-}
+};

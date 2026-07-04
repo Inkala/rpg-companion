@@ -1,21 +1,23 @@
-import type { AccountMode } from '../../app/appTypes';
-import type { AuthUser } from '../../auth/api';
+import type { AccountMode } from '../app/appTypes';
+import type { AuthUser } from '../auth/api';
+import './accounts.css';
 
-export function AccountHeaderActions({
-  accountsAvailable,
-  currentUser,
-  isSessionLoading,
-  sessionError,
-  onOpenAccount,
-  onSignOut,
-}: {
+interface AccountHeaderActionsProps {
   accountsAvailable: boolean;
   currentUser: AuthUser | null;
   isSessionLoading: boolean;
   sessionError: string | null;
   onOpenAccount: (mode: AccountMode) => void;
   onSignOut: () => void;
-}) {
+}
+
+export const AccountHeaderActions = ({
+  accountsAvailable,
+  currentUser,
+  sessionError,
+  onOpenAccount,
+  onSignOut,
+}: AccountHeaderActionsProps) => {
   if (!accountsAvailable) {
     return (
       <section className="account-strip account-strip--quiet" aria-label="Account status">
@@ -45,11 +47,6 @@ export function AccountHeaderActions({
 
   return (
     <section className="account-strip" aria-label="Account actions">
-      <p className="account-strip__text">
-        {isSessionLoading
-          ? 'Checking session...'
-          : 'Accounts are available during local development. Character saving will be available as Hunin grows.'}
-      </p>
       {sessionError ? (
         <p className="form-error" role="alert">
           {sessionError}
@@ -73,4 +70,4 @@ export function AccountHeaderActions({
       </div>
     </section>
   );
-}
+};

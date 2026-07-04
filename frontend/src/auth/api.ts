@@ -22,15 +22,15 @@ export class AuthApiError extends Error {
   }
 }
 
-export function authApiAvailable() {
+export const authApiAvailable = () => {
   return getApiBaseUrl() !== '';
-}
+};
 
-export async function registerAccount(input: {
+export const registerAccount = async (input: {
   username: string;
   email: string;
   password: string;
-}) {
+}) => {
   const response = await authRequest<SessionResponse>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({
@@ -40,17 +40,17 @@ export async function registerAccount(input: {
     }),
   });
   return response.user;
-}
+};
 
-export async function signIn(input: { usernameOrEmail: string; password: string }) {
+export const signIn = async (input: { usernameOrEmail: string; password: string; }) => {
   const response = await authRequest<SessionResponse>('/auth/sessions', {
     method: 'POST',
     body: JSON.stringify(input),
   });
   return response.user;
-}
+};
 
-export async function currentSession() {
+export const currentSession = async () => {
   try {
     const response = await authRequest<SessionResponse>('/auth/session');
     return response.user;
@@ -60,13 +60,13 @@ export async function currentSession() {
     }
     throw error;
   }
-}
+};
 
-export async function signOut() {
+export const signOut = async () => {
   await authRequest<void>('/auth/session', { method: 'DELETE' });
-}
+};
 
-async function authRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+const authRequest = async <T,>(path: string, init: RequestInit = {}): Promise<T> => {
   const apiBaseUrl = getApiBaseUrl();
   if (apiBaseUrl === '') {
     throw new AuthApiError('Accounts are unavailable until the backend is configured.', 0);
@@ -91,18 +91,18 @@ async function authRequest<T>(path: string, init: RequestInit = {}): Promise<T> 
   }
 
   return (await response.json()) as T;
-}
+};
 
-async function readErrorMessage(response: Response) {
+const readErrorMessage = async (response: Response) => {
   try {
     const body = (await response.json()) as ErrorResponse;
     return body.error || 'The account request failed.';
   } catch {
     return 'The account request failed.';
   }
-}
+};
 
-function getApiBaseUrl() {
+const getApiBaseUrl = () => {
   const configured = import.meta.env.VITE_API_BASE_URL?.trim() ?? '';
   return configured.replace(/\/$/, '');
-}
+};

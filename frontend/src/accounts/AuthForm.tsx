@@ -1,26 +1,28 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import type { AccountMode } from '../../app/appTypes';
+import type { AccountMode } from '../app/appTypes';
 import {
   AuthApiError,
   registerAccount,
   signIn,
   type AuthUser,
-} from '../../auth/api';
+} from '../auth/api';
 import {
   validateRegistrationEmail,
   validateRegistrationPassword,
   validateRegistrationUsername,
 } from './authValidation';
 
-export function AuthForm({
-  initialMode,
-  onAuthenticated,
-  onModeChange,
-}: {
+interface AuthFormProps {
   initialMode: AccountMode;
   onAuthenticated: (user: AuthUser) => void;
   onModeChange: (mode: AccountMode) => void;
-}) {
+}
+
+export const AuthForm = ({
+  initialMode,
+  onAuthenticated,
+  onModeChange,
+}: AuthFormProps) => {
   const [mode, setMode] = useState<AccountMode>(initialMode);
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -40,7 +42,7 @@ export function AuthForm({
     setPasswordError(null);
   }, [initialMode]);
 
-  async function submitAccountForm(event: FormEvent<HTMLFormElement>) {
+  const submitAccountForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
 
@@ -73,7 +75,7 @@ export function AuthForm({
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
   const isRegistering = mode === 'register';
   const usernameErrorId = 'account-username-error';
@@ -204,4 +206,4 @@ export function AuthForm({
       </button>
     </>
   );
-}
+};

@@ -7,19 +7,22 @@ import type {
   CharacterReferenceViewModel,
   QuickReferenceSheetContent,
 } from './types';
+import './characters.css';
 
 type ActiveQuickReference = {
   content: QuickReferenceSheetContent;
   opener: HTMLButtonElement;
 };
 
-export function CharacterReference({
-  character,
-  onBack,
-}: {
+interface CharacterReferenceProps {
   character: CharacterReferenceViewModel;
   onBack: () => void;
-}) {
+}
+
+export const CharacterReference = ({
+  character,
+  onBack,
+}: CharacterReferenceProps) => {
   const defaultOpenSections = useMemo(
     () =>
       Object.fromEntries(
@@ -31,14 +34,14 @@ export function CharacterReference({
   const [activeQuickReference, setActiveQuickReference] =
     useState<ActiveQuickReference | null>(null);
 
-  function toggleSection(sectionId: string) {
+  const toggleSection = (sectionId: string) => {
     setOpenSections((current) => ({
       ...current,
       [sectionId]: !current[sectionId],
     }));
-  }
+  };
 
-  function openQuickReference(item: CharacterReferenceItem, opener: HTMLButtonElement) {
+  const openQuickReference = (item: CharacterReferenceItem, opener: HTMLButtonElement) => {
     if (!item.quickReference) {
       return;
     }
@@ -47,15 +50,15 @@ export function CharacterReference({
       content: item.quickReference,
       opener,
     });
-  }
+  };
 
-  function closeQuickReference() {
+  const closeQuickReference = () => {
     const opener = activeQuickReference?.opener;
     setActiveQuickReference(null);
     window.setTimeout(() => {
       opener?.focus();
     }, 0);
-  }
+  };
 
   return (
     <>
@@ -130,4 +133,4 @@ export function CharacterReference({
       ) : null}
     </>
   );
-}
+};

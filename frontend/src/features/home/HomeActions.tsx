@@ -3,7 +3,7 @@ import { PlannedActionCard } from './PlannedActionCard';
 export const partyLoginRequiredMessage =
   'You’ll need an account to create or join a party.';
 
-export function HomeActions() {
+export const HomeActions = () => {
   return (
     <section className="home-actions" aria-labelledby="home-actions-title">
       <div>
@@ -30,4 +30,4 @@ export function HomeActions() {
       </div>
     </section>
   );
-}
+};

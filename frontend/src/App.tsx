@@ -16,9 +16,9 @@ import { CharacterReference } from './characters/CharacterReference';
 import { maraReferenceCharacter } from './characters/maraReference';
 import { AccountPage } from './pages/AccountPage';
 import { HomePage } from './pages/HomePage';
-import './App.css';
+import { NotFoundPage } from './pages/NotFoundPage';
 
-export function App() {
+export const App = () => {
   const [route, setRoute] = useState<AppRoute>(() => parseAppRoute(window.location.pathname));
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(false);
@@ -26,9 +26,9 @@ export function App() {
   const accountsAvailable = authApiAvailable();
 
   useEffect(() => {
-    function handlePopState() {
+    const handlePopState = () => {
       setRoute(parseAppRoute(window.location.pathname));
-    }
+    };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -70,36 +70,36 @@ export function App() {
     };
   }, [accountsAvailable]);
 
-  function navigateToRoute(nextRoute: AppRoute) {
+  const navigateToRoute = (nextRoute: AppRoute) => {
     const path = pathForRoute(nextRoute);
     window.history.pushState(null, '', path);
     setRoute(nextRoute);
-  }
+  };
 
-  function showSampleCharacter() {
+  const showSampleCharacter = () => {
     navigateToRoute({ name: 'sample-character' });
-  }
+  };
 
-  function showHome() {
+  const showHome = () => {
     navigateToRoute({ name: 'home' });
-  }
+  };
 
-  function showAccount(mode: AccountMode) {
+  const showAccount = (mode: AccountMode) => {
     navigateToRoute({ name: 'account', mode });
-  }
+  };
 
-  function showAccountMode(mode: AccountMode) {
+  const showAccountMode = (mode: AccountMode) => {
     window.history.pushState(null, '', pathForAccountMode(mode));
     setRoute({ name: 'account', mode });
-  }
+  };
 
-  function handleAuthenticated(user: AuthUser) {
+  const handleAuthenticated = (user: AuthUser) => {
     setCurrentUser(user);
     setSessionError(null);
     navigateToRoute({ name: 'home' });
-  }
+  };
 
-  async function handleSignOut() {
+  const handleSignOut = async () => {
     try {
       await signOut();
       setCurrentUser(null);
@@ -112,7 +112,7 @@ export function App() {
           : 'Could not sign out. Please try again.';
       setSessionError(message);
     }
-  }
+  };
 
   return (
     <>
@@ -122,7 +122,7 @@ export function App() {
           currentUser={currentUser}
           isSessionLoading={isSessionLoading}
           sessionError={sessionError}
-          onExploreMara={showSampleCharacter}
+          onExploreCharacter={showSampleCharacter}
           onOpenAccount={showAccount}
           onSignOut={handleSignOut}
         />
@@ -146,26 +146,4 @@ export function App() {
       )}
     </>
   );
-}
-
-function NotFoundPage({ onHome }: { onHome: () => void }) {
-  return (
-    <main className="app-shell account-page">
-      <header className="reference-nav">
-        <button className="back-button" onClick={onHome}>
-          Home
-        </button>
-      </header>
-      <section className="account-card account-card--quiet">
-        <p className="eyebrow">Not found</p>
-        <h1 className="account-title">Page not found</h1>
-        <p className="account-card__text">
-          This Hunin page does not exist yet.
-        </p>
-        <button type="button" className="button button--secondary" onClick={onHome}>
-          Home
-        </button>
-      </section>
-    </main>
-  );
-}
+};

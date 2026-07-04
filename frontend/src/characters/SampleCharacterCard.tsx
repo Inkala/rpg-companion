@@ -1,7 +1,12 @@
-import { HitPointStat, Stat } from '../../characters/CharacterStats';
-import { maraLandingPreview } from '../../characters/maraReference';
+import { HitPointStat, Stat } from './CharacterStats';
+import { maraLandingPreview } from './maraReference';
+import './characters.css';
 
-export function SampleCharacterCard({ onExploreMara }: { onExploreMara: () => void }) {
+interface SampleCharacterCardProps {
+  onExploreCharacter: () => void;
+}
+
+export const SampleCharacterCard = ({ onExploreCharacter }: SampleCharacterCardProps) => {
   return (
     <section className="demo-section" aria-labelledby="sample-character-title">
       <div>
@@ -42,10 +47,10 @@ export function SampleCharacterCard({ onExploreMara }: { onExploreMara: () => vo
 
         <p className="preview-note">{maraLandingPreview.concept}</p>
 
-        <button className="button button--secondary" onClick={onExploreMara}>
+        <button className="button button--secondary" onClick={onExploreCharacter}>
           Explore Mara
         </button>
       </section>
     </section>
   );
-}
+};

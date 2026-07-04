@@ -1,12 +1,14 @@
 import { HomeActions } from './HomeActions';
-import { SampleCharacterCard } from './SampleCharacterCard';
+import { SampleCharacterCard } from '../../characters/SampleCharacterCard';
 
-export function SignedOutHomeContent({ onExploreMara }: { onExploreMara: () => void }) {
+export const SignedOutHomeContent = (
+  { onExploreCharacter }: { onExploreCharacter: () => void; }
+) => {
   return (
     <>
       <HomeActions />
 
-      <SampleCharacterCard onExploreMara={onExploreMara} />
+      <SampleCharacterCard onExploreCharacter={onExploreCharacter} />
     </>
   );
-}
+};

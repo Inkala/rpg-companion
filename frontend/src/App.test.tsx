@@ -10,11 +10,11 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/');
 });
 
-function openCharacterReference() {
+const openCharacterReference = () => {
   render(<App />);
 
   fireEvent.click(screen.getByRole('button', { name: 'Explore Mara' }));
-}
+};
 
 const passwordPolicyMessage =
   'Use 8–128 characters with an uppercase letter, lowercase letter, number, and special character.';
@@ -24,7 +24,7 @@ const emailPolicyMessage = 'Enter a valid email address.';
 const partyLoginRequiredMessage =
   'You’ll need an account to create or join a party.';
 
-function openRegistrationForm() {
+const openRegistrationForm = () => {
   vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
   const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'authentication required' }, 401));
   vi.stubGlobal('fetch', fetchMock);
@@ -32,7 +32,7 @@ function openRegistrationForm() {
   const result = render(<App />);
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
   return { ...result, fetchMock };
-}
+};
 
 describe('App', () => {
   it('renders the home route from /', () => {
@@ -643,9 +643,9 @@ describe('App', () => {
   });
 });
 
-function jsonResponse(body: unknown, status = 200) {
+const jsonResponse = (body: unknown, status = 200) => {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
-}
+};

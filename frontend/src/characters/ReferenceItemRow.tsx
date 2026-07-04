@@ -1,12 +1,14 @@
 import type { CharacterReferenceItem } from './types';
 
-export function ReferenceItemRow({
-  item,
-  onOpenQuickReference,
-}: {
+interface ReferenceItemRowProps {
   item: CharacterReferenceItem;
   onOpenQuickReference: (item: CharacterReferenceItem, opener: HTMLButtonElement) => void;
-}) {
+}
+
+export const ReferenceItemRow = ({
+  item,
+  onOpenQuickReference,
+}: ReferenceItemRowProps) => {
   const canOpen = item.quickReference !== undefined;
   const descriptionId = `${item.id}-detail-state`;
 
@@ -43,9 +45,9 @@ export function ReferenceItemRow({
       ) : null}
     </button>
   );
-}
+};
 
-function badgeClassName(label: string) {
+const badgeClassName = (label: string) => {
   if (label === 'Action') {
     return 'badge badge--action';
   }
@@ -67,4 +69,4 @@ function badgeClassName(label: string) {
   }
 
   return 'badge badge--neutral';
-}
+};

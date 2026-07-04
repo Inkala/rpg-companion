@@ -1,22 +1,25 @@
-import type { AccountMode } from '../../app/appTypes';
-import type { AuthUser } from '../../auth/api';
+import type { AccountMode } from '../app/appTypes';
+import type { AuthUser } from '../auth/api';
 import { AuthForm } from './AuthForm';
+import './accounts.css';
 
-export function AccountPanel({
-  accountsAvailable,
-  currentUser,
-  initialMode,
-  onAuthenticated,
-  onModeChange,
-  onSignOut,
-}: {
+interface AccountPanelProps {
   accountsAvailable: boolean;
   currentUser: AuthUser | null;
   initialMode: AccountMode;
   onAuthenticated: (user: AuthUser) => void;
   onModeChange: (mode: AccountMode) => void;
   onSignOut: () => void;
-}) {
+}
+
+export const AccountPanel = ({
+  accountsAvailable,
+  currentUser,
+  initialMode,
+  onAuthenticated,
+  onModeChange,
+  onSignOut,
+}: AccountPanelProps) => {
   if (!accountsAvailable) {
     return (
       <section className="account-card account-card--quiet">
@@ -52,4 +55,4 @@ export function AccountPanel({
       />
     </section>
   );
-}
+};

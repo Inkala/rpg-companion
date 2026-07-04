@@ -195,7 +195,7 @@ describe('CharacterReference', () => {
   });
 });
 
-function openSecondWindQuickReference() {
+const openSecondWindQuickReference = () => {
   render(<CharacterReference character={testCharacter} onBack={vi.fn()} />);
 
   fireEvent.click(screen.getByRole('button', { name: /Features, 1 items/ }));
@@ -207,4 +207,4 @@ function openSecondWindQuickReference() {
   });
 
   return { opener, sheet };
-}
+};

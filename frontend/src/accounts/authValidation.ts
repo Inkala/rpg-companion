@@ -6,7 +6,7 @@ export const usernamePolicyMessage =
 
 export const emailPolicyMessage = 'Enter a valid email address.';
 
-export function validateRegistrationUsername(username: string) {
+export const validateRegistrationUsername = (username: string) => {
   const trimmed = username.trim();
   if (trimmed.length < 3 || trimmed.length > 32) {
     return usernamePolicyMessage;
@@ -15,9 +15,9 @@ export function validateRegistrationUsername(username: string) {
     return usernamePolicyMessage;
   }
   return null;
-}
+};
 
-export function validateRegistrationEmail(email: string) {
+export const validateRegistrationEmail = (email: string) => {
   const trimmed = email.trim();
   if (trimmed.length < 3 || trimmed.length > 254) {
     return emailPolicyMessage;
@@ -34,9 +34,9 @@ export function validateRegistrationEmail(email: string) {
     return emailPolicyMessage;
   }
   return null;
-}
+};
 
-export function validateRegistrationPassword(password: string) {
+export const validateRegistrationPassword = (password: string) => {
   const characters = Array.from(password);
   if (characters.length < 8 || characters.length > 128) {
     return passwordPolicyMessage;
@@ -59,4 +59,4 @@ export function validateRegistrationPassword(password: string) {
   }
 
   return hasUppercase && hasLowercase && hasDigit && hasSpecial ? null : passwordPolicyMessage;
-}
+};

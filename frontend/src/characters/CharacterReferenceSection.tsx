@@ -1,17 +1,19 @@
 import { ReferenceItemRow } from './ReferenceItemRow';
 import type { CharacterReferenceItem, CharacterReferenceSection as Section } from './types';
 
-export function CharacterReferenceSection({
-  section,
-  isOpen,
-  onToggle,
-  onOpenQuickReference,
-}: {
+interface CharacterReferenceSectionProps {
   section: Section;
   isOpen: boolean;
   onToggle: () => void;
   onOpenQuickReference: (item: CharacterReferenceItem, opener: HTMLButtonElement) => void;
-}) {
+}
+
+export const CharacterReferenceSection = ({
+  section,
+  isOpen,
+  onToggle,
+  onOpenQuickReference,
+}: CharacterReferenceSectionProps) => {
   const panelId = `${section.id}-section-panel`;
 
   return (
@@ -42,4 +44,4 @@ export function CharacterReferenceSection({
       ) : null}
     </section>
   );
-}
+};

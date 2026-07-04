@@ -1,23 +1,25 @@
 import type { AccountMode } from '../../app/appTypes';
 import huninLogo from '../../assets/brand/hunin-logo.svg';
 import type { AuthUser } from '../../auth/api';
-import { AccountHeaderActions } from '../account/AccountHeaderActions';
+import { AccountHeaderActions } from '../../accounts/AccountHeaderActions';
 
-export function HomeHeader({
-  accountsAvailable,
-  currentUser,
-  isSessionLoading,
-  sessionError,
-  onOpenAccount,
-  onSignOut,
-}: {
+interface HomeHeaderProps {
   accountsAvailable: boolean;
   currentUser: AuthUser | null;
   isSessionLoading: boolean;
   sessionError: string | null;
   onOpenAccount: (mode: AccountMode) => void;
   onSignOut: () => void;
-}) {
+}
+
+export const HomeHeader = ({
+  accountsAvailable,
+  currentUser,
+  isSessionLoading,
+  sessionError,
+  onOpenAccount,
+  onSignOut,
+}: HomeHeaderProps) => {
   return (
     <header className="home-header">
       <section className="brand-block" aria-labelledby="landing-title">
@@ -51,4 +53,4 @@ export function HomeHeader({
       />
     </header>
   );
-}
+};
