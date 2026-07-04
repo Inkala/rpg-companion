@@ -15,9 +15,11 @@ import {
 export function AuthForm({
   initialMode,
   onAuthenticated,
+  onModeChange,
 }: {
   initialMode: AccountMode;
   onAuthenticated: (user: AuthUser) => void;
+  onModeChange: (mode: AccountMode) => void;
 }) {
   const [mode, setMode] = useState<AccountMode>(initialMode);
   const [username, setUsername] = useState('');
@@ -192,8 +194,10 @@ export function AuthForm({
         type="button"
         className="account-switch"
         onClick={() => {
-          setMode(isRegistering ? 'sign-in' : 'register');
+          const nextMode = isRegistering ? 'sign-in' : 'register';
+          setMode(nextMode);
           setError(null);
+          onModeChange(nextMode);
         }}
       >
         {isRegistering ? 'Already have an account? Sign in' : 'Need an account? Create one'}

@@ -8,6 +8,7 @@ export function AccountPage({
   initialMode,
   onBack,
   onAuthenticated,
+  onModeChange,
   onSignOut,
 }: {
   accountsAvailable: boolean;
@@ -15,6 +16,7 @@ export function AccountPage({
   initialMode: AccountMode;
   onBack: () => void;
   onAuthenticated: (user: AuthUser) => void;
+  onModeChange: (mode: AccountMode) => void;
   onSignOut: () => void;
 }) {
   return (
@@ -30,6 +32,7 @@ export function AccountPage({
         currentUser={currentUser}
         initialMode={initialMode}
         onAuthenticated={onAuthenticated}
+        onModeChange={onModeChange}
         onSignOut={onSignOut}
       />
     </main>

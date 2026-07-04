@@ -7,6 +7,7 @@ beforeEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.stubEnv('VITE_API_BASE_URL', '');
+  window.history.replaceState(null, '', '/');
 });
 
 function openCharacterReference() {
@@ -34,6 +35,67 @@ function openRegistrationForm() {
 }
 
 describe('App', () => {
+  it('renders the home route from /', () => {
+    window.history.replaceState(null, '', '/');
+
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+  });
+
+  it('renders the sign-in route from /login', () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ error: 'authentication required' }, 401)),
+    );
+    window.history.replaceState(null, '', '/login');
+
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Username or email')).toBeInTheDocument();
+  });
+
+  it('renders the create-account route from /sign-up', () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ error: 'authentication required' }, 401)),
+    );
+    window.history.replaceState(null, '', '/sign-up');
+
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: 'Create account' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Username')).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+  });
+
+  it('renders the sample Character Reference route from /characters/sample', () => {
+    window.history.replaceState(null, '', '/characters/sample');
+
+    render(<App />);
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Character Reference' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Mara Velard' })).toBeInTheDocument();
+  });
+
+  it('shows not found for unknown routes and returns home', () => {
+    window.history.replaceState(null, '', '/missing');
+
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Home' })[0]);
+
+    expect(window.location.pathname).toBe('/');
+    expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+  });
+
   it('renders the guest landing page', () => {
     render(<App />);
 
@@ -91,6 +153,48 @@ describe('App', () => {
     expect(
       within(accountActions).getByRole('button', { name: 'Create account' }),
     ).toBeInTheDocument();
+  });
+
+  it('updates the URL from home account actions', () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ error: 'authentication required' }, 401)),
+    );
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(window.location.pathname).toBe('/login');
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(window.location.pathname).toBe('/sign-up');
+    expect(screen.getByRole('heading', { name: 'Create account' })).toBeInTheDocument();
+  });
+
+  it('updates the URL from account form switches', () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ error: 'authentication required' }, 401)),
+    );
+    window.history.replaceState(null, '', '/login');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Need an account? Create one' }));
+
+    expect(window.location.pathname).toBe('/sign-up');
+    expect(screen.getByRole('heading', { name: 'Create account' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Already have an account? Sign in' }));
+
+    expect(window.location.pathname).toBe('/login');
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
   });
 
   it('registers through the configured local backend', async () => {
@@ -364,6 +468,7 @@ describe('App', () => {
         }),
       );
     });
+    expect(window.location.pathname).toBe('/');
     expect(
       screen.getByRole('button', { name: 'Create account' }),
     ).toBeInTheDocument();
@@ -402,11 +507,41 @@ describe('App', () => {
   it('opens Character Reference from Explore Mara', () => {
     openCharacterReference();
 
+    expect(window.location.pathname).toBe('/characters/sample');
     expect(
       screen.getByRole('heading', { level: 1, name: 'Character Reference' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Mara Velard' })).toBeInTheDocument();
     expect(screen.getByText('Human Ranger · Level 3')).toBeInTheDocument();
+  });
+
+  it('supports browser Back and Forward between routes', async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Explore Mara' }));
+
+    expect(window.location.pathname).toBe('/characters/sample');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Character Reference' }),
+    ).toBeInTheDocument();
+
+    window.history.back();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+    fireEvent(window, new PopStateEvent('popstate'));
+
+    expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+
+    window.history.forward();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/characters/sample');
+    });
+    fireEvent(window, new PopStateEvent('popstate'));
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Character Reference' }),
+    ).toBeInTheDocument();
   });
 
   it('shows only maximum HP when Mara is at full HP', () => {

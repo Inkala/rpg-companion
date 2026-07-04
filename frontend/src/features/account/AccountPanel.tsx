@@ -7,12 +7,14 @@ export function AccountPanel({
   currentUser,
   initialMode,
   onAuthenticated,
+  onModeChange,
   onSignOut,
 }: {
   accountsAvailable: boolean;
   currentUser: AuthUser | null;
   initialMode: AccountMode;
   onAuthenticated: (user: AuthUser) => void;
+  onModeChange: (mode: AccountMode) => void;
   onSignOut: () => void;
 }) {
   if (!accountsAvailable) {
@@ -43,7 +45,11 @@ export function AccountPanel({
 
   return (
     <section className="account-card" aria-labelledby="account-title">
-      <AuthForm initialMode={initialMode} onAuthenticated={onAuthenticated} />
+      <AuthForm
+        initialMode={initialMode}
+        onAuthenticated={onAuthenticated}
+        onModeChange={onModeChange}
+      />
     </section>
   );
 }

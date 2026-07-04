@@ -95,3 +95,11 @@ What changed: Split home and account UI out of `frontend/src/App.tsx` into page 
 Validation: Frontend lint, typecheck, test, build, and `git diff --check` passed.
 Decisions: Keep `App.tsx` at `frontend/src/App.tsx`, keep CSS in `App.css`, and preserve T-006 behavior without adding routes or features.
 Next action: Review the T-007 refactor before staging or committing.
+
+## 2026-07-04
+
+Task: T-008 lightweight frontend routing
+What changed: Added a custom History API router for home, sign-in, sign-up, Mara sample Character Reference, and a simple not-found view.
+Validation: Frontend lint, typecheck, test, build, and `git diff --check` passed.
+Decisions: Use `/characters/sample` for the Mara sample route and defer `/characters/new`, `/characters/:id`, `/account`, and deployment fallback config.
+Next action: Review the T-008 routing implementation before staging or committing.
