@@ -87,3 +87,11 @@ What changed: Implemented the corrected home IA from T-005/Figma with lightweigh
 Validation: Frontend lint, typecheck, test, build, and `git diff --check` passed.
 Decisions: Party actions and Create character remain planned/non-functional in this slice; actual creation, party flows, routing, and character list data remain deferred.
 Next action: Review before staging or committing.
+
+## 2026-07-04
+
+Task: T-007 frontend app-shell architecture refactor
+What changed: Split home and account UI out of `frontend/src/App.tsx` into page and feature folders while keeping `App.tsx` as the coordinator.
+Validation: Frontend lint, typecheck, test, build, and `git diff --check` passed.
+Decisions: Keep `App.tsx` at `frontend/src/App.tsx`, keep CSS in `App.css`, and preserve T-006 behavior without adding routes or features.
+Next action: Review the T-007 refactor before staging or committing.
