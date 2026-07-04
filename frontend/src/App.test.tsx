@@ -20,6 +20,8 @@ const passwordPolicyMessage =
 const usernamePolicyMessage =
   'Username must be 3–32 characters and use only English letters, numbers, underscores, or hyphens.';
 const emailPolicyMessage = 'Enter a valid email address.';
+const partyLoginRequiredMessage =
+  'You’ll need an account to create or join a party.';
 
 function openRegistrationForm() {
   vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
@@ -44,20 +46,51 @@ describe('App', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Explore Mara' })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /Create a character/ }),
+      screen.getByRole('button', { name: /Create character/ }),
     ).toHaveAttribute('aria-disabled', 'true');
     expect(
-      screen.getByRole('button', { name: /Add an existing character/ }),
+      screen.getByRole('button', { name: /Create party/ }),
     ).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: /Join party/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(screen.queryByRole('button', { name: /Add an existing character/ })).not.toBeInTheDocument();
+    expect(screen.getAllByText(partyLoginRequiredMessage)).toHaveLength(2);
     expect(
       screen.getByText(
         'Accounts are unavailable in the public demo until the backend is deployed. Mara remains available without an account.',
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Menu' })).toBeInTheDocument();
+  });
+
+  it('orders signed-out home actions before the Mara sample', () => {
+    render(<App />);
+
+    const createCharacter = screen.getByRole('button', { name: /Create character/ });
+    const maraHeading = screen.getByRole('heading', { name: 'Mara Velard' });
+
+    expect(createCharacter.compareDocumentPosition(maraHeading)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it('shows lightweight account actions in the header when accounts are available', () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse({ error: 'authentication required' }, 401)),
+    );
+
+    render(<App />);
+
+    const accountActions = screen.getByLabelText('Account actions');
+    expect(within(accountActions).getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /I have a party invite/ }),
-    ).toHaveAttribute('aria-disabled', 'true');
+      within(accountActions).getByRole('button', { name: 'Create account' }),
+    ).toBeInTheDocument();
   });
 
   it('registers through the configured local backend', async () => {
@@ -90,7 +123,7 @@ describe('App', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByText('Mara')).toBeInTheDocument();
+    expect(await screen.findByText('Signed in as Mara')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenLastCalledWith(
       'http://localhost:8080/auth/register',
       expect.objectContaining({
@@ -156,7 +189,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByText('Mara')).toBeInTheDocument();
+    expect(await screen.findByText('Signed in as Mara')).toBeInTheDocument();
     expect(fetchMock).toHaveBeenLastCalledWith(
       'http://localhost:8080/auth/register',
       expect.objectContaining({
@@ -317,7 +350,9 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(await screen.findByText('Mara')).toBeInTheDocument();
+    expect(await screen.findByText('Signed in as Mara')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'No saved characters yet' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'No parties yet' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
 
     await waitFor(() => {
@@ -332,6 +367,36 @@ describe('App', () => {
     expect(
       screen.getByRole('button', { name: 'Create account' }),
     ).toBeInTheDocument();
+  });
+
+  it('orders signed-in empty home sections before the Mara demo', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          user: {
+            id: '00000000-0000-0000-0000-000000000001',
+            usernameCanonical: 'mara',
+            username: 'Mara',
+          },
+        }),
+      ),
+    );
+
+    render(<App />);
+
+    const myCharacters = await screen.findByText('My characters');
+    const myParties = screen.getByText('My parties');
+    const maraHeading = screen.getByRole('heading', { name: 'Mara Velard' });
+
+    expect(myCharacters.compareDocumentPosition(maraHeading)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(myParties.compareDocumentPosition(maraHeading)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.getByRole('button', { name: 'Explore Mara' })).toBeInTheDocument();
   });
 
   it('opens Character Reference from Explore Mara', () => {

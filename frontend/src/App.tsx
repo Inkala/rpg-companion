@@ -25,6 +25,8 @@ const emailPolicyMessage = 'Enter a valid email address.';
 
 const futureActionDescription =
   'Planned for a later slice. This control is visible for product context but is not available yet.';
+const partyLoginRequiredMessage =
+  'You’ll need an account to create or join a party.';
 
 export function App() {
   const [view, setView] = useState<View>('landing');
@@ -158,6 +160,41 @@ function GuestLanding({
         {futureActionDescription}
       </p>
 
+      <HomeHeader
+        accountsAvailable={accountsAvailable}
+        currentUser={currentUser}
+        isSessionLoading={isSessionLoading}
+        sessionError={sessionError}
+        onOpenAccount={onOpenAccount}
+        onSignOut={onSignOut}
+      />
+
+      {currentUser ? (
+        <SignedInHome onExploreMara={onExploreMara} />
+      ) : (
+        <SignedOutHome onExploreMara={onExploreMara} />
+      )}
+    </main>
+  );
+}
+
+function HomeHeader({
+  accountsAvailable,
+  currentUser,
+  isSessionLoading,
+  sessionError,
+  onOpenAccount,
+  onSignOut,
+}: {
+  accountsAvailable: boolean;
+  currentUser: AuthUser | null;
+  isSessionLoading: boolean;
+  sessionError: string | null;
+  onOpenAccount: (mode: AccountMode) => void;
+  onSignOut: () => void;
+}) {
+  return (
+    <header className="home-header">
       <section className="brand-block" aria-labelledby="landing-title">
         <img className="brand-logo" src={huninLogo} alt="Hunin" />
         <h1 id="landing-title" className="sr-only">
@@ -170,6 +207,114 @@ function GuestLanding({
         </p>
       </section>
 
+      <button
+        type="button"
+        className="mobile-menu-button"
+        aria-disabled="true"
+        aria-describedby="future-entry-description"
+      >
+        Menu
+      </button>
+
+      <AccountEntry
+        accountsAvailable={accountsAvailable}
+        currentUser={currentUser}
+        isSessionLoading={isSessionLoading}
+        sessionError={sessionError}
+        onOpenAccount={onOpenAccount}
+        onSignOut={onSignOut}
+      />
+    </header>
+  );
+}
+
+function SignedOutHome({ onExploreMara }: { onExploreMara: () => void }) {
+  return (
+    <>
+      <section className="home-actions" aria-labelledby="home-actions-title">
+        <div>
+          <p className="eyebrow">Start your own</p>
+          <h2 id="home-actions-title" className="home-actions__title">
+            Choose how Hunin helps next.
+          </h2>
+          <p className="home-actions__copy">
+            Start a character now. Party tools stay visible so the path is
+            clear, but they wait for account-backed party work.
+          </p>
+        </div>
+
+        <div className="main-action-grid">
+          <FutureEntryPoint label="Create character" variant="primary" />
+          <FutureEntryPoint
+            label="Create party"
+            helper={partyLoginRequiredMessage}
+          />
+          <FutureEntryPoint
+            label="Join party"
+            helper={partyLoginRequiredMessage}
+          />
+        </div>
+      </section>
+
+      <MaraDemo onExploreMara={onExploreMara} />
+    </>
+  );
+}
+
+function SignedInHome({ onExploreMara }: { onExploreMara: () => void }) {
+  return (
+    <>
+      <section className="home-stack" aria-label="Your Hunin home">
+        <section className="home-panel" aria-labelledby="my-characters-title">
+          <div>
+            <p className="eyebrow">My characters</p>
+            <h2 id="my-characters-title" className="home-panel__title">
+              No saved characters yet
+            </h2>
+            <p className="home-panel__copy">
+              Start with a guided character or fill in your sheet manually.
+            </p>
+          </div>
+          <FutureEntryPoint label="Create character" variant="primary" />
+        </section>
+
+        <section className="home-panel" aria-labelledby="my-parties-title">
+          <div>
+            <p className="eyebrow">My parties</p>
+            <h2 id="my-parties-title" className="home-panel__title">
+              No parties yet
+            </h2>
+            <p className="home-panel__copy">
+              Party tools are planned for a later slice and will require an
+              account.
+            </p>
+          </div>
+          <div className="panel-action-row">
+            <FutureEntryPoint
+              label="Create party"
+              helper={partyLoginRequiredMessage}
+            />
+            <FutureEntryPoint
+              label="Join party"
+              helper={partyLoginRequiredMessage}
+            />
+          </div>
+        </section>
+      </section>
+
+      <MaraDemo onExploreMara={onExploreMara} />
+    </>
+  );
+}
+
+function MaraDemo({ onExploreMara }: { onExploreMara: () => void }) {
+  return (
+    <section className="demo-section" aria-labelledby="sample-character-title">
+      <div>
+        <p className="eyebrow">Sample character</p>
+        <h2 className="section-kicker">Explore a demo</h2>
+      </div>
+
       <section className="sample-card" aria-labelledby="sample-character-title">
         <div className="sample-card__rule" aria-hidden="true" />
         <div className="sample-card__identity">
@@ -179,10 +324,10 @@ function GuestLanding({
             alt={maraLandingPreview.portrait.alt}
           />
           <div>
-            <p className="eyebrow">Sample character</p>
-            <h2 id="sample-character-title" className="character-name">
+            <p className="eyebrow">Ranger reference</p>
+            <h3 id="sample-character-title" className="character-name">
               {maraLandingPreview.name}
-            </h2>
+            </h3>
             <p className="identity-line">{maraLandingPreview.identity}</p>
           </div>
         </div>
@@ -203,32 +348,11 @@ function GuestLanding({
 
         <p className="preview-note">{maraLandingPreview.concept}</p>
 
-        <button className="button button--primary" onClick={onExploreMara}>
+        <button className="button button--secondary" onClick={onExploreMara}>
           Explore Mara
         </button>
       </section>
-
-      <section className="start-group" aria-labelledby="start-your-own">
-        <h2 id="start-your-own" className="section-kicker">
-          Start your own
-        </h2>
-        <FutureEntryPoint label="Create a character" />
-        <FutureEntryPoint label="Add an existing character" />
-      </section>
-
-      <AccountEntry
-        accountsAvailable={accountsAvailable}
-        currentUser={currentUser}
-        isSessionLoading={isSessionLoading}
-        sessionError={sessionError}
-        onOpenAccount={onOpenAccount}
-        onSignOut={onSignOut}
-      />
-
-      <nav className="quiet-actions" aria-label="Party actions">
-        <FutureEntryPoint label="I have a party invite" variant="quiet" />
-      </nav>
-    </main>
+    </section>
   );
 }
 
@@ -249,9 +373,8 @@ function AccountEntry({
 }) {
   if (!accountsAvailable) {
     return (
-      <section className="account-card account-card--quiet" aria-label="Account status">
-        <p className="eyebrow">Accounts</p>
-        <p className="account-card__text">
+      <section className="account-strip account-strip--quiet" aria-label="Account status">
+        <p className="account-strip__text">
           Accounts are unavailable in the public demo until the backend is deployed. Mara remains
           available without an account.
         </p>
@@ -261,15 +384,14 @@ function AccountEntry({
 
   if (currentUser) {
     return (
-      <section className="account-card" aria-label="Account status">
-        <p className="eyebrow">Signed in</p>
-        <p className="account-card__text">{currentUser.username}</p>
+      <section className="account-strip" aria-label="Account status">
+        <p className="account-strip__label">Signed in as {currentUser.username}</p>
         {sessionError ? (
           <p className="form-error" role="alert">
             {sessionError}
           </p>
         ) : null}
-        <button type="button" className="button button--secondary" onClick={onSignOut}>
+        <button type="button" className="inline-action" onClick={onSignOut}>
           Sign out
         </button>
       </section>
@@ -277,9 +399,8 @@ function AccountEntry({
   }
 
   return (
-    <section className="account-card" aria-label="Account actions">
-      <p className="eyebrow">Accounts</p>
-      <p className="account-card__text">
+    <section className="account-strip" aria-label="Account actions">
+      <p className="account-strip__text">
         {isSessionLoading
           ? 'Checking session...'
           : 'Accounts are available during local development. Character saving will be available as Hunin grows.'}
@@ -292,17 +413,17 @@ function AccountEntry({
       <div className="account-actions">
         <button
           type="button"
-          className="button button--primary"
-          onClick={() => onOpenAccount('register')}
-        >
-          Create account
-        </button>
-        <button
-          type="button"
-          className="button button--secondary"
+          className="inline-action"
           onClick={() => onOpenAccount('sign-in')}
         >
           Sign in
+        </button>
+        <button
+          type="button"
+          className="button button--secondary button--compact"
+          onClick={() => onOpenAccount('register')}
+        >
+          Create account
         </button>
       </div>
     </section>
@@ -311,28 +432,33 @@ function AccountEntry({
 
 function FutureEntryPoint({
   label,
+  helper,
   variant = 'secondary',
 }: {
   label: string;
-  variant?: 'secondary' | 'quiet';
+  helper?: string;
+  variant?: 'primary' | 'secondary' | 'quiet';
 }) {
-  const className =
+  const buttonClassName =
     variant === 'quiet'
       ? 'future-link'
-      : 'button button--secondary future-button';
+      : `button button--${variant} future-button`;
 
   return (
-    <button
-      type="button"
-      className={className}
-      aria-disabled="true"
-      aria-describedby="future-entry-description"
-    >
-      <span>{label}</span>
-      <span className="future-tag" aria-hidden="true">
-        Planned
-      </span>
-    </button>
+    <div className="future-entry">
+      <button
+        type="button"
+        className={buttonClassName}
+        aria-disabled="true"
+        aria-describedby="future-entry-description"
+      >
+        <span>{label}</span>
+        <span className="future-tag" aria-hidden="true">
+          Planned
+        </span>
+      </button>
+      {helper ? <p className="future-help">{helper}</p> : null}
+    </div>
   );
 }
 

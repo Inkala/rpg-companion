@@ -79,3 +79,11 @@ What changed: Updated the design direction to group home actions as Create chara
 Validation: Pending `git diff --check`.
 Decisions: Pause T-006 code polish until the corrected home IA is approved in design or Figma-ready wireframes.
 Next action: Review the revised T-005 IA and decide whether to revise or replace the uncommitted T-006 implementation.
+
+## 2026-07-04
+
+Task: T-006 Home action hierarchy and form/button polish
+What changed: Implemented the corrected home IA from T-005/Figma with lightweight account header controls, grouped planned home actions, signed-in empty-state structure, Mara as secondary demo content, calmer form errors, and focused frontend tests.
+Validation: Frontend lint, typecheck, test, build, and `git diff --check` passed.
+Decisions: Party actions and Create character remain planned/non-functional in this slice; actual creation, party flows, routing, and character list data remain deferred.
+Next action: Review before staging or committing.
