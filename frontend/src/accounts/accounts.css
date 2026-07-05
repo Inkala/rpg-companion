@@ -3,7 +3,7 @@
   gap: var(--space-3);
   margin-top: var(--space-5);
   padding: var(--space-4);
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid rgba(47, 93, 70, 0.26);
   border-radius: var(--radius-lg);
   background: var(--color-bg-surface);
   box-shadow: var(--shadow-card);
@@ -46,6 +46,98 @@
 .account-form {
   display: grid;
   gap: var(--space-3);
+}
+
+.account-actions {
+  justify-items: start;
+}
+
+.account-actions .button,
+.account-card .button,
+.account-actions .inline-action {
+  width: auto;
+}
+
+.account-card .button {
+  justify-self: center;
+}
+
+.account-actions .button,
+.account-actions .inline-action {
+  justify-self: start;
+}
+
+.account-menu {
+  position: relative;
+  display: inline-grid;
+  justify-self: end;
+}
+
+.account-menu__trigger {
+  display: inline-flex;
+  min-height: 48px;
+  min-width: 48px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(47, 93, 70, 0.45);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface-muted);
+  color: var(--color-accent-text);
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
+}
+
+.account-menu__trigger:hover,
+.account-menu__trigger:focus-visible {
+  border-color: rgba(47, 93, 70, 0.75);
+}
+
+.account-menu__trigger:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.account-menu__content {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 13rem;
+  gap: var(--space-1);
+  border: 1px solid rgba(47, 93, 70, 0.45);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface-muted);
+  padding: var(--space-2);
+  box-shadow: var(--shadow-card);
+}
+
+.account-menu__item {
+  display: flex;
+  min-height: 44px;
+  width: 100%;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  padding: 0 var(--space-2);
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+}
+
+.account-menu__item:hover,
+.account-menu__item:focus-visible {
+  background: var(--color-accent-primary);
+  color: var(--color-text-inverse);
+}
+
+.account-menu__item:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .account-page {
@@ -115,9 +207,5 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
-  }
-
-  .account-form .button {
-    width: 100%;
   }
 }

@@ -9,26 +9,27 @@ interface SampleCharacterCardProps {
 export const SampleCharacterCard = ({ onExploreCharacter }: SampleCharacterCardProps) => {
   return (
     <section className="demo-section" aria-labelledby="sample-character-title">
-      <div>
-        <p className="eyebrow">Sample character</p>
-        <h2 className="section-kicker">Explore a demo</h2>
-      </div>
+      <p className="eyebrow">Sample character</p>
 
       <section className="sample-card" aria-labelledby="sample-character-title">
-        <div className="sample-card__rule" aria-hidden="true" />
         <div className="sample-card__identity">
-          <img
-            className="portrait portrait--landing"
-            src={maraLandingPreview.portrait.src}
-            alt={maraLandingPreview.portrait.alt}
-          />
-          <div>
-            <p className="eyebrow">Ranger reference</p>
-            <h3 id="sample-character-title" className="character-name">
-              {maraLandingPreview.name}
-            </h3>
-            <p className="identity-line">{maraLandingPreview.identity}</p>
+          <div className="sample-card__summary">
+            <img
+              className="portrait portrait--landing"
+              src={maraLandingPreview.portrait.src}
+              alt={maraLandingPreview.portrait.alt}
+            />
+            <div>
+              <p className="eyebrow">Ranger reference</p>
+              <h3 id="sample-character-title" className="character-name">
+                {maraLandingPreview.name}
+              </h3>
+              <p className="identity-line">{maraLandingPreview.identity}</p>
+            </div>
           </div>
+          <button className="button button--primary sample-card__action" onClick={onExploreCharacter}>
+            Expand
+          </button>
         </div>
 
         <dl className="landing-stat-strip" aria-label="Mara Velard quick stats">
@@ -46,10 +47,6 @@ export const SampleCharacterCard = ({ onExploreCharacter }: SampleCharacterCardP
         </div>
 
         <p className="preview-note">{maraLandingPreview.concept}</p>
-
-        <button className="button button--secondary" onClick={onExploreCharacter}>
-          Explore Mara
-        </button>
       </section>
     </section>
   );

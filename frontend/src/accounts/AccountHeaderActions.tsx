@@ -1,3 +1,5 @@
+import { LogOut, Sword, UserRound } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import type { AccountMode } from '../app/appTypes';
 import type { AuthUser } from '../auth/api';
 import './accounts.css';
@@ -18,6 +20,27 @@ export const AccountHeaderActions = ({
   onOpenAccount,
   onSignOut,
 }: AccountHeaderActionsProps) => {
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isAccountMenuOpen) {
+      return;
+    }
+
+    const closeMenuOnOutsideClick = (event: PointerEvent) => {
+      if (
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', closeMenuOnOutsideClick);
+    return () => document.removeEventListener('pointerdown', closeMenuOnOutsideClick);
+  }, [isAccountMenuOpen]);
+
   if (!accountsAvailable) {
     return (
       <section className="account-strip account-strip--quiet" aria-label="Account status">
@@ -32,15 +55,49 @@ export const AccountHeaderActions = ({
   if (currentUser) {
     return (
       <section className="account-strip" aria-label="Account status">
-        <p className="account-strip__label">Signed in as {currentUser.username}</p>
         {sessionError ? (
           <p className="form-error" role="alert">
             {sessionError}
           </p>
         ) : null}
-        <button type="button" className="inline-action" onClick={onSignOut}>
-          Sign out
-        </button>
+        <div className="account-menu" ref={accountMenuRef}>
+          <button
+            type="button"
+            className="account-menu__trigger"
+            aria-label={`${currentUser.username} account menu`}
+            aria-expanded={isAccountMenuOpen}
+            aria-haspopup="menu"
+            onClick={() => setIsAccountMenuOpen((current) => !current)}
+          >
+            <UserRound aria-hidden="true" size={24} strokeWidth={2.2} />
+          </button>
+
+          {isAccountMenuOpen ? (
+            <div className="account-menu__content" role="menu">
+              <button
+                type="button"
+                className="account-menu__item"
+                role="menuitem"
+                onClick={() => setIsAccountMenuOpen(false)}
+              >
+                <Sword aria-hidden="true" size={20} strokeWidth={2.2} />
+                <span>My profile</span>
+              </button>
+              <button
+                type="button"
+                className="account-menu__item"
+                role="menuitem"
+                onClick={() => {
+                  setIsAccountMenuOpen(false);
+                  onSignOut();
+                }}
+              >
+                <LogOut aria-hidden="true" size={20} strokeWidth={2.2} />
+                <span>Sign out</span>
+              </button>
+            </div>
+          ) : null}
+        </div>
       </section>
     );
   }

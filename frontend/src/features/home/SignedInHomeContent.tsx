@@ -1,5 +1,4 @@
-import { PlannedActionCard } from './PlannedActionCard';
-import { partyLoginRequiredMessage } from './HomeActions';
+import { PlannedActionButton } from './PlannedActionButton';
 import { SampleCharacterCard } from '../../characters/SampleCharacterCard';
 
 export const SignedInHomeContent = (
@@ -18,29 +17,23 @@ export const SignedInHomeContent = (
               Start with a guided character or fill in your sheet manually.
             </p>
           </div>
-          <PlannedActionCard label="Create character" variant="primary" />
+          <PlannedActionButton label="Create character" variant="primary" />
         </section>
 
-        <section className="home-panel" aria-labelledby="my-parties-title">
-          <div>
-            <p className="eyebrow">My parties</p>
-            <h2 id="my-parties-title" className="home-panel__title">
-              No parties yet
-            </h2>
-            <p className="home-panel__copy">
-              Party tools are planned for a later slice and will require an
-              account.
-            </p>
-          </div>
-          <div className="panel-action-row">
-            <PlannedActionCard
-              label="Create party"
-              helper={partyLoginRequiredMessage}
-            />
-            <PlannedActionCard
-              label="Join party"
-              helper={partyLoginRequiredMessage}
-            />
+        <section className="home-panel home-panel--parties" aria-labelledby="my-parties-title">
+          <p className="eyebrow home-panel__eyebrow">My parties</p>
+          <div className="home-panel__intro">
+            <div>
+              <h2 id="my-parties-title" className="home-panel__title">
+                No parties yet
+              </h2>
+              <p className="home-panel__copy">
+                Party tools are planned for a later slice and will require an
+                account.
+              </p>
+            </div>
+            <PlannedActionButton label="Create party" />
+            <PlannedActionButton label="Join party" />
           </div>
         </section>
       </section>

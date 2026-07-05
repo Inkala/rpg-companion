@@ -1,9 +1,10 @@
 import type { AccountMode } from '../app/appTypes';
 import type { AuthUser } from '../auth/api';
 import { HomeHeader } from '../features/home/HomeHeader';
-import { PlannedActionDescription } from '../features/home/PlannedActionCard';
+import { PlannedActionDescription } from '../features/home/PlannedActionButton';
 import { SignedInHomeContent } from '../features/home/SignedInHomeContent';
-import { SignedOutHomeContent } from '../features/home/SignedOutHomeContent';
+import { HomeActions } from '../features/home/HomeActions';
+import { SampleCharacterCard } from '../characters/SampleCharacterCard';
 import '../features/home/home.css';
 
 interface HomePageProps {
@@ -12,6 +13,7 @@ interface HomePageProps {
   isSessionLoading: boolean;
   sessionError: string | null;
   onExploreCharacter: () => void;
+  onHome: () => void;
   onOpenAccount: (mode: AccountMode) => void;
   onSignOut: () => void;
 }
@@ -22,6 +24,7 @@ export const HomePage = ({
   isSessionLoading,
   sessionError,
   onExploreCharacter,
+  onHome,
   onOpenAccount,
   onSignOut,
 }: HomePageProps) => {
@@ -34,6 +37,7 @@ export const HomePage = ({
         currentUser={currentUser}
         isSessionLoading={isSessionLoading}
         sessionError={sessionError}
+        onHome={onHome}
         onOpenAccount={onOpenAccount}
         onSignOut={onSignOut}
       />
@@ -41,7 +45,10 @@ export const HomePage = ({
       {currentUser ? (
         <SignedInHomeContent onExploreCharacter={onExploreCharacter} />
       ) : (
-        <SignedOutHomeContent onExploreCharacter={onExploreCharacter} />
+        <>
+          <SampleCharacterCard onExploreCharacter={onExploreCharacter} />
+          <HomeActions />
+        </>
       )}
     </main>
   );

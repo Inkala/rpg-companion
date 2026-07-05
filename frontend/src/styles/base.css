@@ -15,6 +15,9 @@
   --color-text-secondary: #5b5145;
   --color-text-muted: #7b6f60;
   --color-text-inverse: #fff8ea;
+  --color-disabled-bg: #e4ded3;
+  --color-disabled-border: #d1c8ba;
+  --color-disabled-text: #8b8174;
   --color-border-subtle: #e2d4be;
   --color-border-strong: #bfae91;
   --color-accent-primary: #2f5d46;
@@ -144,6 +147,13 @@ a:focus-visible,
   border-color: var(--color-border-subtle);
   background: var(--color-bg-surface);
   color: var(--color-text-primary);
+}
+
+.button:disabled {
+  border-color: var(--color-disabled-border);
+  background: var(--color-disabled-bg);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
 }
 
 .button--compact {

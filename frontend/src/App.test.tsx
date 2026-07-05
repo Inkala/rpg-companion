@@ -13,7 +13,7 @@ beforeEach(() => {
 const openCharacterReference = () => {
   render(<App />);
 
-  fireEvent.click(screen.getByRole('button', { name: 'Explore Mara' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
 };
 
 const passwordPolicyMessage =
@@ -21,8 +21,13 @@ const passwordPolicyMessage =
 const usernamePolicyMessage =
   'Username must be 3–32 characters and use only English letters, numbers, underscores, or hyphens.';
 const emailPolicyMessage = 'Enter a valid email address.';
-const partyLoginRequiredMessage =
-  'You’ll need an account to create or join a party.';
+const partyLoginRequiredMessage = 'You’ll need an account to create or join a party.';
+
+const openSignedInAccountMenu = async () => {
+  const accountMenu = await screen.findByRole('button', { name: 'Mara account menu' });
+  fireEvent.click(accountMenu);
+  return screen.getByRole('menu');
+};
 
 const openRegistrationForm = () => {
   vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
@@ -100,13 +105,14 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Hunin' })).toHaveAttribute('href', '/');
     expect(screen.getByText('Your party companion.')).toBeInTheDocument();
     expect(
       screen.getByText(
         'Create, bring in, and understand a character without decoding the whole sheet.',
       ),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Explore Mara' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Create character/ }),
     ).toHaveAttribute('aria-disabled', 'true');
@@ -118,7 +124,7 @@ describe('App', () => {
       'true',
     );
     expect(screen.queryByRole('button', { name: /Add an existing character/ })).not.toBeInTheDocument();
-    expect(screen.getAllByText(partyLoginRequiredMessage)).toHaveLength(2);
+    expect(screen.queryByText(partyLoginRequiredMessage)).not.toBeInTheDocument();
     expect(
       screen.getByText(
         'Accounts are unavailable in the public demo until the backend is deployed. Mara remains available without an account.',
@@ -128,13 +134,13 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Menu' })).toBeInTheDocument();
   });
 
-  it('orders signed-out home actions before the Mara sample', () => {
+  it('orders the signed-out Mara sample before home actions', () => {
     render(<App />);
 
     const createCharacter = screen.getByRole('button', { name: /Create character/ });
     const maraHeading = screen.getByRole('heading', { name: 'Mara Velard' });
 
-    expect(createCharacter.compareDocumentPosition(maraHeading)).toBe(
+    expect(maraHeading.compareDocumentPosition(createCharacter)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
   });
@@ -227,7 +233,9 @@ describe('App', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByText('Signed in as Mara')).toBeInTheDocument();
+    const menu = await openSignedInAccountMenu();
+    expect(within(menu).getByRole('menuitem', { name: 'My profile' })).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenLastCalledWith(
       'http://localhost:8080/auth/register',
       expect.objectContaining({
@@ -293,7 +301,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByText('Signed in as Mara')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Mara account menu' })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenLastCalledWith(
       'http://localhost:8080/auth/register',
       expect.objectContaining({
@@ -454,10 +462,10 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(await screen.findByText('Signed in as Mara')).toBeInTheDocument();
+    const menu = await openSignedInAccountMenu();
     expect(screen.getByRole('heading', { name: 'No saved characters yet' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'No parties yet' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Sign out' }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenLastCalledWith(
@@ -472,6 +480,29 @@ describe('App', () => {
     expect(
       screen.getByRole('button', { name: 'Create account' }),
     ).toBeInTheDocument();
+  });
+
+  it('closes the account menu when clicking outside it', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          user: {
+            id: '00000000-0000-0000-0000-000000000001',
+            usernameCanonical: 'mara',
+            username: 'Mara',
+          },
+        }),
+      ),
+    );
+
+    render(<App />);
+
+    await openSignedInAccountMenu();
+    fireEvent.pointerDown(screen.getByRole('heading', { name: 'No saved characters yet' }));
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('orders signed-in empty home sections before the Mara demo', async () => {
@@ -501,10 +532,10 @@ describe('App', () => {
     expect(myParties.compareDocumentPosition(maraHeading)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
-    expect(screen.getByRole('button', { name: 'Explore Mara' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
   });
 
-  it('opens Character Reference from Explore Mara', () => {
+  it('opens Character Reference from the sample character', () => {
     openCharacterReference();
 
     expect(window.location.pathname).toBe('/characters/sample');
@@ -518,7 +549,7 @@ describe('App', () => {
   it('supports browser Back and Forward between routes', async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Explore Mara' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
 
     expect(window.location.pathname).toBe('/characters/sample');
     expect(

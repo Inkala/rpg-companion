@@ -1,7 +1,4 @@
-import { PlannedActionCard } from './PlannedActionCard';
-
-export const partyLoginRequiredMessage =
-  'You’ll need an account to create or join a party.';
+import { PlannedActionButton } from './PlannedActionButton';
 
 export const HomeActions = () => {
   return (
@@ -18,15 +15,9 @@ export const HomeActions = () => {
       </div>
 
       <div className="main-action-grid">
-        <PlannedActionCard label="Create character" variant="primary" />
-        <PlannedActionCard
-          label="Create party"
-          helper={partyLoginRequiredMessage}
-        />
-        <PlannedActionCard
-          label="Join party"
-          helper={partyLoginRequiredMessage}
-        />
+        <PlannedActionButton label="Create character" variant="primary" />
+        <PlannedActionButton label="Create party" />
+        <PlannedActionButton label="Join party" />
       </div>
     </section>
   );

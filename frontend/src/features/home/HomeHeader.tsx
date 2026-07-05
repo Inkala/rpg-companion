@@ -8,6 +8,7 @@ interface HomeHeaderProps {
   currentUser: AuthUser | null;
   isSessionLoading: boolean;
   sessionError: string | null;
+  onHome: () => void;
   onOpenAccount: (mode: AccountMode) => void;
   onSignOut: () => void;
 }
@@ -17,13 +18,23 @@ export const HomeHeader = ({
   currentUser,
   isSessionLoading,
   sessionError,
+  onHome,
   onOpenAccount,
   onSignOut,
 }: HomeHeaderProps) => {
   return (
     <header className="home-header">
       <section className="brand-block" aria-labelledby="landing-title">
-        <img className="brand-logo" src={huninLogo} alt="Hunin" />
+        <a
+          className="brand-logo-link"
+          href="/"
+          onClick={(event) => {
+            event.preventDefault();
+            onHome();
+          }}
+        >
+          <img className="brand-logo" src={huninLogo} alt="Hunin" />
+        </a>
         <h1 id="landing-title" className="sr-only">
           Hunin
         </h1>

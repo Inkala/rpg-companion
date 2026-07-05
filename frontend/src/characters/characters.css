@@ -15,10 +15,30 @@
 .sample-card__identity,
 .reference-identity {
   display: grid;
+  align-items: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sample-card__identity {
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+
+.sample-card__summary {
+  display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
+}
+
+.sample-card__action {
+  width: auto;
+  white-space: nowrap;
+}
+
+.reference-identity {
+  grid-template-columns: auto minmax(0, 1fr);
 }
 
 .sample-card__rule {
@@ -465,8 +485,8 @@
 }
 
 @media (min-width: 720px) {
-  .sample-card .button {
-    width: 100%;
+  .sample-card .sample-card__action {
+    width: auto;
   }
 
   .sample-card {
@@ -479,7 +499,7 @@
 }
 
 @media (max-width: 390px) {
-  .sample-card__identity {
+  .sample-card__summary {
     grid-template-columns: 64px minmax(0, 1fr);
   }
 

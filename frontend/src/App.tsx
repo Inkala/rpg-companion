@@ -123,6 +123,7 @@ export const App = () => {
           isSessionLoading={isSessionLoading}
           sessionError={sessionError}
           onExploreCharacter={showSampleCharacter}
+          onHome={showHome}
           onOpenAccount={showAccount}
           onSignOut={handleSignOut}
         />
