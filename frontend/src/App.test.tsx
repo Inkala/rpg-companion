@@ -22,6 +22,24 @@ const usernamePolicyMessage =
   'Username must be 3–32 characters and use only English letters, numbers, underscores, or hyphens.';
 const emailPolicyMessage = 'Enter a valid email address.';
 const partyLoginRequiredMessage = 'You’ll need an account to create or join a party.';
+const maraUser = {
+  id: '00000000-0000-0000-0000-000000000001',
+  usernameCanonical: 'mara',
+  username: 'Mara',
+};
+const maraCharacterSummary = {
+  id: '11111111-1111-1111-1111-111111111111',
+  name: 'Mara Velard',
+  className: 'Ranger',
+  subclassName: 'Hunter',
+  level: 3,
+  ancestry: 'Human',
+  background: 'Outlander',
+  hitPoints: { current: 26, max: 26 },
+  armorClass: 14,
+  speedFt: 30,
+  updatedAt: '2026-07-05T10:00:00Z',
+};
 
 const openSignedInAccountMenu = async () => {
   const accountMenu = await screen.findByRole('button', { name: 'Mara account menu' });
@@ -37,6 +55,31 @@ const openRegistrationForm = () => {
   const result = render(<App />);
   fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
   return { ...result, fetchMock };
+};
+
+const signedInFetchMock = (
+  characters: unknown[] = [],
+  characterStatus = 200,
+) => {
+  return vi.fn((url: string, init?: RequestInit) => {
+    if (url.endsWith('/auth/session') && init?.method === 'DELETE') {
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
+
+    if (url.endsWith('/auth/session')) {
+      return Promise.resolve(jsonResponse({ user: maraUser }));
+    }
+
+    if (url.endsWith('/characters')) {
+      return Promise.resolve(
+        characterStatus === 200
+          ? jsonResponse({ characters })
+          : jsonResponse({ error: 'Character list failed.' }, characterStatus),
+      );
+    }
+
+    return Promise.resolve(jsonResponse({ error: 'not found' }, 404));
+  });
 };
 
 describe('App', () => {
@@ -134,6 +177,25 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Menu' })).toBeInTheDocument();
   });
 
+  it('does not load character summaries while signed out', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'authentication required' }, 401));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:8080/auth/session',
+        expect.objectContaining({ credentials: 'include' }),
+      );
+    });
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      'http://localhost:8080/characters',
+      expect.anything(),
+    );
+  });
+
   it('orders the signed-out Mara sample before home actions', () => {
     render(<App />);
 
@@ -210,13 +272,10 @@ describe('App', () => {
       .mockResolvedValueOnce(jsonResponse({ error: 'authentication required' }, 401))
       .mockResolvedValueOnce(
         jsonResponse({
-          user: {
-            id: '00000000-0000-0000-0000-000000000001',
-            usernameCanonical: 'mara',
-            username: 'Mara',
-          },
+          user: maraUser,
         }),
-      );
+      )
+      .mockResolvedValueOnce(jsonResponse({ characters: [] }));
     vi.stubGlobal('fetch', fetchMock);
 
     render(<App />);
@@ -236,7 +295,7 @@ describe('App', () => {
     const menu = await openSignedInAccountMenu();
     expect(within(menu).getByRole('menuitem', { name: 'My profile' })).toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenLastCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:8080/auth/register',
       expect.objectContaining({
         body: JSON.stringify({
@@ -257,13 +316,10 @@ describe('App', () => {
       .mockResolvedValueOnce(jsonResponse({ error: 'authentication required' }, 401))
       .mockResolvedValueOnce(
         jsonResponse({
-          user: {
-            id: '00000000-0000-0000-0000-000000000001',
-            usernameCanonical: 'mara',
-            username: 'Mara',
-          },
+          user: maraUser,
         }),
-      );
+      )
+      .mockResolvedValueOnce(jsonResponse({ characters: [] }));
     vi.stubGlobal('fetch', fetchMock);
 
     const { container } = render(<App />);
@@ -302,7 +358,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     expect(await screen.findByRole('button', { name: 'Mara account menu' })).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenLastCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:8080/auth/register',
       expect.objectContaining({
         body: JSON.stringify({
@@ -446,18 +502,7 @@ describe('App', () => {
 
   it('shows authenticated state and signs out', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        jsonResponse({
-          user: {
-            id: '00000000-0000-0000-0000-000000000001',
-            usernameCanonical: 'mara',
-            username: 'Mara',
-          },
-        }),
-      )
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const fetchMock = signedInFetchMock();
     vi.stubGlobal('fetch', fetchMock);
 
     render(<App />);
@@ -468,7 +513,7 @@ describe('App', () => {
     fireEvent.click(within(menu).getByRole('menuitem', { name: 'Sign out' }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenLastCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         'http://localhost:8080/auth/session',
         expect.objectContaining({
           credentials: 'include',
@@ -482,20 +527,64 @@ describe('App', () => {
     ).toBeInTheDocument();
   });
 
+  it('loads character summaries after session restore', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const fetchMock = signedInFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findByText('No saved characters yet')).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8080/characters',
+      expect.objectContaining({ credentials: 'include' }),
+    );
+  });
+
+  it('shows the signed-in empty character state for an empty character list', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', signedInFetchMock());
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'No saved characters yet' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Start with a guided character or fill in your sheet manually.'),
+    ).toBeInTheDocument();
+  });
+
+  it('renders saved character summary cards', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', signedInFetchMock([maraCharacterSummary]));
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Saved characters' })).toBeInTheDocument();
+    const card = screen.getByRole('article', { name: 'Mara Velard' });
+    expect(within(card).getByRole('heading', { name: 'Mara Velard' })).toBeInTheDocument();
+    expect(within(card).getByText('Ranger - Hunter - Level 3')).toBeInTheDocument();
+    expect(within(card).getByText('Human - Outlander')).toBeInTheDocument();
+    expect(within(card).getByText('26/26')).toBeInTheDocument();
+    expect(within(card).getByText('14')).toBeInTheDocument();
+    expect(within(card).getByText('30 ft.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Mara Velard/ })).not.toBeInTheDocument();
+  });
+
+  it('shows a friendly character summary loading error', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', signedInFetchMock([], 500));
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Couldn’t load characters' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Try refreshing the page. Mara is still available below.'),
+    ).toBeInTheDocument();
+  });
+
   it('closes the account menu when clicking outside it', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        jsonResponse({
-          user: {
-            id: '00000000-0000-0000-0000-000000000001',
-            usernameCanonical: 'mara',
-            username: 'Mara',
-          },
-        }),
-      ),
-    );
+    vi.stubGlobal('fetch', signedInFetchMock());
 
     render(<App />);
 
@@ -507,18 +596,7 @@ describe('App', () => {
 
   it('orders signed-in empty home sections before the Mara demo', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        jsonResponse({
-          user: {
-            id: '00000000-0000-0000-0000-000000000001',
-            usernameCanonical: 'mara',
-            username: 'Mara',
-          },
-        }),
-      ),
-    );
+    vi.stubGlobal('fetch', signedInFetchMock());
 
     render(<App />);
 

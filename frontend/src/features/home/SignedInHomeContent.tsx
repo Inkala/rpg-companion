@@ -1,22 +1,50 @@
+import { useEffect, useState } from 'react';
+import { listCharacterSummaries } from '../../characters/api';
+import type { CharacterSummaryDTO } from '../../characters/apiTypes';
 import { PlannedActionButton } from './PlannedActionButton';
 import { SampleCharacterCard } from '../../characters/SampleCharacterCard';
+
+type CharacterSummaryState =
+  | { status: 'loading' }
+  | { status: 'empty' }
+  | { status: 'error' }
+  | { status: 'loaded'; characters: CharacterSummaryDTO[] };
 
 export const SignedInHomeContent = (
   { onExploreCharacter }: { onExploreCharacter: () => void; }
 ) => {
+  const [characterState, setCharacterState] = useState<CharacterSummaryState>({ status: 'loading' });
+
+  useEffect(() => {
+    let isActive = true;
+
+    setCharacterState({ status: 'loading' });
+    listCharacterSummaries()
+      .then((characters) => {
+        if (!isActive) {
+          return;
+        }
+
+        setCharacterState(
+          characters.length > 0 ? { status: 'loaded', characters } : { status: 'empty' },
+        );
+      })
+      .catch(() => {
+        if (isActive) {
+          setCharacterState({ status: 'error' });
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   return (
     <>
       <section className="home-stack" aria-label="Your Hunin home">
         <section className="home-panel" aria-labelledby="my-characters-title">
-          <div>
-            <p className="eyebrow">My characters</p>
-            <h2 id="my-characters-title" className="home-panel__title">
-              No saved characters yet
-            </h2>
-            <p className="home-panel__copy">
-              Start with a guided character or fill in your sheet manually.
-            </p>
-          </div>
+          <CharacterSummaryContent state={characterState} />
           <PlannedActionButton label="Create character" variant="primary" />
         </section>
 
@@ -40,5 +68,94 @@ export const SignedInHomeContent = (
 
       <SampleCharacterCard onExploreCharacter={onExploreCharacter} />
     </>
+  );
+};
+
+const CharacterSummaryContent = ({ state }: { state: CharacterSummaryState }) => {
+  if (state.status === 'loading') {
+    return (
+      <div>
+        <p className="eyebrow">My characters</p>
+        <h2 id="my-characters-title" className="home-panel__title">
+          Loading your characters...
+        </h2>
+      </div>
+    );
+  }
+
+  if (state.status === 'error') {
+    return (
+      <div>
+        <p className="eyebrow">My characters</p>
+        <h2 id="my-characters-title" className="home-panel__title">
+          Couldn’t load characters
+        </h2>
+        <p className="home-panel__copy">
+          Try refreshing the page. Mara is still available below.
+        </p>
+      </div>
+    );
+  }
+
+  if (state.status === 'loaded') {
+    return (
+      <div className="character-summary-list">
+        <p className="eyebrow">My characters</p>
+        <h2 id="my-characters-title" className="home-panel__title">
+          Saved characters
+        </h2>
+        {state.characters.map((character) => (
+          <CharacterSummaryCard character={character} key={character.id} />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p className="eyebrow">My characters</p>
+      <h2 id="my-characters-title" className="home-panel__title">
+        No saved characters yet
+      </h2>
+      <p className="home-panel__copy">
+        Start with a guided character or fill in your sheet manually.
+      </p>
+    </div>
+  );
+};
+
+const CharacterSummaryCard = ({ character }: { character: CharacterSummaryDTO }) => {
+  const classLine = [
+    character.className,
+    character.subclassName,
+    `Level ${character.level}`,
+  ].filter(Boolean).join(' - ');
+
+  return (
+    <article className="character-summary-card" aria-labelledby={`character-${character.id}`}>
+      <div>
+        <h2 id={`character-${character.id}`} className="character-summary-card__title">
+          {character.name}
+        </h2>
+        <p className="character-summary-card__meta">{classLine}</p>
+        <p className="character-summary-card__meta">
+          {character.ancestry} - {character.background}
+        </p>
+      </div>
+      <dl className="character-summary-stats" aria-label={`${character.name} summary stats`}>
+        <div>
+          <dt>HP</dt>
+          <dd>{character.hitPoints.current}/{character.hitPoints.max}</dd>
+        </div>
+        <div>
+          <dt>AC</dt>
+          <dd>{character.armorClass}</dd>
+        </div>
+        <div>
+          <dt>Speed</dt>
+          <dd>{character.speedFt} ft.</dd>
+        </div>
+      </dl>
+    </article>
   );
 };

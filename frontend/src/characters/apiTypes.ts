@@ -29,3 +29,21 @@ export type CharacterDTO = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type CharacterSummaryDTO = {
+  id: string;
+  name: string;
+  className: string;
+  subclassName: string | null;
+  level: number;
+  ancestry: string;
+  background: string;
+  hitPoints: HitPointsDTO;
+  armorClass: number;
+  speedFt: number;
+  updatedAt: string;
+};
+
+export type CharacterListResponse = {
+  characters: CharacterSummaryDTO[];
+};
