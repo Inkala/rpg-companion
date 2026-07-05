@@ -2,7 +2,7 @@
   "name": "hunin-frontend",
   "private": true,
   "version": "0.0.0",
-  "packageManager": "pnpm@10.17.1",
+  "packageManager": "pnpm@11.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@radix-ui/react-tooltip": "^1.2.11",
+    "lucide-react": "^1.23.0",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },

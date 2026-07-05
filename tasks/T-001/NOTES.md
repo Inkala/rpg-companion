@@ -13,7 +13,7 @@
 ## Decisions made
 
 - CI uses GitHub Actions with separate frontend and backend jobs on Ubuntu. Frontend uses Node 24 LTS
-  and pnpm 10.17.1. Backend uses the Go version declared in `backend/go.mod`.
+  and pnpm 11.7.0. Backend uses the Go version declared in `backend/go.mod`.
 
 ## Blockers
 

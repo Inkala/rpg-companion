@@ -2,7 +2,7 @@
 
 These checks cover the current frontend and backend scaffold. Run the smaller service-specific checks while working, then the full relevant service checks before handing off changes.
 
-Frontend checks require Node 24 LTS and pnpm 10.17.1.
+Frontend checks require Node 24 LTS and pnpm 11.7.0.
 Local PostgreSQL requires Docker Desktop or another Docker-compatible runtime. Database migrations
 use the golang-migrate CLI.
 
@@ -80,7 +80,7 @@ go build ./...
 GitHub Actions runs the frontend and backend checks automatically on pushes to `main` and pull
 requests targeting `main`.
 
-The frontend job uses Node 24 LTS and pnpm 10.17.1, installs from `frontend/` with
+The frontend job uses Node 24 LTS and pnpm 11.7.0, installs from `frontend/` with
 `pnpm install --frozen-lockfile`, then runs lint, typecheck, test, and build.
 
 The backend job uses the Go version declared in `backend/go.mod`, starts a PostgreSQL service

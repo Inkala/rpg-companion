@@ -103,3 +103,11 @@ What changed: Added a custom History API router for home, sign-in, sign-up, Mara
 Validation: Frontend lint, typecheck, test, build, and `git diff --check` passed.
 Decisions: Use `/characters/sample` for the Mara sample route and defer `/characters/new`, `/characters/:id`, `/account`, and deployment fallback config.
 Next action: Review the T-008 routing implementation before staging or committing.
+
+## 2026-07-05
+
+Task: Frontend toolchain alignment and UI dependency install
+What changed: Standardized frontend tooling docs and CI on Node 24 with pnpm 11.7.0, added Lucide React icons and Radix Tooltip dependencies, and checked available package updates.
+Validation: Frontend frozen install, lint, typecheck, test, build, and `git diff --check` passed.
+Decisions: Keep broader framework/package major upgrades separate from this cleanup.
+Next action: Commit and push the toolchain cleanup.

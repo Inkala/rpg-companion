@@ -77,3 +77,22 @@ Character create and read endpoints become protected. The backend derives owners
 authenticated session and returns 404 for records the user does not own. The public static frontend
 must keep the Mara guest flow usable and present account actions as unavailable until a backend is
 deployed.
+
+## 2026-07-05: Frontend Node and pnpm versions
+
+Context:
+Local dependency installation failed because different pnpm major versions wanted different stores,
+and the Homebrew pnpm 11 binary requires a newer Node runtime than the default Node 20 on the
+machine.
+
+Decision:
+Standardize frontend development on Node 24 LTS and pnpm 11.7.0. Keep `.node-version` set to `24`,
+pin `packageManager` to `pnpm@11.7.0`, and use the same pnpm version in CI.
+
+Reason:
+Node 24 satisfies the current pnpm 11 runtime requirements, matches the existing `.node-version`,
+and keeps local installs, lockfile updates, and CI on one package-manager major version.
+
+Consequences:
+Developers should switch to Node 24 before running frontend pnpm commands. Existing Node 20 shells
+may fail with pnpm 11. Larger dependency upgrades remain separate from this toolchain alignment.

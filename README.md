@@ -59,7 +59,7 @@ shown as live public features until the backend is deployed.
 
 ### Frontend
 
-Requires Node 24 LTS and pnpm 10.17.1.
+Requires Node 24 LTS and pnpm 11.7.0. The repository includes `.node-version` with `24`.
 
 ```sh
 cd frontend
