@@ -96,3 +96,25 @@ and keeps local installs, lockfile updates, and CI on one package-manager major 
 Consequences:
 Developers should switch to Node 24 before running frontend pnpm commands. Existing Node 20 shells
 may fail with pnpm 11. Larger dependency upgrades remain separate from this toolchain alignment.
+
+## 2026-07-05: Manual character entry persistence boundary
+
+Context:
+Hunin needs a future `Fill the sheet myself` flow for players who already have character sheets. The
+current backend stores required core character fields as relational columns and rich sheet detail as
+`reference_payload` JSONB.
+
+Decision:
+Manual character entry V1 will save through the existing `POST /characters` contract. Required
+summary/core fields map to existing top-level request fields, and richer manual sheet data maps into
+`referencePayload` as `CharacterSheetV1`. The first version will not require a database migration.
+
+Reason:
+This supports real existing-character transfer while preserving the current backend boundary and
+avoiding premature schema changes for skills, features, spells, equipment, and notes.
+
+Consequences:
+Manual entry implementation must keep backend top-level fields limited to the current contract.
+Rules-rich data should stay in `CharacterSheetV1` JSON until a later task proves a relational column
+is needed. Backend validation hardening can be planned separately after the frontend payload shape is
+stable.

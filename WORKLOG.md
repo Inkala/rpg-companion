@@ -111,3 +111,11 @@ What changed: Standardized frontend tooling docs and CI on Node 24 with pnpm 11.
 Validation: Frontend frozen install, lint, typecheck, test, build, and `git diff --check` passed.
 Decisions: Keep broader framework/package major upgrades separate from this cleanup.
 Next action: Commit and push the toolchain cleanup.
+
+## 2026-07-05
+
+Task: T-010 manual character entry planning
+What changed: Created the docs-only plan for the future `Fill the sheet myself` flow, including first-version scope, required and optional fields, step split, CharacterSheetV1 mapping, deferred work, tests, and future implementation tasks.
+Validation: Pending `git diff --check`.
+Decisions: Manual entry V1 should save through the existing `POST /characters` contract, with rich sheet detail stored in `referencePayload` as `CharacterSheetV1` and no migration required.
+Next action: Review and approve T-010 after the signed-in My characters frontend work is pushed.
