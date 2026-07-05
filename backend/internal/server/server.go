@@ -29,6 +29,7 @@ func New(characterRepository *characters.Repository, authRepository *auth.Reposi
 	mux.HandleFunc("GET /auth/session", authHandler.CurrentSession)
 	mux.HandleFunc("DELETE /auth/session", authHandler.Logout)
 	mux.Handle("POST /characters", authenticator.RequireSession(http.HandlerFunc(characterHandler.Create)))
+	mux.Handle("GET /characters", authenticator.RequireSession(http.HandlerFunc(characterHandler.List)))
 	mux.Handle("GET /characters/{id}", authenticator.RequireSession(http.HandlerFunc(characterHandler.GetByID)))
 
 	return withCORS(mux, options.AllowedOrigins)

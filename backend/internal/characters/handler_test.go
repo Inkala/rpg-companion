@@ -86,6 +86,108 @@ func TestCharacterHTTPPersistence(t *testing.T) {
 	}
 }
 
+func TestCharacterHTTPListSummaries(t *testing.T) {
+	pool := setupIntegrationDatabase(t)
+	repository := NewRepository(pool)
+	handler := NewHandler(repository)
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /characters", handler.List)
+
+	ownerID := uuid.MustParse("10000000-0000-0000-0000-000000000001")
+	otherOwnerID := uuid.MustParse("10000000-0000-0000-0000-000000000002")
+	insertTestUser(t, pool, ownerID, "mara")
+	insertTestUser(t, pool, otherOwnerID, "other")
+
+	emptyRecorder := httptest.NewRecorder()
+	emptyRequest := httptest.NewRequest(http.MethodGet, "/characters", nil)
+	emptyRequest = withAuthenticatedUser(emptyRequest, ownerID)
+	mux.ServeHTTP(emptyRecorder, emptyRequest)
+
+	if emptyRecorder.Code != http.StatusOK {
+		t.Fatalf("expected empty list status %d, got %d with body %s", http.StatusOK, emptyRecorder.Code, emptyRecorder.Body.String())
+	}
+	var emptyResponse characterListResponse
+	if err := json.NewDecoder(emptyRecorder.Body).Decode(&emptyResponse); err != nil {
+		t.Fatalf("decode empty list response: %v", err)
+	}
+	if len(emptyResponse.Characters) != 0 {
+		t.Fatalf("expected empty character list, got %v", emptyResponse.Characters)
+	}
+
+	updatedAt := time.Date(2026, 7, 5, 12, 0, 0, 0, time.UTC)
+	createTestCharacter(t, repository, testCharacterInput{
+		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000001"),
+		OwnerID:   ownerID,
+		Name:      "Older Ranger",
+		Subclass:  stringPtr("Hunter"),
+		UpdatedAt: updatedAt,
+	})
+	createTestCharacter(t, repository, testCharacterInput{
+		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000002"),
+		OwnerID:   ownerID,
+		Name:      "Newest Fighter",
+		Subclass:  nil,
+		UpdatedAt: updatedAt,
+	})
+	createTestCharacter(t, repository, testCharacterInput{
+		ID:        uuid.MustParse("00000000-0000-0000-0000-000000000003"),
+		OwnerID:   otherOwnerID,
+		Name:      "Other User Character",
+		Subclass:  stringPtr("Thief"),
+		UpdatedAt: updatedAt.Add(time.Hour),
+	})
+
+	listRecorder := httptest.NewRecorder()
+	listRequest := httptest.NewRequest(http.MethodGet, "/characters", nil)
+	listRequest = withAuthenticatedUser(listRequest, ownerID)
+	mux.ServeHTTP(listRecorder, listRequest)
+
+	if listRecorder.Code != http.StatusOK {
+		t.Fatalf("expected list status %d, got %d with body %s", http.StatusOK, listRecorder.Code, listRecorder.Body.String())
+	}
+
+	responseBody := listRecorder.Body.Bytes()
+	var response characterListResponse
+	if err := json.NewDecoder(bytes.NewReader(responseBody)).Decode(&response); err != nil {
+		t.Fatalf("decode list response: %v", err)
+	}
+	if len(response.Characters) != 2 {
+		t.Fatalf("expected 2 owned characters, got %d: %v", len(response.Characters), response.Characters)
+	}
+	if response.Characters[0].Name != "Newest Fighter" || response.Characters[1].Name != "Older Ranger" {
+		t.Fatalf("expected updated_at DESC, id DESC order, got %q then %q", response.Characters[0].Name, response.Characters[1].Name)
+	}
+	if response.Characters[0].SubclassName != nil {
+		t.Fatalf("expected null subclassName for missing subclass, got %v", response.Characters[0].SubclassName)
+	}
+	if response.Characters[1].SubclassName == nil || *response.Characters[1].SubclassName != "Hunter" {
+		t.Fatalf("expected Hunter subclass for second character, got %v", response.Characters[1].SubclassName)
+	}
+	if response.Characters[0].HitPoints.Current != 26 || response.Characters[0].HitPoints.Max != 26 {
+		t.Fatalf("expected HP 26/26, got %d/%d", response.Characters[0].HitPoints.Current, response.Characters[0].HitPoints.Max)
+	}
+	if response.Characters[0].ArmorClass != 14 {
+		t.Fatalf("expected armor class 14, got %d", response.Characters[0].ArmorClass)
+	}
+	if response.Characters[0].SpeedFt != 30 {
+		t.Fatalf("expected speed 30, got %d", response.Characters[0].SpeedFt)
+	}
+	if response.Characters[0].UpdatedAt != updatedAt.UTC().Format(time.RFC3339) {
+		t.Fatalf("expected updatedAt %q, got %q", updatedAt.UTC().Format(time.RFC3339), response.Characters[0].UpdatedAt)
+	}
+
+	var rawResponse map[string][]map[string]any
+	if err := json.NewDecoder(bytes.NewReader(responseBody)).Decode(&rawResponse); err != nil {
+		t.Fatalf("decode raw list response: %v", err)
+	}
+	firstRawCharacter := rawResponse["characters"][0]
+	for _, excludedField := range []string{"ownerSubjectId", "abilityScores", "createdAt", "referencePayload"} {
+		if _, ok := firstRawCharacter[excludedField]; ok {
+			t.Fatalf("list response must not include %s: %v", excludedField, firstRawCharacter)
+		}
+	}
+}
+
 func TestCharacterHTTPValidation(t *testing.T) {
 	pool := setupIntegrationDatabase(t)
 	handler := NewHandler(NewRepository(pool))
@@ -191,6 +293,50 @@ func TestCharacterHTTPValidation(t *testing.T) {
 func withAuthenticatedUser(request *http.Request, userID uuid.UUID) *http.Request {
 	user := auth.AuthenticatedUser{ID: userID, UsernameCanonical: "mara", Username: "Mara"}
 	return request.WithContext(auth.WithAuthenticatedUser(request.Context(), user))
+}
+
+type testCharacterInput struct {
+	ID        uuid.UUID
+	OwnerID   uuid.UUID
+	Name      string
+	Subclass  *string
+	UpdatedAt time.Time
+}
+
+func createTestCharacter(t *testing.T, repository *Repository, input testCharacterInput) {
+	t.Helper()
+
+	ownerID := input.OwnerID
+	_, err := repository.Create(context.Background(), Character{
+		ID:             input.ID,
+		OwnerSubjectID: &ownerID,
+		Name:           input.Name,
+		ClassName:      "Ranger",
+		SubclassName:   input.Subclass,
+		Level:          3,
+		Ancestry:       "Human",
+		Background:     "Outlander",
+		AbilityScores: AbilityScores{
+			Strength:     10,
+			Dexterity:    16,
+			Constitution: 14,
+			Intelligence: 10,
+			Wisdom:       14,
+			Charisma:     8,
+		},
+		HitPoints: HitPoints{
+			Current: 26,
+			Max:     26,
+		},
+		ArmorClass:       14,
+		SpeedFt:          30,
+		ReferencePayload: json.RawMessage(`{"secret":"do not return from list"}`),
+		CreatedAt:        input.UpdatedAt.Add(-time.Hour),
+		UpdatedAt:        input.UpdatedAt,
+	})
+	if err != nil {
+		t.Fatalf("create test character %s: %v", input.Name, err)
+	}
 }
 
 func insertTestUser(t *testing.T, pool *pgxpool.Pool, userID uuid.UUID, username string) {

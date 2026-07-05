@@ -146,6 +146,46 @@ WHERE id = $1::uuid
 	return character, nil
 }
 
+func (repository *Repository) ListSummariesForOwner(ctx context.Context, ownerID uuid.UUID) ([]CharacterSummary, error) {
+	const query = `
+SELECT
+  id::text,
+  name,
+  class_name,
+  subclass_name,
+  level,
+  ancestry,
+  background,
+  hp_current,
+  hp_max,
+  armor_class,
+  speed_ft,
+  updated_at
+FROM characters
+WHERE owner_subject_id = $1::uuid
+ORDER BY updated_at DESC, id DESC`
+
+	rows, err := repository.pool.Query(ctx, query, ownerID.String())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summaries []CharacterSummary
+	for rows.Next() {
+		summary, err := scanCharacterSummary(rows)
+		if err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, summary)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return summaries, nil
+}
+
 type rowScanner interface {
 	Scan(dest ...any) error
 }
@@ -204,4 +244,35 @@ func scanCharacter(row rowScanner) (Character, error) {
 	character.UpdatedAt = updatedAt
 
 	return character, nil
+}
+
+func scanCharacterSummary(row rowScanner) (CharacterSummary, error) {
+	var id string
+	var summary CharacterSummary
+
+	err := row.Scan(
+		&id,
+		&summary.Name,
+		&summary.ClassName,
+		&summary.SubclassName,
+		&summary.Level,
+		&summary.Ancestry,
+		&summary.Background,
+		&summary.HitPoints.Current,
+		&summary.HitPoints.Max,
+		&summary.ArmorClass,
+		&summary.SpeedFt,
+		&summary.UpdatedAt,
+	)
+	if err != nil {
+		return CharacterSummary{}, err
+	}
+
+	parsedID, err := uuid.Parse(id)
+	if err != nil {
+		return CharacterSummary{}, err
+	}
+	summary.ID = parsedID
+
+	return summary, nil
 }

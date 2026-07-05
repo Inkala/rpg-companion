@@ -336,6 +336,13 @@ func TestCharacterOwnershipThroughAuthenticatedServer(t *testing.T) {
 		t.Fatalf("expected unauthenticated create status %d, got %d with body %s", http.StatusUnauthorized, unauthenticatedRecorder.Code, unauthenticatedRecorder.Body.String())
 	}
 
+	unauthenticatedListRecorder := httptest.NewRecorder()
+	unauthenticatedListRequest := httptest.NewRequest(http.MethodGet, "/characters", nil)
+	handler.ServeHTTP(unauthenticatedListRecorder, unauthenticatedListRequest)
+	if unauthenticatedListRecorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected unauthenticated list status %d, got %d with body %s", http.StatusUnauthorized, unauthenticatedListRecorder.Code, unauthenticatedListRecorder.Body.String())
+	}
+
 	ownerRecorder := httptest.NewRecorder()
 	ownerRequest := jsonRequest(http.MethodPost, "/characters", validCharacterJSON())
 	ownerRequest.AddCookie(userACookie)
@@ -348,6 +355,22 @@ func TestCharacterOwnershipThroughAuthenticatedServer(t *testing.T) {
 	decodeResponse(t, ownerRecorder, &created)
 	if created.OwnerSubjectID == nil || *created.OwnerSubjectID != userA.User.ID {
 		t.Fatalf("expected ownerSubjectId %q, got %v", userA.User.ID, created.OwnerSubjectID)
+	}
+
+	ownerListRecorder := httptest.NewRecorder()
+	ownerListRequest := httptest.NewRequest(http.MethodGet, "/characters", nil)
+	ownerListRequest.AddCookie(userACookie)
+	handler.ServeHTTP(ownerListRecorder, ownerListRequest)
+	if ownerListRecorder.Code != http.StatusOK {
+		t.Fatalf("expected owner list status %d, got %d with body %s", http.StatusOK, ownerListRecorder.Code, ownerListRecorder.Body.String())
+	}
+	var ownerList characterListResponse
+	decodeResponse(t, ownerListRecorder, &ownerList)
+	if len(ownerList.Characters) != 1 {
+		t.Fatalf("expected one owned character in list, got %d", len(ownerList.Characters))
+	}
+	if ownerList.Characters[0].ID != created.ID {
+		t.Fatalf("expected listed character %q, got %q", created.ID, ownerList.Characters[0].ID)
 	}
 
 	rejectedOwnerRecorder := httptest.NewRecorder()
@@ -522,6 +545,12 @@ type authResponse struct {
 type characterResponse struct {
 	ID             string  `json:"id"`
 	OwnerSubjectID *string `json:"ownerSubjectId"`
+}
+
+type characterListResponse struct {
+	Characters []struct {
+		ID string `json:"id"`
+	} `json:"characters"`
 }
 
 func validCharacterJSON() string {

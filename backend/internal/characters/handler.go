@@ -101,6 +101,26 @@ func (handler Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, responseFromCharacter(character))
 }
 
+func (handler Handler) List(w http.ResponseWriter, r *http.Request) {
+	if handler.repository == nil {
+		writeError(w, http.StatusServiceUnavailable, "character persistence is not configured")
+		return
+	}
+	ownerID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	summaries, err := handler.repository.ListSummariesForOwner(r.Context(), ownerID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not list characters")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, listResponseFromCharacterSummaries(summaries))
+}
+
 func writeError(w http.ResponseWriter, statusCode int, message string) {
 	writeJSON(w, statusCode, map[string]string{"error": message})
 }

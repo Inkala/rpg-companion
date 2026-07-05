@@ -25,6 +25,20 @@ type Character struct {
 	UpdatedAt        time.Time
 }
 
+type CharacterSummary struct {
+	ID           uuid.UUID
+	Name         string
+	ClassName    string
+	SubclassName *string
+	Level        int
+	Ancestry     string
+	Background   string
+	HitPoints    HitPoints
+	ArmorClass   int
+	SpeedFt      int
+	UpdatedAt    time.Time
+}
+
 type AbilityScores struct {
 	Strength     int `json:"strength"`
 	Dexterity    int `json:"dexterity"`
@@ -86,6 +100,24 @@ type characterResponse struct {
 	UpdatedAt        string          `json:"updatedAt"`
 }
 
+type characterListResponse struct {
+	Characters []characterSummaryResponse `json:"characters"`
+}
+
+type characterSummaryResponse struct {
+	ID           string    `json:"id"`
+	Name         string    `json:"name"`
+	ClassName    string    `json:"className"`
+	SubclassName *string   `json:"subclassName"`
+	Level        int       `json:"level"`
+	Ancestry     string    `json:"ancestry"`
+	Background   string    `json:"background"`
+	HitPoints    HitPoints `json:"hitPoints"`
+	ArmorClass   int       `json:"armorClass"`
+	SpeedFt      int       `json:"speedFt"`
+	UpdatedAt    string    `json:"updatedAt"`
+}
+
 func responseFromCharacter(character Character) characterResponse {
 	var ownerSubjectID *string
 	if character.OwnerSubjectID != nil {
@@ -109,5 +141,30 @@ func responseFromCharacter(character Character) characterResponse {
 		ReferencePayload: character.ReferencePayload,
 		CreatedAt:        character.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt:        character.UpdatedAt.UTC().Format(time.RFC3339),
+	}
+}
+
+func listResponseFromCharacterSummaries(summaries []CharacterSummary) characterListResponse {
+	characters := make([]characterSummaryResponse, 0, len(summaries))
+	for _, summary := range summaries {
+		characters = append(characters, responseFromCharacterSummary(summary))
+	}
+
+	return characterListResponse{Characters: characters}
+}
+
+func responseFromCharacterSummary(summary CharacterSummary) characterSummaryResponse {
+	return characterSummaryResponse{
+		ID:           summary.ID.String(),
+		Name:         summary.Name,
+		ClassName:    summary.ClassName,
+		SubclassName: summary.SubclassName,
+		Level:        summary.Level,
+		Ancestry:     summary.Ancestry,
+		Background:   summary.Background,
+		HitPoints:    summary.HitPoints,
+		ArmorClass:   summary.ArmorClass,
+		SpeedFt:      summary.SpeedFt,
+		UpdatedAt:    summary.UpdatedAt.UTC().Format(time.RFC3339),
 	}
 }
