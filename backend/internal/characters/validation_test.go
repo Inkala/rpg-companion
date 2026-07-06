@@ -69,6 +69,97 @@ func TestCharacterFromRequestRejectsNonObjectReferencePayload(t *testing.T) {
 	}
 }
 
+func TestCharacterFromRequestValidatesMissingNestedFields(t *testing.T) {
+	request := validCreateCharacterRequest()
+	request.Ancestry = " "
+	request.Background = ""
+	request.AbilityScores = requiredAbilityScores{}
+	request.HitPoints = requiredHitPoints{}
+	request.ArmorClass = nil
+	request.SpeedFt = nil
+	request.ReferencePayload = nil
+
+	_, err := characterFromRequest(request, time.Now())
+
+	validationErr, ok := isValidationError(err)
+	if !ok {
+		t.Fatalf("expected validation error, got %v", err)
+	}
+
+	expectedMessages := []string{
+		"ancestry is required",
+		"background is required",
+		"abilityScores.strength is required",
+		"abilityScores.dexterity is required",
+		"abilityScores.constitution is required",
+		"abilityScores.intelligence is required",
+		"abilityScores.wisdom is required",
+		"abilityScores.charisma is required",
+		"hitPoints.current is required",
+		"hitPoints.max is required",
+		"armorClass is required",
+		"speedFt is required",
+		"referencePayload is required",
+	}
+
+	for _, expected := range expectedMessages {
+		if !contains(validationErr.Messages, expected) {
+			t.Errorf("expected validation message %q in %v", expected, validationErr.Messages)
+		}
+	}
+}
+
+func TestCharacterFromRequestValidatesInvalidHitPoints(t *testing.T) {
+	request := validCreateCharacterRequest()
+	request.HitPoints.Current = intPtr(-1)
+	request.HitPoints.Max = intPtr(-5)
+
+	_, err := characterFromRequest(request, time.Now())
+
+	validationErr, ok := isValidationError(err)
+	if !ok {
+		t.Fatalf("expected validation error, got %v", err)
+	}
+
+	expectedMessages := []string{
+		"hitPoints.current must be non-negative",
+		"hitPoints.max must be non-negative",
+		"hitPoints.current must be less than or equal to hitPoints.max",
+	}
+
+	for _, expected := range expectedMessages {
+		if !contains(validationErr.Messages, expected) {
+			t.Errorf("expected validation message %q in %v", expected, validationErr.Messages)
+		}
+	}
+}
+
+func TestCharacterFromRequestTrimsOptionalSubclass(t *testing.T) {
+	request := validCreateCharacterRequest()
+	request.SubclassName = stringPtr("  Hunter  ")
+
+	character, err := characterFromRequest(request, time.Now())
+	if err != nil {
+		t.Fatalf("expected valid character, got %v", err)
+	}
+	if character.SubclassName == nil || *character.SubclassName != "Hunter" {
+		t.Fatalf("expected trimmed subclass Hunter, got %v", character.SubclassName)
+	}
+}
+
+func TestCharacterFromRequestTreatsBlankSubclassAsNil(t *testing.T) {
+	request := validCreateCharacterRequest()
+	request.SubclassName = stringPtr("  ")
+
+	character, err := characterFromRequest(request, time.Now())
+	if err != nil {
+		t.Fatalf("expected valid character, got %v", err)
+	}
+	if character.SubclassName != nil {
+		t.Fatalf("expected nil subclass, got %v", *character.SubclassName)
+	}
+}
+
 func validCreateCharacterRequest() createCharacterRequest {
 	payload := json.RawMessage(`{"actions":[],"features":[],"spells":[]}`)
 	return createCharacterRequest{
