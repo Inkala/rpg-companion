@@ -131,6 +131,18 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Mara Velard' })).toBeInTheDocument();
   });
 
+  it('renders the character creation shell route from /characters/new', () => {
+    window.history.replaceState(null, '', '/characters/new');
+
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: 'Start a character draft.' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Fill the sheet myself/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Help me choose/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Not saving yet' })).toBeInTheDocument();
+    expect(screen.getByText(/Save later will connect this flow/)).toBeInTheDocument();
+  });
+
   it('shows not found for unknown routes and returns home', () => {
     window.history.replaceState(null, '', '/missing');
 
@@ -157,8 +169,8 @@ describe('App', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /Create character/ }),
-    ).toHaveAttribute('aria-disabled', 'true');
+      screen.getByRole('button', { name: 'Create character' }),
+    ).not.toHaveAttribute('aria-disabled');
     expect(
       screen.getByRole('button', { name: /Create party/ }),
     ).toHaveAttribute('aria-disabled', 'true');
@@ -205,6 +217,17 @@ describe('App', () => {
     expect(maraHeading.compareDocumentPosition(createCharacter)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
+  });
+
+  it('opens character creation from the signed-out home action', () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create character' }));
+
+    expect(window.location.pathname).toBe('/characters/new');
+    expect(screen.getByRole('heading', { name: 'Start a character draft.' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Fill the sheet myself/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Help me choose/ })).toBeInTheDocument();
   });
 
   it('shows lightweight account actions in the header when accounts are available', () => {
@@ -551,6 +574,22 @@ describe('App', () => {
     expect(
       screen.getByText('Start with a guided character or fill in your sheet manually.'),
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create character' })).not.toHaveAttribute(
+      'aria-disabled',
+    );
+  });
+
+  it('opens character creation from the signed-in home action', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', signedInFetchMock());
+
+    render(<App />);
+
+    await screen.findByRole('heading', { name: 'No saved characters yet' });
+    fireEvent.click(screen.getByRole('button', { name: 'Create character' }));
+
+    expect(window.location.pathname).toBe('/characters/new');
+    expect(screen.getByRole('heading', { name: 'Start a character draft.' })).toBeInTheDocument();
   });
 
   it('renders saved character summary cards', async () => {
@@ -624,8 +663,42 @@ describe('App', () => {
     expect(screen.getByText('Human Ranger · Level 3')).toBeInTheDocument();
   });
 
+  it('returns home from character creation', () => {
+    window.history.replaceState(null, '', '/characters/new');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(window.location.pathname).toBe('/');
+    expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+  });
+
   it('supports browser Back and Forward between routes', async () => {
     render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create character' }));
+
+    expect(window.location.pathname).toBe('/characters/new');
+    expect(screen.getByRole('heading', { name: 'Start a character draft.' })).toBeInTheDocument();
+
+    window.history.back();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+    fireEvent(window, new PopStateEvent('popstate'));
+
+    expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+
+    window.history.forward();
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/characters/new');
+    });
+    fireEvent(window, new PopStateEvent('popstate'));
+
+    expect(screen.getByRole('heading', { name: 'Start a character draft.' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
 

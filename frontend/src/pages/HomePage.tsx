@@ -12,6 +12,7 @@ interface HomePageProps {
   currentUser: AuthUser | null;
   isSessionLoading: boolean;
   sessionError: string | null;
+  onCreateCharacter: () => void;
   onExploreCharacter: () => void;
   onHome: () => void;
   onOpenAccount: (mode: AccountMode) => void;
@@ -23,6 +24,7 @@ export const HomePage = ({
   currentUser,
   isSessionLoading,
   sessionError,
+  onCreateCharacter,
   onExploreCharacter,
   onHome,
   onOpenAccount,
@@ -43,11 +45,14 @@ export const HomePage = ({
       />
 
       {currentUser ? (
-        <SignedInHomeContent onExploreCharacter={onExploreCharacter} />
+        <SignedInHomeContent
+          onCreateCharacter={onCreateCharacter}
+          onExploreCharacter={onExploreCharacter}
+        />
       ) : (
         <>
           <SampleCharacterCard onExploreCharacter={onExploreCharacter} />
-          <HomeActions />
+          <HomeActions onCreateCharacter={onCreateCharacter} />
         </>
       )}
     </main>

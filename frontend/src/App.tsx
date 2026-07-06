@@ -12,6 +12,7 @@ import {
   signOut,
   type AuthUser,
 } from './auth/api';
+import { CharacterCreationPage } from './character-creation/CharacterCreationPage';
 import { CharacterReference } from './characters/CharacterReference';
 import { maraReferenceCharacter } from './characters/maraReference';
 import { AccountPage } from './pages/AccountPage';
@@ -80,6 +81,10 @@ export const App = () => {
     navigateToRoute({ name: 'sample-character' });
   };
 
+  const showNewCharacter = () => {
+    navigateToRoute({ name: 'new-character' });
+  };
+
   const showHome = () => {
     navigateToRoute({ name: 'home' });
   };
@@ -122,6 +127,7 @@ export const App = () => {
           currentUser={currentUser}
           isSessionLoading={isSessionLoading}
           sessionError={sessionError}
+          onCreateCharacter={showNewCharacter}
           onExploreCharacter={showSampleCharacter}
           onHome={showHome}
           onOpenAccount={showAccount}
@@ -137,6 +143,8 @@ export const App = () => {
           onModeChange={showAccountMode}
           onSignOut={handleSignOut}
         />
+      ) : route.name === 'new-character' ? (
+        <CharacterCreationPage onBack={showHome} />
       ) : route.name === 'sample-character' ? (
         <CharacterReference
           character={maraReferenceCharacter}

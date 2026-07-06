@@ -127,3 +127,11 @@ What changed: Added the approved 3-question MVP questionnaire, scoring model, re
 Validation: `git diff --check` passed.
 Decisions: Help me choose recommends only between Strength melee Fighter and Dexterity archer Fighter for the first level-1 Human Fighter slice; magic, healing, stealth, social, and tactical complexity questions remain future-only until supported rules exist.
 Next action: Review the planning-doc update before staging or committing.
+
+## 2026-07-06
+
+Task: T-011 character creation entry and draft foundation
+What changed: Added `/characters/new`, connected home Create character actions to the new route, created the character creation shell, and added initial in-memory draft state types for mode, name, concept, and selected build.
+Validation: Frontend lint, typecheck, test, build, and `git diff --check` passed.
+Decisions: Keep this slice entry-only. Saving, localStorage, manual sheet fields, questionnaire steps, backend changes, and CharacterSheetV1 save mapping remain deferred.
+Next action: Review T-011 implementation after validation before staging or committing.

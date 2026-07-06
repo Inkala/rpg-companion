@@ -1,8 +1,8 @@
 # Current Work
 
-Active task: T-010 manual character entry planning
+Active task: T-011 character creation entry and draft foundation
 
-State: Planning complete. Awaiting review and approval before any implementation starts.
+State: Implementation complete. Awaiting review before staging or commit.
 
 T-002 status: authentication and owner-scoped character implementation completed, committed, and validated.
 
@@ -12,8 +12,13 @@ T-006 status: Home action hierarchy and form/button polish completed, committed,
 
 T-007 status: frontend app-shell architecture refactor completed, committed, pushed, and validated.
 
-Next action: Review and approve `tasks/T-010/` after the signed-in My characters frontend work is pushed.
+T-010 status: manual character entry planning completed and approved.
 
-Task folder: `tasks/T-010/`
+T-011 scope: creation entry foundation only. Adds `/characters/new`, mode choice, in-memory draft
+state types, and no save behavior.
 
-Last updated: 2026-07-05
+Next action: Review T-011 implementation and validation results before staging or commit.
+
+Task folder: not created for this small implementation slice.
+
+Last updated: 2026-07-06

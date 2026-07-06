@@ -11,7 +11,13 @@ type CharacterSummaryState =
   | { status: 'loaded'; characters: CharacterSummaryDTO[] };
 
 export const SignedInHomeContent = (
-  { onExploreCharacter }: { onExploreCharacter: () => void; }
+  {
+    onCreateCharacter,
+    onExploreCharacter,
+  }: {
+    onCreateCharacter: () => void;
+    onExploreCharacter: () => void;
+  },
 ) => {
   const [characterState, setCharacterState] = useState<CharacterSummaryState>({ status: 'loading' });
 
@@ -45,7 +51,13 @@ export const SignedInHomeContent = (
       <section className="home-stack" aria-label="Your Hunin home">
         <section className="home-panel" aria-labelledby="my-characters-title">
           <CharacterSummaryContent state={characterState} />
-          <PlannedActionButton label="Create character" variant="primary" />
+          <button
+            type="button"
+            className="button button--primary"
+            onClick={onCreateCharacter}
+          >
+            Create character
+          </button>
         </section>
 
         <section className="home-panel home-panel--parties" aria-labelledby="my-parties-title">

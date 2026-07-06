@@ -1,6 +1,10 @@
 import { PlannedActionButton } from './PlannedActionButton';
 
-export const HomeActions = () => {
+type HomeActionsProps = {
+  onCreateCharacter: () => void;
+};
+
+export const HomeActions = ({ onCreateCharacter }: HomeActionsProps) => {
   return (
     <section className="home-actions" aria-labelledby="home-actions-title">
       <div>
@@ -15,7 +19,13 @@ export const HomeActions = () => {
       </div>
 
       <div className="main-action-grid">
-        <PlannedActionButton label="Create character" variant="primary" />
+        <button
+          type="button"
+          className="button button--primary"
+          onClick={onCreateCharacter}
+        >
+          Create character
+        </button>
         <PlannedActionButton label="Create party" />
         <PlannedActionButton label="Join party" />
       </div>
