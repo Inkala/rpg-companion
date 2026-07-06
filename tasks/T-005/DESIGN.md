@@ -422,21 +422,127 @@ the user.
 
 First implementation:
 
-- Ask one or a few preference questions.
+- Ask exactly three required scenario-style preference questions.
 - Recommend between the two approved Fighter presets:
   - Strength melee Fighter,
   - Dexterity archer Fighter.
 - Explain the recommendation in plain language.
 - Allow override before review.
+- Do not imply support for magic, healing, rogue-style stealth, all classes, all spells, or full
+  D&D character creation.
+- Keep scope copy visible but quiet: "This first guide chooses between two level-1 Fighter styles."
 
-Example question direction:
+Intro copy:
 
 ```text
-Trouble starts across the room. What sounds more like you?
+Let’s pick between two beginner-friendly level-1 Human Fighter styles. This first version only
+recommends a sturdy melee Fighter or a precise archer Fighter. You can switch after the
+recommendation.
+```
+
+Approved MVP questions:
+
+```text
+1. Danger breaks out right in front of the party. What feels most like your hero?
 
 - Step forward, shield up, and hold the line.
-- Find the best angle and end the threat from range.
+  Maps to Strength melee Fighter.
+- Move to a clear angle and drop the biggest threat from range.
+  Maps to Dexterity archer Fighter.
+
+2. In a fight, where do you picture them doing their best work?
+
+- Up close, trading blows where things are loud and messy.
+  Maps to Strength melee Fighter.
+- A few steps back, watching the field and choosing the right shot.
+  Maps to Dexterity archer Fighter.
+
+3. An ally is in trouble. What is your instinct?
+
+- Rush in and make space for them to breathe.
+  Maps to Strength melee Fighter.
+- Stay mobile and pick off the enemy pressuring them.
+  Maps to Dexterity archer Fighter.
 ```
+
+Scoring:
+
+- Each answer gives 1 point to one build.
+- Highest score wins.
+- With 3 required binary questions, there is no tie.
+- Store `questionnaireAnswers`, `recommendedBuild`, `selectedBuild`, and
+  `recommendationWasOverridden`.
+- Derive the character from `selectedBuild`.
+
+Recommendation result copy:
+
+Strength melee Fighter:
+
+```text
+Your answers point to a Strength melee Fighter: a level-1 Human Fighter who stands up front,
+protects allies, and handles danger face to face. This build uses chain mail, a shield, and a
+longsword, with strong defense and a simple, sturdy combat plan.
+```
+
+Secondary note:
+
+```text
+Good fit if you want your character to feel brave, durable, and direct.
+```
+
+Dexterity archer Fighter:
+
+```text
+Your answers point to a Dexterity archer Fighter: a level-1 Human Fighter who fights from range,
+moves for a better angle, and solves problems with accurate shots. This build uses a longbow,
+lighter armor, and positioning, with a strong ranged attack.
+```
+
+Secondary note:
+
+```text
+Good fit if you want your character to feel alert, flexible, and precise.
+```
+
+Override copy:
+
+```text
+Prefer the other style? No problem. The recommendation is guidance, not a lock.
+```
+
+Use explicit action labels such as:
+
+- Use Strength melee Fighter
+- Choose Dexterity archer Fighter
+- Use Dexterity archer Fighter
+- Choose Strength melee Fighter
+
+Figma-ready layout notes:
+
+- Mobile: one question per screen with progress text such as `Question 2 of 3`.
+- Desktop: stepper or progress can be visible, but the current question remains the primary focus.
+- Use two large radio-card choices per question.
+- Recommendation screen shows the result as a heading, the explanatory copy, the secondary note,
+  and primary/secondary build actions.
+- Override state should feel normal, not like an error.
+
+Accessibility notes:
+
+- Use native radio inputs or correct `radiogroup` semantics.
+- Cards must be keyboard selectable.
+- Show visible focus states.
+- Do not rely on color alone for selected or recommended states.
+- Result should be announced with heading text.
+
+Future-only expansions:
+
+- magic questions,
+- healing questions,
+- stealth questions,
+- social questions,
+- tactical complexity questions.
+
+Only add these once supported rules, classes, spells, features, and implementation paths exist.
 
 ### Fill The Sheet Myself
 

@@ -64,6 +64,9 @@ Guided builds:
 - Strength melee Fighter.
 - Dexterity archer Fighter.
 
+Help me choose must recommend only between these two builds. It must not imply support for magic,
+healing, rogue-style stealth, all classes, all spells, or full D&D character creation.
+
 Ability scores:
 
 - Standard-array-derived presets only.
@@ -158,8 +161,63 @@ Fixed presets:
    - Short concept or note is optional.
 
 3. Guided build
-   - User chooses between Strength melee Fighter and Dexterity archer Fighter.
+   - User can choose between Strength melee Fighter and Dexterity archer Fighter directly, or use
+     Help me choose.
+   - Help me choose uses exactly three required scenario-style questions.
+   - Each answer maps to one of the two approved Fighter builds.
    - Each option uses plain-language guidance and avoids assuming the player already knows D&D terms.
+   - Scope copy stays visible but quiet: "This first guide chooses between two level-1 Fighter
+     styles."
+
+#### Help Me Choose Questions
+
+Intro copy:
+
+> Let’s pick between two beginner-friendly level-1 Human Fighter styles. This first version only
+> recommends a sturdy melee Fighter or a precise archer Fighter. You can switch after the
+> recommendation.
+
+Questions:
+
+1. Danger breaks out right in front of the party. What feels most like your hero?
+   - Step forward, shield up, and hold the line.
+     - Maps to Strength melee Fighter.
+   - Move to a clear angle and drop the biggest threat from range.
+     - Maps to Dexterity archer Fighter.
+2. In a fight, where do you picture them doing their best work?
+   - Up close, trading blows where things are loud and messy.
+     - Maps to Strength melee Fighter.
+   - A few steps back, watching the field and choosing the right shot.
+     - Maps to Dexterity archer Fighter.
+3. An ally is in trouble. What is your instinct?
+   - Rush in and make space for them to breathe.
+     - Maps to Strength melee Fighter.
+   - Stay mobile and pick off the enemy pressuring them.
+     - Maps to Dexterity archer Fighter.
+
+Scoring:
+
+- Each answer gives 1 point to one build.
+- Highest score wins.
+- With 3 required binary questions, there is no tie.
+- The recommendation is guidance only. User can choose the other build before review.
+
+Recommendation state to store in the draft:
+
+- `questionnaireAnswers`
+- `recommendedBuild`
+- `selectedBuild`
+- `recommendationWasOverridden`
+
+Recommendation edge cases:
+
+- Changing an earlier answer recomputes the recommendation.
+- If the user overrides the recommendation, preserve `recommendedBuild` but derive the character
+  from `selectedBuild`.
+- If answers later align with the override, clear `recommendationWasOverridden`.
+- Guest user can preview but cannot save.
+- Unsupported fantasies like magic, healing, or rogue-style stealth should be marked future or out
+  of scope, not offered as fake options.
 
 4. Background
    - User chooses Soldier or Outlander.
@@ -200,7 +258,11 @@ CharacterCreationDraftV1
 - status
 - name
 - conceptNote
+- questionnaireAnswers
+- recommendedBuild
 - buildChoice
+- selectedBuild
+- recommendationWasOverridden
 - backgroundChoice
 - touchedFields
 ```
@@ -248,6 +310,9 @@ The eventual user-visible implementation is acceptable when:
 - The flow supports only the approved Fighter-only option set.
 - Character name is required and validated near the field.
 - User can choose Strength melee Fighter or Dexterity archer Fighter.
+- Help me choose asks exactly three required questions and recommends only one of the two approved
+  Fighter builds.
+- User can override the Help me choose recommendation before review.
 - User can choose Soldier or Outlander.
 - Review shows all minimum derived character data.
 - Guest can complete the flow and view a temporary in-memory Character Reference preview, but cannot

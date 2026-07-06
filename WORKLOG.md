@@ -119,3 +119,11 @@ What changed: Created the docs-only plan for the future `Fill the sheet myself` 
 Validation: Pending `git diff --check`.
 Decisions: Manual entry V1 should save through the existing `POST /characters` contract, with rich sheet detail stored in `referencePayload` as `CharacterSheetV1` and no migration required.
 Next action: Review and approve T-010 after the signed-in My characters frontend work is pushed.
+
+## 2026-07-05
+
+Task: T-003/T-005 Help me choose questionnaire planning
+What changed: Added the approved 3-question MVP questionnaire, scoring model, recommendation copy, override behavior, accessibility notes, edge cases, and future-only expansion boundaries to the guided creation planning docs.
+Validation: `git diff --check` passed.
+Decisions: Help me choose recommends only between Strength melee Fighter and Dexterity archer Fighter for the first level-1 Human Fighter slice; magic, healing, stealth, social, and tactical complexity questions remain future-only until supported rules exist.
+Next action: Review the planning-doc update before staging or committing.

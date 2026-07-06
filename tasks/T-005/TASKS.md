@@ -87,8 +87,9 @@ This is a design/documentation task. No application implementation should happen
 - Expected owned files or folders: `frontend/src/character-creation/`
 - Shared files or dependencies: creation option data and derivation utilities
 
-- [ ] Add the first Help me choose question(s) that recommend Strength melee Fighter or Dexterity
-  archer Fighter.
+- [ ] Add the approved 3-question Help me choose flow that recommends Strength melee Fighter or
+  Dexterity archer Fighter, stores `recommendedBuild` separately from `selectedBuild`, supports
+  override before review, and avoids unsupported magic/healing/stealth/all-classes implications.
 
 ## 7. Fill the sheet myself descriptions and disclosures
 
