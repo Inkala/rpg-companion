@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { CharacterReference } from './CharacterReference';
+import { HitPointValue } from './CharacterStats';
 import { maraReferenceCharacter } from './maraReference';
 import type { CharacterReferenceViewModel } from './types';
 
@@ -179,6 +180,104 @@ describe('CharacterReference', () => {
     expect(screen.queryByRole('button', { name: /Hunter's Mark/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Fog Cloud/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Cure Wounds/ })).not.toBeInTheDocument();
+  });
+
+  it('shows only maximum HP when Mara is at full HP', () => {
+    render(<CharacterReference character={maraReferenceCharacter} onBack={vi.fn()} />);
+
+    const primaryStats = screen.getByLabelText('Primary stats');
+    const fullHp = within(primaryStats).getByText('26');
+
+    expect(fullHp).toBeInTheDocument();
+    expect(fullHp).toHaveClass('hp-value--full');
+    expect(within(primaryStats).queryByText('26 / 26')).not.toBeInTheDocument();
+  });
+
+  it('renders reduced HP as muted current HP before primary maximum HP', () => {
+    const { container } = render(
+      <HitPointValue hitPoints={{ current: 22, max: 26 }} />,
+    );
+
+    const currentHp = screen.getByText('22');
+    const separator = screen.getByText('/');
+    const maxHp = screen.getByText('26');
+
+    expect(container.textContent).toBe('22 / 26');
+    expect(currentHp.compareDocumentPosition(separator)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(separator.compareDocumentPosition(maxHp)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(currentHp).toHaveClass('hp-value__current');
+    expect(separator).toHaveClass('hp-value__separator');
+    expect(maxHp).toHaveClass('hp-value__max');
+  });
+
+  it('starts Mara actions expanded', () => {
+    render(<CharacterReference character={maraReferenceCharacter} onBack={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: /Actions, 2 items/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: /Longbow/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Shortsword/ })).toBeInTheDocument();
+  });
+
+  it('expands Mara features on request', () => {
+    render(<CharacterReference character={maraReferenceCharacter} onBack={vi.fn()} />);
+
+    const featuresHeader = screen.getByRole('button', {
+      name: /Features, 2 items/,
+    });
+
+    expect(featuresHeader).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: /Colossus Slayer/ })).not.toBeInTheDocument();
+
+    fireEvent.click(featuresHeader);
+
+    expect(featuresHeader).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /Archery/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Colossus Slayer/ })).toBeInTheDocument();
+  });
+
+  it('opens the Mara Colossus Slayer sheet', () => {
+    render(<CharacterReference character={maraReferenceCharacter} onBack={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Features, 2 items/ }));
+
+    fireEvent.click(screen.getByRole('button', { name: /Colossus Slayer/ }));
+
+    const sheet = screen.getByRole('dialog', {
+      name: 'Colossus Slayer quick reference',
+    });
+
+    expect(sheet).toBeInTheDocument();
+    expect(
+      within(sheet).getByText(
+        'After you hit an enemy that is already wounded, add 1d8 damage.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(sheet).getByText('Timing')).toBeInTheDocument();
+    expect(within(sheet).getByText('Once per turn')).toBeInTheDocument();
+  });
+
+  it('closes the Mara sheet and returns focus to Colossus Slayer', async () => {
+    render(<CharacterReference character={maraReferenceCharacter} onBack={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Features, 2 items/ }));
+
+    const colossusRow = screen.getByRole('button', { name: /Colossus Slayer/ });
+    fireEvent.click(colossusRow);
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Close Colossus Slayer quick reference',
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(colossusRow).toHaveFocus();
+    });
   });
 
   it('keeps rows without quick-reference content as planned details', () => {

@@ -1,0 +1,102 @@
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { AppShell } from './AppShell';
+
+const maraUser = {
+  id: '00000000-0000-0000-0000-000000000001',
+  usernameCanonical: 'mara',
+  username: 'Mara',
+};
+
+const renderShell = (
+  options: Partial<Parameters<typeof AppShell>[0]> = {},
+) => {
+  const props = {
+    accountsAvailable: false,
+    children: <main>Shell content</main>,
+    currentUser: null,
+    isSessionLoading: false,
+    sessionError: null,
+    onHome: vi.fn(),
+    onOpenAccount: vi.fn(),
+    onSignOut: vi.fn(),
+    ...options,
+  };
+
+  render(<AppShell {...props} />);
+  return props;
+};
+
+describe('AppShell', () => {
+  it('renders brand, navigation shell, and children', () => {
+    renderShell();
+
+    expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Hunin' })).toHaveAttribute('href', '/');
+    expect(screen.getByText('Your party companion.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Create, bring in, and understand a character without decoding the whole sheet.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Shell content')).toBeInTheDocument();
+  });
+
+  it('opens account actions from the desktop header', () => {
+    const { onOpenAccount } = renderShell({ accountsAvailable: true });
+
+    const accountActions = screen.getByLabelText('Account actions');
+    fireEvent.click(within(accountActions).getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(within(accountActions).getByRole('button', { name: 'Create account' }));
+
+    expect(onOpenAccount).toHaveBeenNthCalledWith(1, 'sign-in');
+    expect(onOpenAccount).toHaveBeenNthCalledWith(2, 'register');
+  });
+
+  it('shows unavailable account copy when accounts are disabled', () => {
+    renderShell();
+
+    expect(
+      screen.getByText(
+        'Accounts are unavailable in the public demo until the backend is deployed. Mara remains available without an account.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('hides desktop account actions on account pages while keeping the mobile menu trigger', () => {
+    renderShell({ accountsAvailable: true, showAccountActions: false });
+
+    expect(screen.queryByLabelText('Account actions')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Menu' })).toBeInTheDocument();
+  });
+
+  it('opens mobile account actions and closes them with Escape', () => {
+    const { onOpenAccount } = renderShell({ accountsAvailable: true });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    const menu = screen.getByRole('menu');
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Sign in' }));
+
+    expect(onOpenAccount).toHaveBeenCalledWith('sign-in');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('signs out from the mobile account menu', () => {
+    const { onSignOut } = renderShell({
+      accountsAvailable: true,
+      currentUser: maraUser,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+
+    expect(onSignOut).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+});
