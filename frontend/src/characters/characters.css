@@ -493,9 +493,6 @@
     padding: var(--space-5);
   }
 
-  .reference-page {
-    width: min(100%, 680px);
-  }
 }
 
 @media (max-width: 390px) {

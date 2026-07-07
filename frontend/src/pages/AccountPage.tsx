@@ -22,7 +22,7 @@ export const AccountPage = ({
   onSignOut,
 }: AccountPageProps) => {
   return (
-    <main className="app-shell account-page">
+    <main className="app-shell account-page account-page--auth">
       <header className="reference-nav">
         <button className="back-button" onClick={onBack}>
           Back

@@ -40,6 +40,8 @@
   --radius-pill: 999px;
   --shadow-card: 0 1px 2px rgba(32, 27, 21, 0.08);
   --shadow-sheet: 0 -12px 32px rgba(32, 27, 21, 0.22);
+  --layout-content-max-width: 760px;
+  --layout-auth-max-width: 570px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -183,7 +185,7 @@ a:focus-visible,
 
 @media (min-width: 720px) {
   .app-shell {
-    width: min(100%, 760px);
+    width: min(100%, var(--layout-content-max-width));
     padding-top: var(--space-8);
   }
 

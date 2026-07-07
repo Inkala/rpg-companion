@@ -203,6 +203,10 @@
 }
 
 @media (min-width: 720px) {
+  .account-page--auth {
+    width: min(75%, var(--layout-auth-max-width));
+  }
+
   .account-actions {
     display: flex;
     flex-wrap: wrap;

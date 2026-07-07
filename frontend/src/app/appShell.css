@@ -134,7 +134,7 @@
   .app-header {
     grid-template-columns: minmax(0, 1fr) minmax(15rem, auto);
     align-items: start;
-    width: min(100%, 760px);
+    width: min(100%, var(--layout-content-max-width));
     padding-top: var(--space-8);
   }
 
