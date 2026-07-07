@@ -151,3 +151,11 @@ What changed: Implemented the 5-question, 4-answer Help me choose quiz inside `f
 Validation: Frontend lint, typecheck, test, build, and `git diff --check` passed.
 Decisions: Keep questionnaire testing in `frontend/src/character-creation/CharacterCreationPage.test.tsx` and do not touch global app header/navigation or route-level app tests in this task.
 Next action: Review T-012 implementation and validation results before staging or committing.
+
+## 2026-07-07
+
+Task: T-013 generated Fighter save flow planning
+What changed: Created docs-only planning for generating fixed level-1 Human Fighter builds from Help me choose, reviewing before save, persisting through the authenticated character API, showing saved summaries in My characters, and opening saved characters in Character Reference.
+Validation: Pending `git diff --check`.
+Decisions: Prefer review before save; signed-out users may preview but must sign in to save; use `CharacterSheetV1` as the full `referencePayload`; no backend migration appears necessary.
+Next action: Review and approve T-013 before implementation.
