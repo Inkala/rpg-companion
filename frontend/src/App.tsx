@@ -5,6 +5,7 @@ import {
   pathForAccountMode,
   pathForRoute,
 } from './app/router';
+import { AppShell } from './app/AppShell';
 import {
   AuthApiError,
   authApiAvailable,
@@ -120,18 +121,21 @@ export const App = () => {
   };
 
   return (
-    <>
+    <AppShell
+      accountsAvailable={accountsAvailable}
+      currentUser={currentUser}
+      isSessionLoading={isSessionLoading}
+      sessionError={sessionError}
+      onHome={showHome}
+      onOpenAccount={showAccount}
+      onSignOut={handleSignOut}
+      showAccountActions={route.name !== 'account'}
+    >
       {route.name === 'home' ? (
         <HomePage
-          accountsAvailable={accountsAvailable}
-          currentUser={currentUser}
-          isSessionLoading={isSessionLoading}
-          sessionError={sessionError}
+          isSignedIn={currentUser !== null}
           onCreateCharacter={showNewCharacter}
           onExploreCharacter={showSampleCharacter}
-          onHome={showHome}
-          onOpenAccount={showAccount}
-          onSignOut={handleSignOut}
         />
       ) : route.name === 'account' ? (
         <AccountPage
@@ -153,6 +157,6 @@ export const App = () => {
       ) : (
         <NotFoundPage onHome={showHome} />
       )}
-    </>
+    </AppShell>
   );
 };

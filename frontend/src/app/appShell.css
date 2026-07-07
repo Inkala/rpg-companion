@@ -1,0 +1,162 @@
+.global-shell {
+  min-height: 100vh;
+}
+
+.app-header {
+  display: grid;
+  width: min(100%, 560px);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) 0;
+  gap: var(--space-4);
+}
+
+.app-brand {
+  min-width: 0;
+}
+
+.app-brand__link {
+  display: inline-block;
+  margin-bottom: var(--space-3);
+}
+
+.app-brand__logo {
+  display: block;
+  width: min(220px, 70vw);
+  height: auto;
+}
+
+.app-brand__tagline {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.app-brand__support {
+  max-width: 34rem;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.app-header__nav {
+  display: none;
+}
+
+.app-mobile-menu {
+  position: absolute;
+  top: var(--space-6);
+  right: var(--space-4);
+}
+
+.app-mobile-menu__trigger {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-disabled-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-accent-text);
+  padding: 0 var(--space-3);
+  cursor: pointer;
+  font-weight: 800;
+  box-shadow: var(--shadow-card);
+}
+
+.app-mobile-menu__content {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 13rem;
+  gap: var(--space-1);
+  border: 1px solid rgba(47, 93, 70, 0.45);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface-muted);
+  padding: var(--space-2);
+  box-shadow: var(--shadow-card);
+}
+
+.app-mobile-menu__item {
+  display: flex;
+  min-height: 44px;
+  width: 100%;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  padding: 0 var(--space-2);
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+}
+
+.app-mobile-menu__item:hover,
+.app-mobile-menu__item:focus-visible {
+  background: var(--color-accent-primary);
+  color: var(--color-text-inverse);
+}
+
+.app-mobile-menu__item:focus-visible,
+.app-mobile-menu__trigger:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.app-mobile-menu__item--primary {
+  background: var(--color-accent-primary);
+  color: var(--color-text-inverse);
+}
+
+.app-mobile-menu__note,
+.app-mobile-menu__error {
+  margin: 0;
+  padding: var(--space-2);
+}
+
+.app-mobile-menu__note {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.35;
+}
+
+@media (min-width: 720px) {
+  .app-header {
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, auto);
+    align-items: start;
+    width: min(100%, 760px);
+    padding-top: var(--space-8);
+  }
+
+  .app-brand__logo {
+    width: 260px;
+  }
+
+  .app-header__nav {
+    display: grid;
+    justify-self: end;
+    justify-items: end;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    text-align: right;
+  }
+
+  .app-header__home {
+    min-height: auto;
+  }
+
+  .app-header__account {
+    display: grid;
+    justify-items: end;
+  }
+
+  .app-mobile-menu {
+    display: none;
+  }
+}
