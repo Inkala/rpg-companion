@@ -71,3 +71,36 @@ Planning docs should be validated with:
 git diff --check
 git status --short
 ```
+
+## T-013A Implementation Notes
+
+Certain:
+
+- Preflight confirmed the worktree was clean on `main`.
+- Preflight confirmed `bdcb667 docs(characters): plan generated fighter save flow` was present in
+  `git log --oneline -5`.
+- Added pure generated Fighter build data and mappers in
+  `frontend/src/character-creation/generatedFighterBuilds.ts`.
+- Added focused mapper tests in
+  `frontend/src/character-creation/generatedFighterBuilds.test.ts`.
+- Did not edit `frontend/src/App.tsx`, routing files, backend files, API helper files, My
+  characters cards, Character Reference loading routes, dependencies, CI, deployment config,
+  branches, worktrees, staging, commits, or pushes.
+
+Mapper shape:
+
+- `generatedFighterBuilds` stores the two fixed supported Help me choose builds.
+- `buildGeneratedFighterCharacterSheet(buildId, characterName)` returns a complete
+  `CharacterSheetV1`.
+- `buildGeneratedFighterCreateRequest(buildId, characterName)` returns a backend-ready create
+  request object with `referencePayload` set to the same `CharacterSheetV1`.
+- The create request intentionally has no `ownerSubjectId`.
+
+Validation:
+
+- `pnpm --dir frontend test -- generatedFighterBuilds.test.ts` passed. Vitest also ran the current
+  matching frontend suite in this project configuration.
+- `pnpm --dir frontend lint` passed.
+- `pnpm --dir frontend typecheck` passed.
+- `pnpm --dir frontend test` passed.
+- `pnpm --dir frontend build` passed.

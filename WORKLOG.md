@@ -159,3 +159,11 @@ What changed: Created docs-only planning for generating fixed level-1 Human Figh
 Validation: Pending `git diff --check`.
 Decisions: Prefer review before save; signed-out users may preview but must sign in to save; use `CharacterSheetV1` as the full `referencePayload`; no backend migration appears necessary.
 Next action: Review and approve T-013 before implementation.
+
+## 2026-07-07
+
+Task: T-013A generated Fighter build data and pure mappers
+What changed: Added fixed Strength melee Fighter and Dexterity archer Fighter data plus pure mappers for backend-ready create payloads and complete `CharacterSheetV1` reference payloads.
+Validation: Focused generated Fighter mapper tests, frontend lint, typecheck, test, and build passed.
+Decisions: Keep create-request typing local to the mapper for this slice and avoid review UI, backend calls, routes, API helper changes, My characters changes, and Character Reference loading changes.
+Next action: Review the T-013A diff before staging or committing.

@@ -1,8 +1,9 @@
 # Current Work
 
-Active task: T-013 generated Fighter save flow planning
+Active task: T-013A generated Fighter build data and pure mappers
 
-State: Docs-only planning complete. Awaiting review before staging or commit.
+State: Implementation complete. Frontend validation passed; awaiting review before staging or
+commit.
 
 T-002 status: authentication and owner-scoped character implementation completed, committed, and validated.
 
@@ -24,7 +25,10 @@ T-013 scope: plan the next Help me choose save slice so selected Fighter builds 
 `CharacterSheetV1`, review before save, persist through authenticated `POST /characters`, appear in
 My characters, and open in Character Reference.
 
-Next action: Review T-013 planning docs and approve the implementation split before coding.
+T-013A scope: add pure frontend generated Fighter data and mappers only. No review step, save UI,
+backend calls, routes, My characters card changes, or Character Reference loading changes.
+
+Next action: Review the T-013A diff before staging or commit.
 
 Task folder: `tasks/T-013/`
 

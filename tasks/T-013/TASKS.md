@@ -1,6 +1,6 @@
 # T-013 Tasks
 
-Status: planning
+Status: T-013A implementation complete
 
 This is a documentation-only planning task. Do not modify application code, backend code,
 migrations, tests, dependencies, CI, deployment config, Git history, branches, worktrees, staging,
@@ -16,7 +16,7 @@ commits, or pushes as part of the planning task itself.
 - Expected owned files or folders: `tasks/T-013/`.
 - Shared files or dependencies: `CURRENT.md`, `WORKLOG.md`.
 
-- [ ] Review and approve the generated Fighter save requirements and design.
+- [x] Review and approve the generated Fighter save requirements and design.
 
 ## 2. Add generated Fighter build data and mappers
 
@@ -32,11 +32,20 @@ commits, or pushes as part of the planning task itself.
 - Shared files or dependencies: `CharacterBuildId`, `CharacterSheetV1`, character API request
   types, T-012 selected-build state.
 
-- [ ] Define exact fixed data for Strength melee Fighter.
-- [ ] Define exact fixed data for Dexterity archer Fighter.
-- [ ] Map selected build plus name to the backend create request.
-- [ ] Map selected build plus name to `CharacterSheetV1`.
-- [ ] Add focused mapper tests.
+- [x] Define exact fixed data for Strength melee Fighter.
+- [x] Define exact fixed data for Dexterity archer Fighter.
+- [x] Map selected build plus name to the backend create request.
+- [x] Map selected build plus name to `CharacterSheetV1`.
+- [x] Add focused mapper tests.
+
+T-013A boundary:
+
+- [x] No review step.
+- [x] No save UI.
+- [x] No backend call.
+- [x] No `/characters/:id` route.
+- [x] No My characters card change.
+- [x] No Character Reference loading route change.
 
 ## 3. Add frontend character create and detail API helpers
 
@@ -128,13 +137,14 @@ commits, or pushes as part of the planning task itself.
 
 ## Validation For Future Implementation
 
-- [ ] Run `pnpm --dir frontend lint`.
-- [ ] Run `pnpm --dir frontend typecheck`.
-- [ ] Run `pnpm --dir frontend test`.
-- [ ] Run `pnpm --dir frontend build`.
-- [ ] Run backend tests only if backend code changes.
-- [ ] Run `git diff --check`.
-- [ ] Run `git status --short`.
+- [x] Run `pnpm --dir frontend test -- generatedFighterBuilds.test.ts`.
+- [x] Run `pnpm --dir frontend lint`.
+- [x] Run `pnpm --dir frontend typecheck`.
+- [x] Run `pnpm --dir frontend test`.
+- [x] Run `pnpm --dir frontend build`.
+- [x] Run backend tests only if backend code changes. Not needed for T-013A.
+- [x] Run `git diff --check`.
+- [x] Run `git status --short --branch`.
 
 ## Planning Validation
 
