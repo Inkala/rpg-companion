@@ -88,10 +88,6 @@ export const AppShell = ({
             Hunin
           </h1>
           <p className="app-brand__tagline">Your party companion.</p>
-          <p className="app-brand__support">
-            Create, bring in, and understand a character without decoding the
-            whole sheet.
-          </p>
         </section>
 
         <nav className="app-header__nav" aria-label="App navigation">

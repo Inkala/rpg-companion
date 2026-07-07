@@ -16,20 +16,25 @@ export const HomePage = ({
   isSignedIn = false,
 }: HomePageProps) => {
   return (
-    <main className="app-shell landing-page">
+    <main className="app-shell home-page">
       <PlannedActionDescription />
+      <p className="home-support">
+        Create, bring in, and understand a character without decoding the whole sheet.
+      </p>
 
-      {isSignedIn ? (
-        <SignedInHomeContent
-          onCreateCharacter={onCreateCharacter}
-          onExploreCharacter={onExploreCharacter}
-        />
-      ) : (
-        <>
-          <SampleCharacterCard onExploreCharacter={onExploreCharacter} />
-          <HomeActions onCreateCharacter={onCreateCharacter} />
-        </>
-      )}
+      <div className="landing-page">
+        {isSignedIn ? (
+          <SignedInHomeContent
+            onCreateCharacter={onCreateCharacter}
+            onExploreCharacter={onExploreCharacter}
+          />
+        ) : (
+          <>
+            <SampleCharacterCard onExploreCharacter={onExploreCharacter} />
+            <HomeActions onCreateCharacter={onCreateCharacter} />
+          </>
+        )}
+      </div>
     </main>
   );
 };

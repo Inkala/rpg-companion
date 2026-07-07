@@ -1,7 +1,19 @@
+.home-page {
+  display: block;
+}
+
 .landing-page {
   display: grid;
   align-content: start;
   gap: var(--space-5);
+}
+
+.home-support {
+  max-width: 34rem;
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 .brand-block {

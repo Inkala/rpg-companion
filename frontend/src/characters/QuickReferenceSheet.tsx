@@ -69,8 +69,6 @@ export const QuickReferenceSheet = ({
         aria-describedby={summaryId}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="sheet-handle" aria-hidden="true" />
-
         <div className="sheet-header">
           <div>
             <p className="eyebrow">Quick reference</p>

@@ -68,14 +68,15 @@ export const CharacterReference = ({
             Back
             <span className="sr-only"> to guest landing page</span>
           </button>
-          <span className="reference-nav__label" aria-hidden="true">
-            Character Reference
-          </span>
         </header>
 
         <section className="reference-summary" aria-labelledby="reference-title">
-          <p className="eyebrow">Character Reference</p>
-          <h1 id="reference-title">Character Reference</h1>
+          <h1 id="reference-title" className="sr-only">
+            Character Reference
+          </h1>
+          <p className="eyebrow" aria-hidden="true">
+            Character Reference
+          </p>
           <div className="reference-identity">
             {character.portrait ? (
               <img

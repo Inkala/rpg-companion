@@ -223,23 +223,10 @@
   padding-bottom: var(--space-8);
 }
 
-.reference-nav__label {
-  color: var(--color-text-secondary);
-  font-size: 0.95rem;
-  font-weight: 800;
-}
-
 .reference-summary {
   display: grid;
   gap: var(--space-3);
   padding: var(--space-4);
-}
-
-.reference-summary h1 {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: 1rem;
-  font-weight: 800;
 }
 
 .reference-character {
@@ -382,14 +369,6 @@
   background: var(--color-bg-surface-raised);
   box-shadow: var(--shadow-sheet);
   padding: var(--space-4);
-}
-
-.sheet-handle {
-  width: 48px;
-  height: 4px;
-  justify-self: center;
-  border-radius: var(--radius-pill);
-  background: var(--color-border-strong);
 }
 
 .sheet-header {

@@ -186,7 +186,7 @@ a:focus-visible,
 @media (min-width: 720px) {
   .app-shell {
     width: min(100%, var(--layout-content-max-width));
-    padding-top: var(--space-8);
+    padding-top: var(--space-4);
   }
 
   .button {
