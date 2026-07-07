@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createCharacter, CharactersApiError } from '../characters/api';
 import {
   initialFantasyBucketScores,
   initialCharacterCreationDraft,
@@ -8,11 +9,24 @@ import {
   type FantasyBucket,
   type FantasyBucketScores,
 } from './characterCreationTypes';
+import {
+  buildGeneratedFighterCreateRequest,
+  generatedFighterBuilds,
+} from './generatedFighterBuilds';
 import './characterCreation.css';
 
 type CharacterCreationPageProps = {
   onBack: () => void;
+  isSignedIn?: boolean;
+  onSignIn?: () => void;
+  onCreateAccount?: () => void;
 };
+
+type SaveState =
+  | { status: 'idle' }
+  | { status: 'saving' }
+  | { status: 'error'; message: string }
+  | { status: 'success'; characterName: string };
 
 const modeChoices: {
   mode: Exclude<CharacterCreationMode, null>;
@@ -325,12 +339,19 @@ const getRecommendedBuild = (
   return finalAnsweredFallback ?? 'strength-melee-fighter';
 };
 
-export const CharacterCreationPage = ({ onBack }: CharacterCreationPageProps) => {
+export const CharacterCreationPage = ({
+  onBack,
+  isSignedIn = false,
+  onSignIn,
+  onCreateAccount,
+}: CharacterCreationPageProps) => {
   const [draft, setDraft] = useState<CharacterCreationDraft>(
     initialCharacterCreationDraft,
   );
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isShowingRecommendation, setIsShowingRecommendation] = useState(false);
+  const [isShowingReview, setIsShowingReview] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>({ status: 'idle' });
 
   const chooseMode = (mode: Exclude<CharacterCreationMode, null>) => {
     setDraft((currentDraft) => ({
@@ -341,6 +362,8 @@ export const CharacterCreationPage = ({ onBack }: CharacterCreationPageProps) =>
     if (mode === 'guided') {
       setCurrentQuestionIndex(0);
       setIsShowingRecommendation(false);
+      setIsShowingReview(false);
+      setSaveState({ status: 'idle' });
     }
   };
 
@@ -372,6 +395,13 @@ export const CharacterCreationPage = ({ onBack }: CharacterCreationPageProps) =>
   };
 
   const goBack = () => {
+    if (isShowingReview) {
+      setIsShowingReview(false);
+      setSaveState({ status: 'idle' });
+      setIsShowingRecommendation(true);
+      return;
+    }
+
     if (isShowingRecommendation) {
       setIsShowingRecommendation(false);
       setCurrentQuestionIndex(quizQuestions.length - 1);
@@ -418,6 +448,41 @@ export const CharacterCreationPage = ({ onBack }: CharacterCreationPageProps) =>
         currentDraft.recommendedBuild !== null &&
         currentDraft.recommendedBuild !== build,
     }));
+    setIsShowingReview(true);
+    setSaveState({ status: 'idle' });
+  };
+
+  const updateName = (name: string) => {
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      name,
+    }));
+    if (saveState.status !== 'idle') {
+      setSaveState({ status: 'idle' });
+    }
+  };
+
+  const saveGeneratedCharacter = async () => {
+    if (!draft.selectedBuild || saveState.status === 'saving') {
+      return;
+    }
+
+    setSaveState({ status: 'saving' });
+
+    try {
+      const request = buildGeneratedFighterCreateRequest(
+        draft.selectedBuild,
+        draft.name,
+      );
+      const character = await createCharacter(request);
+      setSaveState({ status: 'success', characterName: character.name });
+    } catch (error) {
+      const message =
+        error instanceof CharactersApiError
+          ? error.message
+          : 'Could not save the character. Check your connection and try again.';
+      setSaveState({ status: 'error', message });
+    }
   };
 
   const renderQuiz = () => {
@@ -568,6 +633,154 @@ export const CharacterCreationPage = ({ onBack }: CharacterCreationPageProps) =>
     );
   };
 
+  const renderReview = () => {
+    if (!draft.selectedBuild) {
+      return renderRecommendation();
+    }
+
+    const build = generatedFighterBuilds[draft.selectedBuild];
+    const request = buildGeneratedFighterCreateRequest(draft.selectedBuild, draft.name);
+    const sheet = request.referencePayload;
+    const mainAttack = sheet.actions[0];
+    const mainAttackSummary = mainAttack
+      ? [mainAttack.name, ...mainAttack.meta.slice(1)].join(' - ')
+      : 'Not generated';
+    const keyFeatures = sheet.features
+      .filter((feature) => feature.includeInReference)
+      .map((feature) => feature.name);
+    const isSaving = saveState.status === 'saving';
+
+    return (
+      <section className="creation-review" aria-labelledby="review-title">
+        <div className="creation-review__header">
+          <p className="eyebrow">Generated character review</p>
+          <h2 id="review-title" className="creation-recommendation__title">
+            Review before saving.
+          </h2>
+          <p className="creation-shell__copy">
+            This is a fixed beginner build from Help me choose. You can rename
+            the character now; deeper rules choices come in later slices.
+          </p>
+        </div>
+
+        <label className="creation-review__field">
+          <span>Name</span>
+          <input
+            type="text"
+            value={draft.name}
+            placeholder={build.defaultName}
+            onChange={(event) => updateName(event.target.value)}
+          />
+        </label>
+
+        <div className="creation-review__summary" aria-label="Generated character summary">
+          <div>
+            <p className="eyebrow">Class/build</p>
+            <h3>{sheet.summary.displayLine}</h3>
+            <p>{sheet.summary.supportingLine}</p>
+          </div>
+          <dl className="creation-review__stats">
+            <div>
+              <dt>Ancestry</dt>
+              <dd>{request.ancestry}</dd>
+            </div>
+            <div>
+              <dt>Background</dt>
+              <dd>{request.background}</dd>
+            </div>
+            <div>
+              <dt>HP</dt>
+              <dd>{request.hitPoints.current}/{request.hitPoints.max}</dd>
+            </div>
+            <div>
+              <dt>AC</dt>
+              <dd>{request.armorClass}</dd>
+            </div>
+            <div>
+              <dt>Speed</dt>
+              <dd>{request.speedFt} ft.</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="creation-review__details">
+          <div>
+            <p className="eyebrow">Main attack</p>
+            <p>{mainAttackSummary}</p>
+          </div>
+          <div>
+            <p className="eyebrow">Key features</p>
+            <ul>
+              {keyFeatures.map((feature) => (
+                <li key={feature}>{feature}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <p className="creation-scope-note">
+          Fixed beginner build: Hunin is not running full D&D character
+          creation rules yet.
+        </p>
+
+        {isSignedIn ? (
+          <div className="creation-save-panel" aria-live="polite">
+            {saveState.status === 'error' ? (
+              <p className="creation-save-panel__error" role="alert">
+                {saveState.message}
+              </p>
+            ) : null}
+            {saveState.status === 'success' ? (
+              <p className="creation-save-panel__success">
+                {saveState.characterName} is saved. You can return home to see
+                it in My characters.
+              </p>
+            ) : null}
+            <div className="creation-quiz__actions">
+              <button type="button" className="back-button" onClick={goBack}>
+                Back
+              </button>
+              <button
+                type="button"
+                className="button button--primary"
+                disabled={isSaving}
+                onClick={saveGeneratedCharacter}
+              >
+                {isSaving ? 'Saving character...' : 'Save character'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="creation-save-panel" aria-live="polite">
+            <p className="creation-save-panel__notice">
+              Sign in to save this character and show it in My characters. You
+              can still preview the generated build here.
+            </p>
+            <div className="creation-quiz__actions">
+              <button type="button" className="back-button" onClick={goBack}>
+                Back
+              </button>
+              {onSignIn ? (
+                <button type="button" className="button button--primary" onClick={onSignIn}>
+                  Sign in
+                </button>
+              ) : null}
+              {onCreateAccount ? (
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={onCreateAccount}
+                >
+                  Create account
+                </button>
+              ) : null}
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  };
+
   return (
     <main className="app-shell character-creation-page">
       <header className="reference-nav">
@@ -589,7 +802,7 @@ export const CharacterCreationPage = ({ onBack }: CharacterCreationPageProps) =>
         </div>
 
         {draft.mode === 'guided' ? (
-          isShowingRecommendation ? renderRecommendation() : renderQuiz()
+          isShowingReview ? renderReview() : isShowingRecommendation ? renderRecommendation() : renderQuiz()
         ) : (
           <fieldset className="creation-mode-group">
             <legend className="creation-mode-group__legend">Choose a mode</legend>
@@ -637,7 +850,12 @@ export const CharacterCreationPage = ({ onBack }: CharacterCreationPageProps) =>
             </div>
             <div>
               <dt>Name</dt>
-              <dd>{draft.name || 'Not added yet'}</dd>
+              <dd>
+                {draft.name ||
+                  (draft.selectedBuild
+                    ? generatedFighterBuilds[draft.selectedBuild].defaultName
+                    : 'Not added yet')}
+              </dd>
             </div>
             <div>
               <dt>Concept</dt>

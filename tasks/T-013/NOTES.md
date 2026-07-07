@@ -104,3 +104,34 @@ Validation:
 - `pnpm --dir frontend typecheck` passed.
 - `pnpm --dir frontend test` passed.
 - `pnpm --dir frontend build` passed.
+
+## T-013B Implementation Notes
+
+Certain:
+
+- Added a generated character review step after accepting or overriding the Help me choose Fighter
+  recommendation.
+- Added editable generated character name on review.
+- Added signed-in save behavior through `createCharacter`.
+- Added signed-out preview behavior with sign-in and create-account actions provided by `App.tsx`.
+- Added `CreateCharacterRequestDTO` and `createCharacter` for authenticated `POST /characters`.
+- Added loading, retryable error, and success states for save.
+- Did not add `/characters/:id`, saved Character Reference loading, clickable My characters cards,
+  manual character entry, localStorage draft persistence, party/GM flow, backend changes,
+  dependencies, CI, deployment config, branches, worktrees, staging, commits, or pushes.
+- Did not edit `frontend/src/App.test.tsx`; the existing app tests ran and passed during focused
+  validation.
+
+Deferred to T-013C:
+
+- Opening the saved generated character.
+- Loading saved `referencePayload` into Character Reference.
+- Making My characters cards actionable.
+
+Validation:
+
+- `pnpm --dir frontend test -- CharacterCreationPage.test.tsx api.test.ts` passed.
+- `pnpm --dir frontend lint` passed.
+- `pnpm --dir frontend typecheck` passed.
+- `pnpm --dir frontend test` passed.
+- `pnpm --dir frontend build` passed.

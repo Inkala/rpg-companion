@@ -148,7 +148,12 @@ export const App = () => {
           onSignOut={handleSignOut}
         />
       ) : route.name === 'new-character' ? (
-        <CharacterCreationPage onBack={showHome} />
+        <CharacterCreationPage
+          isSignedIn={currentUser !== null}
+          onBack={showHome}
+          onCreateAccount={() => showAccount('register')}
+          onSignIn={() => showAccount('sign-in')}
+        />
       ) : route.name === 'sample-character' ? (
         <CharacterReference
           character={maraReferenceCharacter}

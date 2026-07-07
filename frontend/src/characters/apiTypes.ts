@@ -30,6 +30,20 @@ export type CharacterDTO = {
   updatedAt: string;
 };
 
+export type CreateCharacterRequestDTO = {
+  name: string;
+  className: string;
+  subclassName: string | null;
+  level: number;
+  ancestry: string;
+  background: string;
+  abilityScores: AbilityScoresDTO;
+  hitPoints: HitPointsDTO;
+  armorClass: number;
+  speedFt: number;
+  referencePayload: unknown;
+};
+
 export type CharacterSummaryDTO = {
   id: string;
   name: string;

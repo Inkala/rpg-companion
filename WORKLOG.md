@@ -167,3 +167,11 @@ What changed: Added fixed Strength melee Fighter and Dexterity archer Fighter da
 Validation: Focused generated Fighter mapper tests, frontend lint, typecheck, test, and build passed.
 Decisions: Keep create-request typing local to the mapper for this slice and avoid review UI, backend calls, routes, API helper changes, My characters changes, and Character Reference loading changes.
 Next action: Review the T-013A diff before staging or committing.
+
+## 2026-07-07
+
+Task: T-013B generated Fighter review and save UI
+What changed: Added the generated character review step after Help me choose selection, editable name, signed-in save through the authenticated character create API, signed-out save prompt, and loading/error/success states.
+Validation: Focused character creation/API tests, frontend lint, typecheck, test, and build passed.
+Decisions: Defer saved-character opening, `/characters/:id`, clickable My characters cards, and saved Character Reference loading to T-013C.
+Next action: Review the T-013B diff before staging or committing.

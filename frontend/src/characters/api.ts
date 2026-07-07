@@ -1,4 +1,9 @@
-import type { CharacterListResponse, CharacterSummaryDTO } from './apiTypes';
+import type {
+  CharacterDTO,
+  CharacterListResponse,
+  CharacterSummaryDTO,
+  CreateCharacterRequestDTO,
+} from './apiTypes';
 
 type ErrorResponse = {
   error?: string;
@@ -17,6 +22,15 @@ export class CharactersApiError extends Error {
 export const listCharacterSummaries = async (): Promise<CharacterSummaryDTO[]> => {
   const response = await characterRequest<CharacterListResponse>('/characters');
   return response.characters;
+};
+
+export const createCharacter = async (
+  character: CreateCharacterRequestDTO,
+): Promise<CharacterDTO> => {
+  return characterRequest<CharacterDTO>('/characters', {
+    method: 'POST',
+    body: JSON.stringify(character),
+  });
 };
 
 const characterRequest = async <T,>(path: string, init: RequestInit = {}): Promise<T> => {

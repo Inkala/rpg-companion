@@ -1,6 +1,6 @@
 # Current Work
 
-Active task: T-013A generated Fighter build data and pure mappers
+Active task: T-013B generated Fighter review and save UI
 
 State: Implementation complete. Frontend validation passed; awaiting review before staging or
 commit.
@@ -28,7 +28,11 @@ My characters, and open in Character Reference.
 T-013A scope: add pure frontend generated Fighter data and mappers only. No review step, save UI,
 backend calls, routes, My characters card changes, or Character Reference loading changes.
 
-Next action: Review the T-013A diff before staging or commit.
+T-013B scope: add generated character review after Help me choose selection, signed-in
+authenticated save, signed-out save prompt, loading/error/success states, and create-character API
+helper. No saved-character route or Character Reference loading.
+
+Next action: Review the T-013B diff before staging or commit.
 
 Task folder: `tasks/T-013/`
 

@@ -1,6 +1,6 @@
 # T-013 Tasks
 
-Status: T-013A implementation complete
+Status: T-013B implementation complete
 
 This is a documentation-only planning task. Do not modify application code, backend code,
 migrations, tests, dependencies, CI, deployment config, Git history, branches, worktrees, staging,
@@ -59,11 +59,17 @@ T-013A boundary:
 - Shared files or dependencies: existing `listCharacterSummaries`, backend create/detail contract,
   auth session cookies.
 
-- [ ] Add `CreateCharacterRequestDTO`.
-- [ ] Add `createCharacter`.
+- [x] Add `CreateCharacterRequestDTO`.
+- [x] Add `createCharacter`.
 - [ ] Add `getCharacterById`.
-- [ ] Preserve existing list behavior.
-- [ ] Test credentials, JSON headers, success shape, and error handling.
+- [x] Preserve existing list behavior.
+- [x] Test credentials, JSON headers, success shape, and error handling for create.
+
+T-013B boundary:
+
+- [x] No `getCharacterById`.
+- [x] No saved-character route.
+- [x] No saved Character Reference loading.
 
 ## 4. Build review step and save states
 
@@ -76,14 +82,20 @@ T-013A boundary:
 - Shared files or dependencies: current auth session state, account navigation callbacks, global app
   shell.
 
-- [ ] After choosing a recommended or alternate build, show generated-character review.
-- [ ] Add name entry or name confirmation.
-- [ ] Show build, ancestry, background, HP, AC, speed, main attack, and key features.
-- [ ] For signed-in users, enable save.
-- [ ] For signed-out users, show sign-in-required save prompt and do not call the backend.
-- [ ] Disable duplicate submits while save is in flight.
-- [ ] Keep review state intact after errors.
-- [ ] Add component tests for signed-in save, signed-out prompt, and save errors.
+- [x] After choosing a recommended or alternate build, show generated-character review.
+- [x] Add name entry or name confirmation.
+- [x] Show build, ancestry, background, HP, AC, speed, main attack, and key features.
+- [x] For signed-in users, enable save.
+- [x] For signed-out users, show sign-in-required save prompt and do not call the backend.
+- [x] Disable duplicate submits while save is in flight.
+- [x] Keep review state intact after errors.
+- [x] Add component tests for signed-in save, signed-out prompt, and save errors.
+
+T-013B deferred:
+
+- [x] Do not open saved characters after save. Defer to T-013C.
+- [x] Do not make My characters cards clickable. Defer to T-013C.
+- [x] Do not add `/characters/:id`. Defer to T-013C.
 
 ## 5. Open saved generated character in Character Reference
 
@@ -138,6 +150,7 @@ T-013A boundary:
 ## Validation For Future Implementation
 
 - [x] Run `pnpm --dir frontend test -- generatedFighterBuilds.test.ts`.
+- [x] Run `pnpm --dir frontend test -- CharacterCreationPage.test.tsx api.test.ts`.
 - [x] Run `pnpm --dir frontend lint`.
 - [x] Run `pnpm --dir frontend typecheck`.
 - [x] Run `pnpm --dir frontend test`.

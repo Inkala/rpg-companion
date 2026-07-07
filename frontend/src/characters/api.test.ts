@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CharacterSummaryDTO } from './apiTypes';
-import { CharactersApiError, listCharacterSummaries } from './api';
+import type { CharacterDTO, CharacterSummaryDTO, CreateCharacterRequestDTO } from './apiTypes';
+import { CharactersApiError, createCharacter, listCharacterSummaries } from './api';
 
 const maraSummary: CharacterSummaryDTO = {
   id: '11111111-1111-1111-1111-111111111111',
@@ -14,6 +14,35 @@ const maraSummary: CharacterSummaryDTO = {
   armorClass: 14,
   speedFt: 30,
   updatedAt: '2026-07-05T10:00:00Z',
+};
+
+const fighterCreateRequest: CreateCharacterRequestDTO = {
+  name: 'Branna Shieldhand',
+  className: 'Fighter',
+  subclassName: null,
+  level: 1,
+  ancestry: 'Human',
+  background: 'Soldier',
+  abilityScores: {
+    strength: 16,
+    dexterity: 11,
+    constitution: 15,
+    intelligence: 9,
+    wisdom: 13,
+    charisma: 14,
+  },
+  hitPoints: { current: 12, max: 12 },
+  armorClass: 19,
+  speedFt: 30,
+  referencePayload: { schemaVersion: 'CharacterSheetV1' },
+};
+
+const createdFighter: CharacterDTO = {
+  id: '22222222-2222-2222-2222-222222222222',
+  ownerSubjectId: '33333333-3333-3333-3333-333333333333',
+  ...fighterCreateRequest,
+  createdAt: '2026-07-07T10:00:00Z',
+  updatedAt: '2026-07-07T10:00:00Z',
 };
 
 beforeEach(() => {
@@ -60,6 +89,26 @@ describe('characters API', () => {
       speedFt: expect.any(Number),
       updatedAt: expect.any(String),
     });
+  });
+
+  it('creates a character through the configured backend', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(createdFighter, 201));
+    vi.stubEnv('VITE_API_BASE_URL', ' http://localhost:8080/ ');
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(createCharacter(fighterCreateRequest)).resolves.toEqual(createdFighter);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8080/characters',
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(fighterCreateRequest),
+      }),
+    );
   });
 
   it('throws when the character API is not configured', async () => {
