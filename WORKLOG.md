@@ -143,3 +143,11 @@ What changed: Created docs-only T-012 planning for a 5-question, 4-answer Help m
 Validation: Pending `git diff --check`.
 Decisions: Keep MVP output limited to Strength melee Fighter and Dexterity archer Fighter, do not reveal scoring or build mappings while answering, and keep global app header/navigation as a separate task.
 Next action: Review and approve revised T-012 before implementation.
+
+## 2026-07-07
+
+Task: T-012 revised Help me choose questionnaire implementation
+What changed: Implemented the 5-question, 4-answer Help me choose quiz inside `frontend/src/character-creation/`, including fantasy bucket scoring, supported Fighter fallback recommendations, honest future-path messaging, accept/override actions, and component-level tests.
+Validation: Frontend lint, typecheck, test, build, and `git diff --check` passed.
+Decisions: Keep questionnaire testing in `frontend/src/character-creation/CharacterCreationPage.test.tsx` and do not touch global app header/navigation or route-level app tests in this task.
+Next action: Review T-012 implementation and validation results before staging or committing.

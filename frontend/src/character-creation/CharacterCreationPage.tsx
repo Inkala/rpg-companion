@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import {
+  initialFantasyBucketScores,
   initialCharacterCreationDraft,
+  type CharacterBuildId,
   type CharacterCreationDraft,
   type CharacterCreationMode,
+  type FantasyBucket,
+  type FantasyBucketScores,
 } from './characterCreationTypes';
 import './characterCreation.css';
 
@@ -23,20 +27,545 @@ const modeChoices: {
   {
     mode: 'guided',
     label: 'Help me choose',
-    description: 'For starting with guidance before the full questionnaire exists.',
+    description: 'For a quick fantasy preference quiz with an honest Fighter-only result.',
   },
 ];
+
+const buildContent: Record<
+  CharacterBuildId,
+  {
+    label: string;
+    resultCopy: string;
+    secondaryNote: string;
+  }
+> = {
+  'strength-melee-fighter': {
+    label: 'Strength melee Fighter',
+    resultCopy:
+      'Your closest supported match is a Strength melee Fighter: a level-1 Human Fighter who stands up front, protects allies, and handles danger face to face. This build uses chain mail, a shield, and a longsword, with strong defense and a simple, sturdy combat plan.',
+    secondaryNote:
+      'Good fit if you want your character to feel brave, durable, and direct.',
+  },
+  'dexterity-archer-fighter': {
+    label: 'Dexterity archer Fighter',
+    resultCopy:
+      'Your closest supported match is a Dexterity archer Fighter: a level-1 Human Fighter who fights from range, moves for a better angle, and solves problems with accurate shots. This build uses a longbow, lighter armor, and positioning, with a strong ranged attack.',
+    secondaryNote:
+      'Good fit if you want your character to feel alert, flexible, and precise.',
+  },
+};
+
+const futurePathMessages: Record<
+  Exclude<
+    FantasyBucket,
+    'strengthMelee' | 'dexterityArcher'
+  >,
+  string
+> = {
+  futureMagic:
+    'Your answers have a spark of magic in them. This first version does not build spellcasters yet, so the recommendation below is the closest beginner Fighter style available right now.',
+  futureHealingSupport:
+    'Your answers lean toward protecting or supporting allies. This first version does not build healers yet, so the recommendation below keeps you useful in the supported Fighter paths.',
+  futureStealthTrickery:
+    'Your answers enjoy sneaky or tricky solutions. This first version does not build rogue-style characters yet, so the recommendation below picks the closest supported Fighter style.',
+  futureSocialCleverChaos:
+    'Your answers like clever, dramatic, or social chaos. This first version does not build social specialists yet, so the recommendation below chooses the closest supported Fighter style.',
+};
+
+type QuizAnswer = {
+  id: string;
+  label: string;
+  bucket: FantasyBucket;
+  fallbackBuild: CharacterBuildId;
+};
+
+type QuizQuestion = {
+  id: string;
+  prompt: string;
+  answers: QuizAnswer[];
+};
+
+const quizQuestions: QuizQuestion[] = [
+  {
+    id: 'danger-appears',
+    prompt: 'Danger appears. What is your first instinct?',
+    answers: [
+      {
+        id: 'danger-stand-front',
+        label: 'Stand in front and take the pressure.',
+        bucket: 'strengthMelee',
+        fallbackBuild: 'strength-melee-fighter',
+      },
+      {
+        id: 'danger-clean-shot',
+        label: 'Find a clean shot from a safer angle.',
+        bucket: 'dexterityArcher',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+      {
+        id: 'danger-impossible-power',
+        label: 'Reach for impossible power or a strange sign.',
+        bucket: 'futureMagic',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+      {
+        id: 'danger-everyone-breathing',
+        label: 'Get everyone breathing and back on their feet.',
+        bucket: 'futureHealingSupport',
+        fallbackBuild: 'strength-melee-fighter',
+      },
+    ],
+  },
+  {
+    id: 'best-place',
+    prompt: 'Where do you picture your hero doing their best work?',
+    answers: [
+      {
+        id: 'place-crush',
+        label: 'In the crush, shield high and feet planted.',
+        bucket: 'strengthMelee',
+        fallbackBuild: 'strength-melee-fighter',
+      },
+      {
+        id: 'place-range',
+        label: 'At range, reading the field and picking targets.',
+        bucket: 'dexterityArcher',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+      {
+        id: 'place-out-of-sight',
+        label: 'Out of sight, setting up the moment no one sees coming.',
+        bucket: 'futureStealthTrickery',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+      {
+        id: 'place-causing-scene',
+        label: 'In the middle of the plan, distracting, bargaining, or causing a scene.',
+        bucket: 'futureSocialCleverChaos',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+    ],
+  },
+  {
+    id: 'ally-trouble',
+    prompt: 'An ally is in trouble. How do you help?',
+    answers: [
+      {
+        id: 'ally-make-space',
+        label: 'Rush in and make space for them.',
+        bucket: 'strengthMelee',
+        fallbackBuild: 'strength-melee-fighter',
+      },
+      {
+        id: 'ally-drop-enemy',
+        label: 'Drop the enemy pressuring them.',
+        bucket: 'dexterityArcher',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+      {
+        id: 'ally-patch-up',
+        label: 'Patch them up or keep them standing.',
+        bucket: 'futureHealingSupport',
+        fallbackBuild: 'strength-melee-fighter',
+      },
+      {
+        id: 'ally-look-wrong-way',
+        label: 'Trick the threat into looking the wrong way.',
+        bucket: 'futureStealthTrickery',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+    ],
+  },
+  {
+    id: 'risky-obstacle',
+    prompt: 'A risky obstacle blocks the way. What sounds most like your hero?',
+    answers: [
+      {
+        id: 'obstacle-force-open',
+        label: 'Force it open and keep moving.',
+        bucket: 'strengthMelee',
+        fallbackBuild: 'strength-melee-fighter',
+      },
+      {
+        id: 'obstacle-careful-route',
+        label: 'Look for a careful route around it.',
+        bucket: 'dexterityArcher',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+      {
+        id: 'obstacle-impossible-shortcut',
+        label: 'Use a spell, omen, or impossible shortcut.',
+        bucket: 'futureMagic',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+      {
+        id: 'obstacle-talk-bluff',
+        label: 'Talk, bluff, or improvise until the room changes.',
+        bucket: 'futureSocialCleverChaos',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+    ],
+  },
+  {
+    id: 'victory-feels',
+    prompt: 'What should victory feel like?',
+    answers: [
+      {
+        id: 'victory-held-line',
+        label: 'Everyone is safe because you held the line.',
+        bucket: 'strengthMelee',
+        fallbackBuild: 'strength-melee-fighter',
+      },
+      {
+        id: 'victory-perfect-shot',
+        label: 'The perfect shot landed at the perfect time.',
+        bucket: 'dexterityArcher',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+      {
+        id: 'victory-reality-bent',
+        label: 'Reality bent just enough to save the day.',
+        bucket: 'futureMagic',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+      {
+        id: 'victory-ridiculous-plan',
+        label: 'The plan was ridiculous, dramatic, and somehow worked.',
+        bucket: 'futureSocialCleverChaos',
+        fallbackBuild: 'dexterity-archer-fighter',
+      },
+    ],
+  },
+];
+
+const getBuildLabel = (build: CharacterBuildId | null) => {
+  return build ? buildContent[build].label : 'Not chosen';
+};
+
+const findAnswer = (answerId: string) => {
+  return quizQuestions.flatMap((question) => question.answers).find(
+    (answer) => answer.id === answerId,
+  );
+};
+
+const scoreAnswers = (answers: CharacterCreationDraft['questionnaireAnswers']) => {
+  const fantasyBucketScores: FantasyBucketScores = initialFantasyBucketScores();
+  const fallbackScores: Record<CharacterBuildId, number> = {
+    'strength-melee-fighter': 0,
+    'dexterity-archer-fighter': 0,
+  };
+  let finalAnsweredFallback: CharacterBuildId | null = null;
+
+  quizQuestions.forEach((question) => {
+    const answerId = answers[question.id];
+    if (!answerId) {
+      return;
+    }
+
+    const answer = findAnswer(answerId);
+    if (!answer) {
+      return;
+    }
+
+    fantasyBucketScores[answer.bucket] += 1;
+    fallbackScores[answer.fallbackBuild] += 1;
+    finalAnsweredFallback = answer.fallbackBuild;
+  });
+
+  return { fantasyBucketScores, fallbackScores, finalAnsweredFallback };
+};
+
+const getUnsupportedFantasyBuckets = (scores: FantasyBucketScores) => {
+  const unsupportedBuckets: Exclude<
+    FantasyBucket,
+    'strengthMelee' | 'dexterityArcher'
+  >[] = [
+    'futureMagic',
+    'futureHealingSupport',
+    'futureStealthTrickery',
+    'futureSocialCleverChaos',
+  ];
+  const highestScore = Math.max(...Object.values(scores));
+
+  if (highestScore === 0) {
+    return [];
+  }
+
+  return unsupportedBuckets
+    .filter((bucket) => scores[bucket] === highestScore)
+    .slice(0, 2);
+};
+
+const getRecommendedBuild = (
+  answers: CharacterCreationDraft['questionnaireAnswers'],
+): CharacterBuildId | null => {
+  if (quizQuestions.some((question) => !answers[question.id])) {
+    return null;
+  }
+
+  const { fantasyBucketScores, fallbackScores, finalAnsweredFallback } =
+    scoreAnswers(answers);
+
+  if (fallbackScores['strength-melee-fighter'] > fallbackScores['dexterity-archer-fighter']) {
+    return 'strength-melee-fighter';
+  }
+
+  if (fallbackScores['dexterity-archer-fighter'] > fallbackScores['strength-melee-fighter']) {
+    return 'dexterity-archer-fighter';
+  }
+
+  if (fantasyBucketScores.strengthMelee > fantasyBucketScores.dexterityArcher) {
+    return 'strength-melee-fighter';
+  }
+
+  if (fantasyBucketScores.dexterityArcher > fantasyBucketScores.strengthMelee) {
+    return 'dexterity-archer-fighter';
+  }
+
+  return finalAnsweredFallback ?? 'strength-melee-fighter';
+};
 
 export const CharacterCreationPage = ({ onBack }: CharacterCreationPageProps) => {
   const [draft, setDraft] = useState<CharacterCreationDraft>(
     initialCharacterCreationDraft,
   );
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [isShowingRecommendation, setIsShowingRecommendation] = useState(false);
 
   const chooseMode = (mode: Exclude<CharacterCreationMode, null>) => {
     setDraft((currentDraft) => ({
       ...currentDraft,
       mode,
     }));
+
+    if (mode === 'guided') {
+      setCurrentQuestionIndex(0);
+      setIsShowingRecommendation(false);
+    }
+  };
+
+  const answerQuestion = (questionId: string, answerId: string) => {
+    setDraft((currentDraft) => {
+      const questionnaireAnswers = {
+        ...currentDraft.questionnaireAnswers,
+        [questionId]: answerId,
+      };
+      const { fantasyBucketScores } = scoreAnswers(questionnaireAnswers);
+      const recommendedBuild = getRecommendedBuild(questionnaireAnswers);
+      const unsupportedFantasyBuckets = getUnsupportedFantasyBuckets(
+        fantasyBucketScores,
+      );
+      const recommendationWasOverridden =
+        recommendedBuild !== null &&
+        currentDraft.selectedBuild !== null &&
+        currentDraft.selectedBuild !== recommendedBuild;
+
+      return {
+        ...currentDraft,
+        questionnaireAnswers,
+        fantasyBucketScores,
+        unsupportedFantasyBuckets,
+        recommendedBuild,
+        recommendationWasOverridden,
+      };
+    });
+  };
+
+  const goBack = () => {
+    if (isShowingRecommendation) {
+      setIsShowingRecommendation(false);
+      setCurrentQuestionIndex(quizQuestions.length - 1);
+      return;
+    }
+
+    setCurrentQuestionIndex((index) => Math.max(index - 1, 0));
+  };
+
+  const goNext = () => {
+    const currentQuestion = quizQuestions[currentQuestionIndex];
+    const selectedAnswer = draft.questionnaireAnswers[currentQuestion.id];
+
+    if (!selectedAnswer) {
+      return;
+    }
+
+    if (currentQuestionIndex === quizQuestions.length - 1) {
+      const { fantasyBucketScores } = scoreAnswers(draft.questionnaireAnswers);
+      const recommendedBuild = getRecommendedBuild(draft.questionnaireAnswers);
+
+      setDraft((currentDraft) => ({
+        ...currentDraft,
+        fantasyBucketScores,
+        recommendedBuild,
+        unsupportedFantasyBuckets: getUnsupportedFantasyBuckets(fantasyBucketScores),
+        recommendationWasOverridden:
+          recommendedBuild !== null &&
+          currentDraft.selectedBuild !== null &&
+          currentDraft.selectedBuild !== recommendedBuild,
+      }));
+      setIsShowingRecommendation(true);
+      return;
+    }
+
+    setCurrentQuestionIndex((index) => index + 1);
+  };
+
+  const chooseBuild = (build: CharacterBuildId) => {
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      selectedBuild: build,
+      recommendationWasOverridden:
+        currentDraft.recommendedBuild !== null &&
+        currentDraft.recommendedBuild !== build,
+    }));
+  };
+
+  const renderQuiz = () => {
+    const currentQuestion = quizQuestions[currentQuestionIndex];
+    const selectedAnswer = draft.questionnaireAnswers[currentQuestion.id];
+
+    return (
+      <section className="creation-quiz" aria-labelledby="quiz-title">
+        <div className="creation-quiz__intro">
+          <p className="eyebrow">Help me choose</p>
+          <h2 id="quiz-title" className="creation-draft-summary__title">
+            Follow your character instinct.
+          </h2>
+          <p className="creation-shell__copy">
+            Answer five quick fantasy questions. This first version can only
+            recommend two beginner level-1 Human Fighter styles, and it will
+            say honestly when your answers point toward a future path.
+          </p>
+        </div>
+
+        <fieldset className="creation-question" aria-describedby="question-progress">
+          <legend className="creation-question__legend">
+            <span id="question-progress" className="creation-question__progress">
+              Question {currentQuestionIndex + 1} of {quizQuestions.length}
+            </span>
+            <span>{currentQuestion.prompt}</span>
+          </legend>
+
+          <div className="creation-answer-grid">
+            {currentQuestion.answers.map((answer) => {
+              const isSelected = selectedAnswer === answer.id;
+
+              return (
+                <label
+                  key={answer.id}
+                  className="creation-answer-card"
+                  data-selected={isSelected ? 'true' : 'false'}
+                >
+                  <input
+                    type="radio"
+                    name={currentQuestion.id}
+                    value={answer.id}
+                    checked={isSelected}
+                    onChange={() => answerQuestion(currentQuestion.id, answer.id)}
+                  />
+                  <span className="creation-answer-card__body">
+                    <span className="creation-answer-card__label">
+                      {answer.label}
+                    </span>
+                    {isSelected ? (
+                      <span className="creation-answer-card__selected">
+                        Selected
+                      </span>
+                    ) : null}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <div className="creation-quiz__actions">
+          <button
+            type="button"
+            className="back-button"
+            disabled={currentQuestionIndex === 0}
+            onClick={goBack}
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            className="button button--primary"
+            disabled={!selectedAnswer}
+            onClick={goNext}
+          >
+            {currentQuestionIndex === quizQuestions.length - 1
+              ? 'See recommendation'
+              : 'Next'}
+          </button>
+        </div>
+      </section>
+    );
+  };
+
+  const renderRecommendation = () => {
+    const recommendedBuild =
+      draft.recommendedBuild ?? getRecommendedBuild(draft.questionnaireAnswers);
+
+    if (!recommendedBuild) {
+      return renderQuiz();
+    }
+
+    const otherBuild: CharacterBuildId =
+      recommendedBuild === 'strength-melee-fighter'
+        ? 'dexterity-archer-fighter'
+        : 'strength-melee-fighter';
+    const recommendation = buildContent[recommendedBuild];
+
+    return (
+      <section className="creation-recommendation" aria-labelledby="recommendation-title">
+        <div className="creation-recommendation__content">
+          <p className="eyebrow">Closest supported match</p>
+          <h2 id="recommendation-title" className="creation-recommendation__title">
+            {recommendation.label}
+          </h2>
+
+          {draft.unsupportedFantasyBuckets.length > 0 ? (
+            <div className="creation-future-notes" aria-label="Future path notes">
+              {draft.unsupportedFantasyBuckets.map((bucket) => (
+                <p key={bucket} className="creation-future-note">
+                  {futurePathMessages[bucket]}
+                </p>
+              ))}
+            </div>
+          ) : null}
+
+          <p className="creation-shell__copy">{recommendation.resultCopy}</p>
+          <p className="creation-recommendation__note">
+            {recommendation.secondaryNote}
+          </p>
+          <p className="creation-scope-note">
+            Prefer the other supported Fighter style? No problem. This
+            recommendation is guidance, not a lock.
+          </p>
+        </div>
+
+        <div className="creation-quiz__actions">
+          <button type="button" className="back-button" onClick={goBack}>
+            Back
+          </button>
+          <button
+            type="button"
+            className="button button--primary"
+            onClick={() => chooseBuild(recommendedBuild)}
+          >
+            Use {recommendation.label}
+          </button>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => chooseBuild(otherBuild)}
+          >
+            Choose {buildContent[otherBuild].label}
+          </button>
+        </div>
+      </section>
+    );
   };
 
   return (
@@ -54,31 +583,34 @@ export const CharacterCreationPage = ({ onBack }: CharacterCreationPageProps) =>
             Start a character draft.
           </h1>
           <p className="creation-shell__copy">
-            Choose how you want to begin. This foundation keeps a temporary
-            draft in memory only: saving, full questions, and manual sheet
-            fields come later.
+            Choose how you want to begin. This draft stays in memory only:
+            saving, full review, and manual sheet fields come later.
           </p>
         </div>
 
-        <fieldset className="creation-mode-group">
-          <legend className="creation-mode-group__legend">Choose a mode</legend>
-          <div className="creation-mode-grid">
-            {modeChoices.map((choice) => (
-              <button
-                key={choice.mode}
-                type="button"
-                className="creation-mode-card"
-                aria-pressed={draft.mode === choice.mode}
-                onClick={() => chooseMode(choice.mode)}
-              >
-                <span className="creation-mode-card__label">{choice.label}</span>
-                <span className="creation-mode-card__description">
-                  {choice.description}
-                </span>
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        {draft.mode === 'guided' ? (
+          isShowingRecommendation ? renderRecommendation() : renderQuiz()
+        ) : (
+          <fieldset className="creation-mode-group">
+            <legend className="creation-mode-group__legend">Choose a mode</legend>
+            <div className="creation-mode-grid">
+              {modeChoices.map((choice) => (
+                <button
+                  key={choice.mode}
+                  type="button"
+                  className="creation-mode-card"
+                  aria-pressed={draft.mode === choice.mode}
+                  onClick={() => chooseMode(choice.mode)}
+                >
+                  <span className="creation-mode-card__label">{choice.label}</span>
+                  <span className="creation-mode-card__description">
+                    {choice.description}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        )}
 
         <section className="creation-draft-summary" aria-labelledby="draft-title">
           <div>
@@ -95,7 +627,13 @@ export const CharacterCreationPage = ({ onBack }: CharacterCreationPageProps) =>
           <dl className="creation-draft-list" aria-label="Current draft fields">
             <div>
               <dt>Mode</dt>
-              <dd>{draft.mode ?? 'Not chosen'}</dd>
+              <dd>
+                {draft.mode === 'guided'
+                  ? 'Help me choose'
+                  : draft.mode === 'manual'
+                    ? 'Fill the sheet myself'
+                    : 'Not chosen'}
+              </dd>
             </div>
             <div>
               <dt>Name</dt>
@@ -106,8 +644,27 @@ export const CharacterCreationPage = ({ onBack }: CharacterCreationPageProps) =>
               <dd>{draft.concept || 'Not added yet'}</dd>
             </div>
             <div>
+              <dt>Answers</dt>
+              <dd>
+                {Object.keys(draft.questionnaireAnswers).length} of{' '}
+                {quizQuestions.length}
+              </dd>
+            </div>
+            <div>
+              <dt>Recommended build</dt>
+              <dd>
+                {isShowingRecommendation
+                  ? getBuildLabel(draft.recommendedBuild)
+                  : 'Shown after the quiz'}
+              </dd>
+            </div>
+            <div>
               <dt>Selected build</dt>
-              <dd>{draft.selectedBuild ?? 'Not chosen'}</dd>
+              <dd>{getBuildLabel(draft.selectedBuild)}</dd>
+            </div>
+            <div>
+              <dt>Recommendation overridden</dt>
+              <dd>{draft.recommendationWasOverridden ? 'Yes' : 'No'}</dd>
             </div>
           </dl>
         </section>

@@ -15,4 +15,9 @@
   implementation until approved.
 - Assumption: Implementation should remain inside `frontend/src/character-creation/` unless the
   approved app-shell task changes page composition first.
-
+- Certain: Implementation uses component-level tests in
+  `frontend/src/character-creation/CharacterCreationPage.test.tsx` and does not edit
+  `frontend/src/App.test.tsx`.
+- Certain: The quiz hides bucket names, scoring, and build labels until the result screen.
+- Certain: Unsupported future-path messages are shown only on the result screen when unsupported
+  buckets are among the strongest fantasy signals.

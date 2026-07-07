@@ -1,8 +1,8 @@
 # Current Work
 
-Active task: T-012 revised Help me choose questionnaire planning
+Active task: T-012 revised Help me choose questionnaire
 
-State: Planning docs created. Awaiting review before implementation.
+State: Implementation complete. Awaiting review before staging or commit.
 
 T-002 status: authentication and owner-scoped character implementation completed, committed, and validated.
 
@@ -16,11 +16,11 @@ T-010 status: manual character entry planning completed and approved.
 
 T-011 status: character creation entry and draft foundation completed, pushed, and validated.
 
-T-012 scope: docs-only revised questionnaire planning. Defines a 5-question, 4-answer Help me
-choose quiz with broader fantasy buckets, honest future-path messaging, and Fighter-only MVP
-recommendations.
+T-012 scope: revised Help me choose questionnaire implementation inside `frontend/src/character-creation/`.
+Adds a 5-question, 4-answer quiz with broader fantasy buckets, supported Fighter fallback scoring,
+honest future-path messaging, and no saving/backend behavior.
 
-Next action: Review and approve the revised T-012 questionnaire direction before implementation.
+Next action: Review T-012 implementation and validation results before staging or commit.
 
 Task folder: `tasks/T-012/`
 

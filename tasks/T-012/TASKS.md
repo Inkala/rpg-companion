@@ -1,8 +1,6 @@
 # T-012 Tasks
 
-Status: planning
-
-This is a docs-only task until the revised questionnaire is approved.
+Status: implementation complete
 
 ## 1. Revised questionnaire planning
 
@@ -23,40 +21,39 @@ This is a docs-only task until the revised questionnaire is approved.
 - [x] Create `tasks/T-012/NOTES.md`.
 - [x] Update `CURRENT.md`.
 - [x] Append `WORKLOG.md`.
-- [ ] Review and approve revised T-012 questionnaire direction.
+- [x] Review and approve revised T-012 questionnaire direction.
 
-## 2. Future implementation: data model
+## 2. Implementation: data model
 
-- [ ] Add typed fantasy buckets.
-- [ ] Add typed answer IDs and question IDs.
-- [ ] Add quiz answer, bucket score, unsupported fantasy, recommendation, selected build, and
+- [x] Add typed fantasy buckets.
+- [x] Add typed answer IDs and question IDs.
+- [x] Add quiz answer, bucket score, unsupported fantasy, recommendation, selected build, and
   override state to the draft.
 
-## 3. Future implementation: quiz UI
+## 3. Implementation: quiz UI
 
-- [ ] Start the revised quiz from `Help me choose`.
-- [ ] Show 5 questions with 4 answers each.
-- [ ] Hide scoring, fantasy buckets, and build mappings while answering.
-- [ ] Support Back and Next.
-- [ ] Disable or block Next until an answer is selected.
-- [ ] Show progress text.
+- [x] Start the revised quiz from `Help me choose`.
+- [x] Show 5 questions with 4 answers each.
+- [x] Hide scoring, fantasy buckets, and build mappings while answering.
+- [x] Support Back and Next.
+- [x] Disable or block Next until an answer is selected.
+- [x] Show progress text.
 
-## 4. Future implementation: result UI
+## 4. Implementation: result UI
 
-- [ ] Score fantasy buckets.
-- [ ] Resolve to Strength melee Fighter or Dexterity archer Fighter.
-- [ ] Show future-path messaging when unsupported buckets are prominent.
-- [ ] Allow accepting the recommendation.
-- [ ] Allow choosing the other supported Fighter style.
-- [ ] Store selected build separately from recommended build.
+- [x] Score fantasy buckets.
+- [x] Resolve to Strength melee Fighter or Dexterity archer Fighter.
+- [x] Show future-path messaging when unsupported buckets are prominent.
+- [x] Allow accepting the recommendation.
+- [x] Allow choosing the other supported Fighter style.
+- [x] Store selected build separately from recommended build.
 
-## 5. Future implementation: validation
+## 5. Validation
 
-- [ ] Add focused tests for hidden mappings, answer selection, progress, scoring, future-path
+- [x] Add focused tests for hidden mappings, answer selection, progress, scoring, future-path
   messaging, recommendation, and override behavior.
-- [ ] Run frontend lint.
-- [ ] Run frontend typecheck.
-- [ ] Run frontend test.
-- [ ] Run frontend build.
-- [ ] Run `git diff --check`.
-
+- [x] Run frontend lint.
+- [x] Run frontend typecheck.
+- [x] Run frontend test.
+- [x] Run frontend build.
+- [x] Run `git diff --check`.
