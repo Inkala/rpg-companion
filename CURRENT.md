@@ -1,8 +1,8 @@
 # Current Work
 
-Active task: T-011 character creation entry and draft foundation
+Active task: T-012 revised Help me choose questionnaire planning
 
-State: Implementation complete. Awaiting review before staging or commit.
+State: Planning docs created. Awaiting review before implementation.
 
 T-002 status: authentication and owner-scoped character implementation completed, committed, and validated.
 
@@ -14,11 +14,14 @@ T-007 status: frontend app-shell architecture refactor completed, committed, pus
 
 T-010 status: manual character entry planning completed and approved.
 
-T-011 scope: creation entry foundation only. Adds `/characters/new`, mode choice, in-memory draft
-state types, and no save behavior.
+T-011 status: character creation entry and draft foundation completed, pushed, and validated.
 
-Next action: Review T-011 implementation and validation results before staging or commit.
+T-012 scope: docs-only revised questionnaire planning. Defines a 5-question, 4-answer Help me
+choose quiz with broader fantasy buckets, honest future-path messaging, and Fighter-only MVP
+recommendations.
 
-Task folder: not created for this small implementation slice.
+Next action: Review and approve the revised T-012 questionnaire direction before implementation.
 
-Last updated: 2026-07-06
+Task folder: `tasks/T-012/`
+
+Last updated: 2026-07-07

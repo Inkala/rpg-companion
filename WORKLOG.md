@@ -135,3 +135,11 @@ What changed: Added `/characters/new`, connected home Create character actions t
 Validation: Frontend lint, typecheck, test, build, and `git diff --check` passed.
 Decisions: Keep this slice entry-only. Saving, localStorage, manual sheet fields, questionnaire steps, backend changes, and CharacterSheetV1 save mapping remain deferred.
 Next action: Review T-011 implementation after validation before staging or committing.
+
+## 2026-07-07
+
+Task: T-012 revised Help me choose questionnaire planning
+What changed: Created docs-only T-012 planning for a 5-question, 4-answer Help me choose quiz with broader fantasy buckets, supported Fighter fallback scoring, honest future-path messaging, accessibility requirements, edge cases, and an implementation plan.
+Validation: Pending `git diff --check`.
+Decisions: Keep MVP output limited to Strength melee Fighter and Dexterity archer Fighter, do not reveal scoring or build mappings while answering, and keep global app header/navigation as a separate task.
+Next action: Review and approve revised T-012 before implementation.
