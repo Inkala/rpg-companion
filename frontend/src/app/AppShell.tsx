@@ -95,13 +95,6 @@ export const AppShell = ({
         </section>
 
         <nav className="app-header__nav" aria-label="App navigation">
-          <button
-            type="button"
-            className="inline-action app-header__home"
-            onClick={onHome}
-          >
-            Home
-          </button>
           {showAccountActions ? (
             <div className="app-header__account">
               <AccountHeaderActions
@@ -129,17 +122,6 @@ export const AppShell = ({
 
           {isMobileMenuOpen ? (
             <div className="app-mobile-menu__content" role="menu">
-              <button
-                type="button"
-                className="app-mobile-menu__item"
-                role="menuitem"
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  onHome();
-                }}
-              >
-                Home
-              </button>
               {showAccountActions ? (
                 <MobileAccountActions
                   accountsAvailable={accountsAvailable}

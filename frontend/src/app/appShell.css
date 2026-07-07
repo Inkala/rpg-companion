@@ -44,6 +44,10 @@
   display: none;
 }
 
+.app-header__nav:empty {
+  display: none;
+}
+
 .app-mobile-menu {
   position: absolute;
   top: var(--space-6);
@@ -145,10 +149,6 @@
     gap: var(--space-3);
     padding-top: var(--space-4);
     text-align: right;
-  }
-
-  .app-header__home {
-    min-height: auto;
   }
 
   .app-header__account {
