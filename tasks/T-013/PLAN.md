@@ -1,6 +1,11 @@
 # T-013: Generated Fighter save flow planning
 
-Status: planning
+Status: complete
+
+T-013A, T-013B, and T-013C are complete, committed, pushed, validated, and smoke-tested locally.
+The first MVP character loop now works locally: Help me choose, review generated Fighter, save, My
+characters, and saved Character Reference opening. The saved reference back-label bug found during
+manual smoke testing was fixed in `70e80e6 fix(characters): label saved reference back action`.
 
 ## Parallel-work assessment
 

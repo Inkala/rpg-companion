@@ -183,3 +183,15 @@ What changed: Added `/characters/:id`, saved character detail loading, valid `Ch
 Validation: Focused route/API/saved-reference/app tests, frontend lint, typecheck, test, and build passed.
 Decisions: Use a small local `CharacterSheetV1` guard instead of adding a runtime schema dependency. Keep invalid saved reference payloads in a calm unsupported state.
 Next action: Review the T-013C diff before staging or committing.
+
+## 2026-07-08
+
+Task: T-013 MVP loop status cleanup
+What changed: Updated status docs after the first local MVP character loop was completed and
+pushed. The loop now works locally from Help me choose through generated Fighter review, save, My
+characters, and saved Character Reference opening.
+Validation: Manual smoke test passed locally. Frontend validation passed during T-013C and the
+follow-up back-label fix. Docs-only `git diff --check` passed.
+Decisions: Treat T-013 as complete. The only smoke-test bug found was the saved Character Reference
+back label, fixed in `70e80e6 fix(characters): label saved reference back action`.
+Next action: Review T-010 and plan or implement Fill the sheet myself V1.

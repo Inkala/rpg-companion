@@ -1,6 +1,6 @@
 # T-010 Tasks
 
-Status: planning
+Status: approved
 
 This is a documentation-only planning task. Do not modify application code, backend code,
 migrations, tests, dependencies, CI, deployment config, branches, worktrees, staging, commits, or
@@ -16,7 +16,7 @@ pushes as part of the planning task itself.
 - Expected owned files or folders: `tasks/T-010/`.
 - Shared files or dependencies: `CURRENT.md`, `WORKLOG.md`, `DECISIONS.md`.
 
-- [ ] Review and approve the manual character entry requirements and design.
+- [x] Review and approve the manual character entry requirements and design.
 
 ## 2. Add manual draft model and validation
 

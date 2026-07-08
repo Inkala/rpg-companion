@@ -1,6 +1,6 @@
 # T-013 Tasks
 
-Status: T-013C implementation complete
+Status: complete
 
 This is a documentation-only planning task. Do not modify application code, backend code,
 migrations, tests, dependencies, CI, deployment config, Git history, branches, worktrees, staging,
@@ -61,7 +61,7 @@ T-013A boundary:
 
 - [x] Add `CreateCharacterRequestDTO`.
 - [x] Add `createCharacter`.
-- [ ] Add `getCharacterById`.
+- [x] Add `getCharacterById`.
 - [x] Preserve existing list behavior.
 - [x] Test credentials, JSON headers, success shape, and error handling for create.
 
@@ -115,6 +115,7 @@ T-013B deferred:
 - [x] Show clear loading and error states.
 - [x] Preserve Mara sample route behavior.
 - [x] Add route and rendering tests.
+- [x] Add saved reference back-label fix after manual smoke testing.
 
 T-013C invalid-payload handling:
 
@@ -136,7 +137,7 @@ T-013C invalid-payload handling:
 
 - [x] Ensure the saved generated character appears in My characters after returning home.
 - [x] Make saved character cards open Character Reference.
-- [ ] Keep empty, loading, and error states intact.
+- [x] Keep empty, loading, and error states intact.
 - [x] Add focused tests for summary display and open behavior.
 
 ## 7. Backend fallback only if contract blocks implementation
@@ -151,7 +152,18 @@ T-013C invalid-payload handling:
 - Shared files or dependencies: migrations, frontend API helpers, authenticated session behavior.
 
 - [x] Confirm no backend change is needed.
-- [ ] If needed, plan a separate backend task before changing code.
+- [x] If needed, plan a separate backend task before changing code. Not needed for T-013.
+
+## 8. Manual smoke test and follow-up fix
+
+- [x] Run local MVP loop smoke test: Help me choose, review generated Fighter, save, My characters,
+  and saved Character Reference opening.
+- [x] Confirm saved Character Reference displays the generated Fighter and does not fall back to
+  Mara.
+- [x] Fix saved Character Reference back label from `Back to guest landing page` to
+  `Back to My characters`.
+- [x] Commit and push the back-label fix in
+  `70e80e6 fix(characters): label saved reference back action`.
 
 ## Validation For Future Implementation
 
@@ -168,8 +180,8 @@ T-013C invalid-payload handling:
 
 ## Planning Validation
 
-- [ ] Run `git diff --check`.
-- [ ] Run `git status --short`.
+- [x] Run `git diff --check`.
+- [x] Run `git status --short`.
 
 ## Commit message
 

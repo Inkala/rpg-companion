@@ -163,3 +163,20 @@ Validation:
 - `pnpm --dir frontend typecheck` passed.
 - `pnpm --dir frontend test` passed.
 - `pnpm --dir frontend build` passed.
+
+## Manual Smoke Test Notes
+
+Certain:
+
+- Manual local smoke testing passed the full first MVP character loop: Help me choose, generated
+  Fighter review, authenticated save, My characters, and saved Character Reference opening.
+- The saved Character Reference showed the generated Human Fighter data, not Mara.
+- The only smoke-test bug found was incorrect saved-reference back label copy. It said
+  `Back to guest landing page` on `/characters/:id`.
+- The back-label bug was fixed and pushed in
+  `70e80e6 fix(characters): label saved reference back action`.
+
+Next feature direction:
+
+- T-013 is complete.
+- Review T-010 and plan or implement Fill the sheet myself V1 next.
