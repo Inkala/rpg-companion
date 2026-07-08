@@ -33,6 +33,10 @@ export const createCharacter = async (
   });
 };
 
+export const getCharacterById = async (id: string): Promise<CharacterDTO> => {
+  return characterRequest<CharacterDTO>(`/characters/${id}`);
+};
+
 const characterRequest = async <T,>(path: string, init: RequestInit = {}): Promise<T> => {
   const apiBaseUrl = getApiBaseUrl();
   if (apiBaseUrl === '') {

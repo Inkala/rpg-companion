@@ -20,13 +20,14 @@ type CharacterCreationPageProps = {
   isSignedIn?: boolean;
   onSignIn?: () => void;
   onCreateAccount?: () => void;
+  onOpenCharacterReference?: (characterId: string) => void;
 };
 
 type SaveState =
   | { status: 'idle' }
   | { status: 'saving' }
   | { status: 'error'; message: string }
-  | { status: 'success'; characterName: string };
+  | { status: 'success'; characterId: string; characterName: string };
 
 const modeChoices: {
   mode: Exclude<CharacterCreationMode, null>;
@@ -344,6 +345,7 @@ export const CharacterCreationPage = ({
   isSignedIn = false,
   onSignIn,
   onCreateAccount,
+  onOpenCharacterReference,
 }: CharacterCreationPageProps) => {
   const [draft, setDraft] = useState<CharacterCreationDraft>(
     initialCharacterCreationDraft,
@@ -475,7 +477,11 @@ export const CharacterCreationPage = ({
         draft.name,
       );
       const character = await createCharacter(request);
-      setSaveState({ status: 'success', characterName: character.name });
+      setSaveState({
+        status: 'success',
+        characterId: character.id,
+        characterName: character.name,
+      });
     } catch (error) {
       const message =
         error instanceof CharactersApiError
@@ -748,6 +754,15 @@ export const CharacterCreationPage = ({
               >
                 {isSaving ? 'Saving character...' : 'Save character'}
               </button>
+              {saveState.status === 'success' && onOpenCharacterReference ? (
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => onOpenCharacterReference(saveState.characterId)}
+                >
+                  Open Character Reference
+                </button>
+              ) : null}
             </div>
           </div>
         ) : (

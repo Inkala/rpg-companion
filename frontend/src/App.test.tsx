@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
+import { buildGeneratedFighterCharacterSheet } from './character-creation/generatedFighterBuilds';
 
 const maraUser = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -8,7 +9,42 @@ const maraUser = {
   username: 'Mara',
 };
 
-const signedInFetchMock = () => {
+const fighterCharacterSummary = {
+  id: '22222222-2222-2222-2222-222222222222',
+  name: 'Branna Shieldhand',
+  className: 'Fighter',
+  subclassName: null,
+  level: 1,
+  ancestry: 'Human',
+  background: 'Soldier',
+  hitPoints: { current: 12, max: 12 },
+  armorClass: 19,
+  speedFt: 30,
+  updatedAt: '2026-07-07T10:00:00Z',
+};
+
+const fighterCharacter = {
+  ownerSubjectId: maraUser.id,
+  ...fighterCharacterSummary,
+  abilityScores: {
+    strength: 16,
+    dexterity: 11,
+    constitution: 15,
+    intelligence: 9,
+    wisdom: 13,
+    charisma: 14,
+  },
+  referencePayload: buildGeneratedFighterCharacterSheet(
+    'strength-melee-fighter',
+    'Branna Shieldhand',
+  ),
+  createdAt: '2026-07-07T10:00:00Z',
+};
+
+const signedInFetchMock = (
+  characters: unknown[] = [],
+  characterDetail: unknown = fighterCharacter,
+) => {
   return vi.fn((url: string, init?: RequestInit) => {
     if (url.endsWith('/auth/session') && init?.method === 'DELETE') {
       return Promise.resolve(new Response(null, { status: 204 }));
@@ -19,7 +55,11 @@ const signedInFetchMock = () => {
     }
 
     if (url.endsWith('/characters')) {
-      return Promise.resolve(jsonResponse({ characters: [] }));
+      return Promise.resolve(jsonResponse({ characters }));
+    }
+
+    if (url.includes('/characters/')) {
+      return Promise.resolve(jsonResponse(characterDetail));
     }
 
     return Promise.resolve(jsonResponse({ error: 'not found' }, 404));
@@ -81,6 +121,93 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Start a character draft.' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Fill the sheet myself/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Help me choose/ })).toBeInTheDocument();
+  });
+
+  it('shows sign-in-required state for a saved character route while signed out', async () => {
+    const fetchMock = stubSignedOutBackend();
+    window.history.replaceState(null, '', '/characters/22222222-2222-2222-2222-222222222222');
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to open this character.' }),
+    ).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      'http://localhost:8080/characters/22222222-2222-2222-2222-222222222222',
+      expect.anything(),
+    );
+  });
+
+  it('shows loading state for a signed-in saved character route', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith('/auth/session')) {
+        return Promise.resolve(jsonResponse({ user: maraUser }));
+      }
+
+      if (url.includes('/characters/')) {
+        return new Promise<Response>(() => {});
+      }
+
+      return Promise.resolve(jsonResponse({ error: 'not found' }, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/characters/22222222-2222-2222-2222-222222222222');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Loading character...' })).toBeInTheDocument();
+  });
+
+  it('renders saved Character Reference for a valid payload', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', signedInFetchMock());
+    window.history.replaceState(null, '', '/characters/22222222-2222-2222-2222-222222222222');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Branna Shieldhand' })).toBeInTheDocument();
+    expect(screen.getByText('Human Fighter - Level 1')).toBeInTheDocument();
+  });
+
+  it('shows saved character fetch errors', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const fetchMock = vi.fn((url: string) => {
+      if (url.endsWith('/auth/session')) {
+        return Promise.resolve(jsonResponse({ user: maraUser }));
+      }
+
+      if (url.includes('/characters/')) {
+        return Promise.resolve(jsonResponse({ error: 'Character not found.' }, 404));
+      }
+
+      return Promise.resolve(jsonResponse({ error: 'not found' }, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/characters/missing');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Could not load character' })).toBeInTheDocument();
+    expect(screen.getByText('Character not found.')).toBeInTheDocument();
+  });
+
+  it('shows unsupported state for invalid saved reference payloads', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal(
+      'fetch',
+      signedInFetchMock([], {
+        ...fighterCharacter,
+        referencePayload: { schemaVersion: 'Unknown' },
+      }),
+    );
+    window.history.replaceState(null, '', '/characters/22222222-2222-2222-2222-222222222222');
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Character Reference is not available yet' }),
+    ).toBeInTheDocument();
   });
 
   it('shows not found for unknown routes and returns home', () => {
@@ -221,6 +348,61 @@ describe('App', () => {
     expect(screen.getAllByRole('button', { name: 'Create account' })[0]).toBeInTheDocument();
   });
 
+  it('opens a saved character from My characters', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', signedInFetchMock([fighterCharacterSummary]));
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Saved characters' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open Character Reference' }));
+
+    expect(window.location.pathname).toBe('/characters/22222222-2222-2222-2222-222222222222');
+    expect(await screen.findByRole('heading', { name: 'Branna Shieldhand' })).toBeInTheDocument();
+  });
+
+  it('opens saved Character Reference from generated save success', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.endsWith('/auth/session')) {
+        return Promise.resolve(jsonResponse({ user: maraUser }));
+      }
+
+      if (url.endsWith('/characters') && init?.method === 'POST') {
+        return Promise.resolve(jsonResponse(fighterCharacter, 201));
+      }
+
+      if (url.endsWith('/characters')) {
+        return Promise.resolve(jsonResponse({ characters: [] }));
+      }
+
+      if (url.includes('/characters/')) {
+        return Promise.resolve(jsonResponse(fighterCharacter));
+      }
+
+      return Promise.resolve(jsonResponse({ error: 'not found' }, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/characters/new');
+
+    render(<App />);
+
+    expect(await screen.findByRole('button', { name: 'Mara account menu' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Help me choose/ }));
+    finishStrengthQuiz();
+    fireEvent.click(screen.getByRole('button', { name: 'Use Strength melee Fighter' }));
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Branna Shieldhand' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+
+    expect(await screen.findByText(/Branna Shieldhand is saved/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open Character Reference' }));
+
+    expect(window.location.pathname).toBe('/characters/22222222-2222-2222-2222-222222222222');
+    expect(await screen.findByRole('heading', { name: 'Branna Shieldhand' })).toBeInTheDocument();
+  });
+
   it('supports browser Back and Forward between routes', async () => {
     render(<App />);
 
@@ -252,6 +434,23 @@ const stubSignedOutBackend = () => {
   const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'authentication required' }, 401));
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
+};
+
+const finishStrengthQuiz = () => {
+  [
+    /Stand in front and take the pressure/,
+    /In the crush, shield high and feet planted/,
+    /Rush in and make space for them/,
+    /Force it open and keep moving/,
+    /Everyone is safe because you held the line/,
+  ].forEach((answer, index) => {
+    fireEvent.click(screen.getByLabelText(answer));
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: index === 4 ? 'See recommendation' : 'Next',
+      }),
+    );
+  });
 };
 
 const jsonResponse = (body: unknown, status = 200) => {

@@ -13,11 +13,16 @@ describe('router', () => {
     expect(parseAppRoute(appPaths.signUp)).toEqual({ name: 'account', mode: 'register' });
     expect(parseAppRoute(appPaths.newCharacter)).toEqual({ name: 'new-character' });
     expect(parseAppRoute(appPaths.sampleCharacter)).toEqual({ name: 'sample-character' });
+    expect(parseAppRoute('/characters/abc-123')).toEqual({
+      name: 'saved-character',
+      id: 'abc-123',
+    });
   });
 
   it('parses unknown routes as not found', () => {
     expect(parseAppRoute('/missing')).toEqual({ name: 'not-found' });
     expect(parseAppRoute('/characters')).toEqual({ name: 'not-found' });
+    expect(parseAppRoute('/characters/abc-123/extra')).toEqual({ name: 'not-found' });
   });
 
   it('normalizes trailing slashes except for home', () => {
@@ -25,6 +30,10 @@ describe('router', () => {
     expect(parseAppRoute('/sign-up/')).toEqual({ name: 'account', mode: 'register' });
     expect(parseAppRoute('/characters/new/')).toEqual({ name: 'new-character' });
     expect(parseAppRoute('/characters/sample/')).toEqual({ name: 'sample-character' });
+    expect(parseAppRoute('/characters/abc-123/')).toEqual({
+      name: 'saved-character',
+      id: 'abc-123',
+    });
     expect(parseAppRoute('/')).toEqual({ name: 'home' });
   });
 
@@ -37,6 +46,9 @@ describe('router', () => {
     expect(pathForRoute({ name: 'account', mode: 'register' })).toBe(appPaths.signUp);
     expect(pathForRoute({ name: 'new-character' })).toBe(appPaths.newCharacter);
     expect(pathForRoute({ name: 'sample-character' })).toBe(appPaths.sampleCharacter);
+    expect(pathForRoute({ name: 'saved-character', id: 'abc-123' })).toBe(
+      '/characters/abc-123',
+    );
     expect(pathForRoute({ name: 'not-found' })).toBe(appPaths.home);
   });
 });

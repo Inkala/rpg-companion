@@ -50,7 +50,9 @@ export const SignedInHomeContent = (
     <>
       <section className="home-stack" aria-label="Your Hunin home">
         <section className="home-panel" aria-labelledby="my-characters-title">
-          <CharacterSummaryContent state={characterState} />
+          <CharacterSummaryContent
+            state={characterState}
+          />
           <button
             type="button"
             className="button button--primary"
@@ -83,7 +85,11 @@ export const SignedInHomeContent = (
   );
 };
 
-const CharacterSummaryContent = ({ state }: { state: CharacterSummaryState }) => {
+const CharacterSummaryContent = ({
+  state,
+}: {
+  state: CharacterSummaryState;
+}) => {
   if (state.status === 'loading') {
     return (
       <div>
@@ -117,7 +123,10 @@ const CharacterSummaryContent = ({ state }: { state: CharacterSummaryState }) =>
           Saved characters
         </h2>
         {state.characters.map((character) => (
-          <CharacterSummaryCard character={character} key={character.id} />
+          <CharacterSummaryCard
+            character={character}
+            key={character.id}
+          />
         ))}
       </div>
     );
@@ -136,7 +145,11 @@ const CharacterSummaryContent = ({ state }: { state: CharacterSummaryState }) =>
   );
 };
 
-const CharacterSummaryCard = ({ character }: { character: CharacterSummaryDTO }) => {
+const CharacterSummaryCard = ({
+  character,
+}: {
+  character: CharacterSummaryDTO;
+}) => {
   const classLine = [
     character.className,
     character.subclassName,
@@ -153,6 +166,13 @@ const CharacterSummaryCard = ({ character }: { character: CharacterSummaryDTO })
         <p className="character-summary-card__meta">
           {character.ancestry} - {character.background}
         </p>
+        <button
+          type="button"
+          className="character-summary-card__open"
+          onClick={() => openSavedCharacter(character.id)}
+        >
+          Open Character Reference
+        </button>
       </div>
       <dl className="character-summary-stats" aria-label={`${character.name} summary stats`}>
         <div>
@@ -170,4 +190,9 @@ const CharacterSummaryCard = ({ character }: { character: CharacterSummaryDTO })
       </dl>
     </article>
   );
+};
+
+const openSavedCharacter = (characterId: string) => {
+  window.history.pushState(null, '', `/characters/${characterId}`);
+  window.dispatchEvent(new PopStateEvent('popstate'));
 };

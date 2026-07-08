@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CharacterDTO, CharacterSummaryDTO, CreateCharacterRequestDTO } from './apiTypes';
-import { CharactersApiError, createCharacter, listCharacterSummaries } from './api';
+import {
+  CharactersApiError,
+  createCharacter,
+  getCharacterById,
+  listCharacterSummaries,
+} from './api';
 
 const maraSummary: CharacterSummaryDTO = {
   id: '11111111-1111-1111-1111-111111111111',
@@ -107,6 +112,22 @@ describe('characters API', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(fighterCreateRequest),
+      }),
+    );
+  });
+
+  it('gets a character by id through the configured backend', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(createdFighter));
+    vi.stubEnv('VITE_API_BASE_URL', ' http://localhost:8080/ ');
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(getCharacterById(createdFighter.id)).resolves.toEqual(createdFighter);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `http://localhost:8080/characters/${createdFighter.id}`,
+      expect.objectContaining({
+        credentials: 'include',
+        headers: {},
       }),
     );
   });

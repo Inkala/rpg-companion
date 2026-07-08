@@ -175,3 +175,11 @@ What changed: Added the generated character review step after Help me choose sel
 Validation: Focused character creation/API tests, frontend lint, typecheck, test, and build passed.
 Decisions: Defer saved-character opening, `/characters/:id`, clickable My characters cards, and saved Character Reference loading to T-013C.
 Next action: Review the T-013B diff before staging or committing.
+
+## 2026-07-07
+
+Task: T-013C open saved characters in Character Reference
+What changed: Added `/characters/:id`, saved character detail loading, valid `CharacterSheetV1` rendering in Character Reference, invalid-payload fallback, My characters open buttons, and an Open Character Reference action after generated save success.
+Validation: Focused route/API/saved-reference/app tests, frontend lint, typecheck, test, and build passed.
+Decisions: Use a small local `CharacterSheetV1` guard instead of adding a runtime schema dependency. Keep invalid saved reference payloads in a calm unsupported state.
+Next action: Review the T-013C diff before staging or committing.

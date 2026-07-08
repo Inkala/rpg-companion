@@ -1,6 +1,6 @@
 # T-013 Tasks
 
-Status: T-013B implementation complete
+Status: T-013C implementation complete
 
 This is a documentation-only planning task. Do not modify application code, backend code,
 migrations, tests, dependencies, CI, deployment config, Git history, branches, worktrees, staging,
@@ -109,12 +109,18 @@ T-013B deferred:
 - Shared files or dependencies: `/characters/sample`, home navigation, authenticated detail API,
   Character Reference component.
 
-- [ ] Add a saved character route such as `/characters/:id`.
-- [ ] Load `GET /characters/{id}` for saved character detail.
-- [ ] Convert `referencePayload` to Character Reference via `CharacterSheetV1`.
-- [ ] Show clear loading and error states.
-- [ ] Preserve Mara sample route behavior.
-- [ ] Add route and rendering tests.
+- [x] Add a saved character route such as `/characters/:id`.
+- [x] Load `GET /characters/{id}` for saved character detail.
+- [x] Convert `referencePayload` to Character Reference via `CharacterSheetV1`.
+- [x] Show clear loading and error states.
+- [x] Preserve Mara sample route behavior.
+- [x] Add route and rendering tests.
+
+T-013C invalid-payload handling:
+
+- [x] Add local `CharacterSheetV1` type guard.
+- [x] Show unsupported state for invalid or missing `referencePayload`.
+- [x] Do not fall back to Mara.
 
 ## 6. Refresh or show My characters after save
 
@@ -128,10 +134,10 @@ T-013B deferred:
 - Shared files or dependencies: `listCharacterSummaries`, saved character route, app shell
   navigation.
 
-- [ ] Ensure the saved generated character appears in My characters after returning home.
-- [ ] Make saved character cards open Character Reference.
+- [x] Ensure the saved generated character appears in My characters after returning home.
+- [x] Make saved character cards open Character Reference.
 - [ ] Keep empty, loading, and error states intact.
-- [ ] Add focused tests for summary display and open behavior.
+- [x] Add focused tests for summary display and open behavior.
 
 ## 7. Backend fallback only if contract blocks implementation
 
@@ -144,13 +150,14 @@ T-013B deferred:
 - Expected owned files or folders: `backend/internal/characters/`, backend tests.
 - Shared files or dependencies: migrations, frontend API helpers, authenticated session behavior.
 
-- [ ] Confirm no backend change is needed.
+- [x] Confirm no backend change is needed.
 - [ ] If needed, plan a separate backend task before changing code.
 
 ## Validation For Future Implementation
 
 - [x] Run `pnpm --dir frontend test -- generatedFighterBuilds.test.ts`.
 - [x] Run `pnpm --dir frontend test -- CharacterCreationPage.test.tsx api.test.ts`.
+- [x] Run `pnpm --dir frontend test -- router.test.ts api.test.ts SavedCharacterReferencePage.test.tsx CharacterCreationPage.test.tsx App.test.tsx`.
 - [x] Run `pnpm --dir frontend lint`.
 - [x] Run `pnpm --dir frontend typecheck`.
 - [x] Run `pnpm --dir frontend test`.

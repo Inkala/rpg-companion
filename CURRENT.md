@@ -1,6 +1,6 @@
 # Current Work
 
-Active task: T-013B generated Fighter review and save UI
+Active task: T-013C open saved characters in Character Reference
 
 State: Implementation complete. Frontend validation passed; awaiting review before staging or
 commit.
@@ -32,7 +32,11 @@ T-013B scope: add generated character review after Help me choose selection, sig
 authenticated save, signed-out save prompt, loading/error/success states, and create-character API
 helper. No saved-character route or Character Reference loading.
 
-Next action: Review the T-013B diff before staging or commit.
+T-013C scope: add `/characters/:id`, load saved character detail, render valid `CharacterSheetV1`
+payloads in Character Reference, make My characters cards openable, and add an Open Character
+Reference action after save success.
+
+Next action: Review the T-013C diff before staging or commit.
 
 Task folder: `tasks/T-013/`
 

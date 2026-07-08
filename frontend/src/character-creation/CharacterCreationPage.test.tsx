@@ -294,8 +294,9 @@ describe('CharacterCreationPage', () => {
   });
 
   it('saves the generated character for signed-in users', async () => {
+    const onOpenCharacterReference = vi.fn();
     createCharacterMock.mockResolvedValue(createdCharacterResponse('Branna Shieldhand'));
-    renderCreationPage({ isSignedIn: true });
+    renderCreationPage({ isSignedIn: true, onOpenCharacterReference });
     fireEvent.click(screen.getByRole('button', { name: /Help me choose/ }));
 
     finishQuiz([
@@ -330,6 +331,11 @@ describe('CharacterCreationPage', () => {
       );
     });
     expect(screen.getByText(/Branna Shieldhand is saved/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open Character Reference' }));
+
+    expect(onOpenCharacterReference).toHaveBeenCalledWith(
+      '22222222-2222-2222-2222-222222222222',
+    );
   });
 
   it('disables the save button while saving', async () => {

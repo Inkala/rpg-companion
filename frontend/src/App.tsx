@@ -16,6 +16,7 @@ import {
 import { CharacterCreationPage } from './character-creation/CharacterCreationPage';
 import { CharacterReference } from './characters/CharacterReference';
 import { maraReferenceCharacter } from './characters/maraReference';
+import { SavedCharacterReferencePage } from './characters/SavedCharacterReferencePage';
 import { AccountPage } from './pages/AccountPage';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -80,6 +81,10 @@ export const App = () => {
 
   const showSampleCharacter = () => {
     navigateToRoute({ name: 'sample-character' });
+  };
+
+  const showSavedCharacter = (id: string) => {
+    navigateToRoute({ name: 'saved-character', id });
   };
 
   const showNewCharacter = () => {
@@ -152,12 +157,20 @@ export const App = () => {
           isSignedIn={currentUser !== null}
           onBack={showHome}
           onCreateAccount={() => showAccount('register')}
+          onOpenCharacterReference={showSavedCharacter}
           onSignIn={() => showAccount('sign-in')}
         />
       ) : route.name === 'sample-character' ? (
         <CharacterReference
           character={maraReferenceCharacter}
           onBack={showHome}
+        />
+      ) : route.name === 'saved-character' ? (
+        <SavedCharacterReferencePage
+          characterId={route.id}
+          isSignedIn={currentUser !== null}
+          onBack={showHome}
+          onSignIn={() => showAccount('sign-in')}
         />
       ) : (
         <NotFoundPage onHome={showHome} />

@@ -9,7 +9,9 @@ export const appPaths = {
 } as const;
 
 export const parseAppRoute = (pathname: string): AppRoute => {
-  switch (normalizePathname(pathname)) {
+  const normalizedPathname = normalizePathname(pathname);
+
+  switch (normalizedPathname) {
     case appPaths.home:
       return { name: 'home' };
     case appPaths.login:
@@ -21,6 +23,13 @@ export const parseAppRoute = (pathname: string): AppRoute => {
     case appPaths.sampleCharacter:
       return { name: 'sample-character' };
     default:
+      if (normalizedPathname.startsWith('/characters/')) {
+        const id = normalizedPathname.slice('/characters/'.length);
+        if (id !== '' && !id.includes('/')) {
+          return { name: 'saved-character', id };
+        }
+      }
+
       return { name: 'not-found' };
   }
 };
@@ -39,6 +48,8 @@ export const pathForRoute = (route: AppRoute) => {
       return appPaths.newCharacter;
     case 'sample-character':
       return appPaths.sampleCharacter;
+    case 'saved-character':
+      return `/characters/${route.id}`;
     case 'not-found':
       return appPaths.home;
   }

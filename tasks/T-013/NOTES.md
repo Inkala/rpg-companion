@@ -135,3 +135,31 @@ Validation:
 - `pnpm --dir frontend typecheck` passed.
 - `pnpm --dir frontend test` passed.
 - `pnpm --dir frontend build` passed.
+
+## T-013C Implementation Notes
+
+Certain:
+
+- Added saved character route parsing and path building for `/characters/:id`.
+- Kept `/characters/new` and `/characters/sample` reserved and working.
+- Added `getCharacterById` for authenticated `GET /characters/{id}`.
+- Added `SavedCharacterReferencePage` with signed-out, loading, fetch-error, invalid-payload, and
+  valid Character Reference states.
+- Added a local `CharacterSheetV1` guard without new dependencies.
+- Made My characters cards open saved Character Reference.
+- Added `Open Character Reference` action after generated character save success.
+- Did not implement manual character entry, editing, deletion, localStorage draft persistence,
+  party/GM flow, backend changes, migrations, schema-validation dependencies, or Figma changes.
+
+Invalid payload behavior:
+
+- Invalid or missing `referencePayload` shows an unsupported Character Reference state.
+- Invalid payload does not crash and does not fall back to Mara.
+
+Validation:
+
+- `pnpm --dir frontend test -- router.test.ts api.test.ts SavedCharacterReferencePage.test.tsx CharacterCreationPage.test.tsx App.test.tsx` passed.
+- `pnpm --dir frontend lint` passed.
+- `pnpm --dir frontend typecheck` passed.
+- `pnpm --dir frontend test` passed.
+- `pnpm --dir frontend build` passed.
