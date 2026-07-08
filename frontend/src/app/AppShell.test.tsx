@@ -35,10 +35,10 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Hunin' })).toHaveAttribute('href', '/');
     expect(screen.getByText('Your party companion.')).toBeInTheDocument();
     expect(
-      screen.getByText(
+      screen.queryByText(
         'Create, bring in, and understand a character without decoding the whole sheet.',
       ),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
     expect(screen.getByText('Shell content')).toBeInTheDocument();
   });
 
