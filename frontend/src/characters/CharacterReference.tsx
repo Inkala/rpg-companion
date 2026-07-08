@@ -77,7 +77,7 @@ export const CharacterReference = ({
           <p className="eyebrow" aria-hidden="true">
             Character Reference
           </p>
-          <div className="reference-identity">
+          <header className="reference-identity">
             {character.portrait ? (
               <img
                 className="portrait portrait--reference"
@@ -92,7 +92,7 @@ export const CharacterReference = ({
                 <p className="supporting-line">{character.supportingIdentity}</p>
               ) : null}
             </div>
-          </div>
+          </header>
 
           <dl className="primary-stats" aria-label="Primary stats">
             <HitPointStat hitPoints={character.stats.hitPoints} />
@@ -113,7 +113,7 @@ export const CharacterReference = ({
           ) : null}
         </section>
 
-        <div className="reference-sections">
+        <section className="reference-sections" aria-label="Character details">
           {character.sections.map((section) => (
             <CharacterReferenceSection
               key={section.id}
@@ -123,7 +123,7 @@ export const CharacterReference = ({
               onOpenQuickReference={openQuickReference}
             />
           ))}
-        </div>
+        </section>
       </main>
 
       {activeQuickReference ? (

@@ -12,7 +12,7 @@ export const SampleCharacterCard = ({ onExploreCharacter }: SampleCharacterCardP
       <p className="eyebrow">Sample character</p>
 
       <section className="sample-card" aria-labelledby="sample-character-title">
-        <div className="sample-card__identity">
+        <header className="sample-card__identity">
           <div className="sample-card__summary">
             <img
               className="portrait portrait--landing"
@@ -30,7 +30,7 @@ export const SampleCharacterCard = ({ onExploreCharacter }: SampleCharacterCardP
           <button className="button button--primary sample-card__action" onClick={onExploreCharacter}>
             Expand
           </button>
-        </div>
+        </header>
 
         <dl className="landing-stat-strip" aria-label="Mara Velard quick stats">
           <HitPointStat hitPoints={maraLandingPreview.stats.hitPoints} />
@@ -38,13 +38,13 @@ export const SampleCharacterCard = ({ onExploreCharacter }: SampleCharacterCardP
           <Stat label="Speed" value={maraLandingPreview.stats.speed} />
         </dl>
 
-        <div className="badge-row" aria-label="Featured abilities">
+        <ul className="badge-row" aria-label="Featured abilities">
           {maraLandingPreview.featuredAbilities.map((ability) => (
-            <span className="badge badge--neutral" key={ability}>
-              {ability}
-            </span>
+            <li key={ability}>
+              <span className="badge badge--neutral">{ability}</span>
+            </li>
           ))}
-        </div>
+        </ul>
 
         <p className="preview-note">{maraLandingPreview.concept}</p>
       </section>

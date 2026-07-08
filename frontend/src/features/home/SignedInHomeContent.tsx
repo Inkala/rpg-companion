@@ -64,7 +64,7 @@ export const SignedInHomeContent = (
 
         <section className="home-panel home-panel--parties" aria-labelledby="my-parties-title">
           <p className="eyebrow home-panel__eyebrow">My parties</p>
-          <div className="home-panel__intro">
+          <header className="home-panel__intro">
             <div>
               <h2 id="my-parties-title" className="home-panel__title">
                 No parties yet
@@ -76,7 +76,7 @@ export const SignedInHomeContent = (
             </div>
             <PlannedActionButton label="Create party" />
             <PlannedActionButton label="Join party" />
-          </div>
+          </header>
         </section>
       </section>
 
@@ -92,18 +92,18 @@ const CharacterSummaryContent = ({
 }) => {
   if (state.status === 'loading') {
     return (
-      <div>
+      <header>
         <p className="eyebrow">My characters</p>
         <h2 id="my-characters-title" className="home-panel__title">
           Loading your characters...
         </h2>
-      </div>
+      </header>
     );
   }
 
   if (state.status === 'error') {
     return (
-      <div>
+      <header>
         <p className="eyebrow">My characters</p>
         <h2 id="my-characters-title" className="home-panel__title">
           Couldn’t load characters
@@ -111,29 +111,31 @@ const CharacterSummaryContent = ({
         <p className="home-panel__copy">
           Try refreshing the page. Mara is still available below.
         </p>
-      </div>
+      </header>
     );
   }
 
   if (state.status === 'loaded') {
     return (
-      <div className="character-summary-list">
-        <p className="eyebrow">My characters</p>
-        <h2 id="my-characters-title" className="home-panel__title">
-          Saved characters
-        </h2>
+      <section className="character-summary-list" aria-labelledby="my-characters-title">
+        <header>
+          <p className="eyebrow">My characters</p>
+          <h2 id="my-characters-title" className="home-panel__title">
+            Saved characters
+          </h2>
+        </header>
         {state.characters.map((character) => (
           <CharacterSummaryCard
             character={character}
             key={character.id}
           />
         ))}
-      </div>
+      </section>
     );
   }
 
   return (
-    <div>
+    <header>
       <p className="eyebrow">My characters</p>
       <h2 id="my-characters-title" className="home-panel__title">
         No saved characters yet
@@ -141,7 +143,7 @@ const CharacterSummaryContent = ({
       <p className="home-panel__copy">
         Start with a guided character or fill in your sheet manually.
       </p>
-    </div>
+    </header>
   );
 };
 
@@ -158,7 +160,7 @@ const CharacterSummaryCard = ({
 
   return (
     <article className="character-summary-card" aria-labelledby={`character-${character.id}`}>
-      <div>
+      <header>
         <h2 id={`character-${character.id}`} className="character-summary-card__title">
           {character.name}
         </h2>
@@ -173,7 +175,7 @@ const CharacterSummaryCard = ({
         >
           Open Character Reference
         </button>
-      </div>
+      </header>
       <dl className="character-summary-stats" aria-label={`${character.name} summary stats`}>
         <div>
           <dt>HP</dt>

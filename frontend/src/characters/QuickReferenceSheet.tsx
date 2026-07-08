@@ -69,7 +69,7 @@ export const QuickReferenceSheet = ({
         aria-describedby={summaryId}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="sheet-header">
+        <header className="sheet-header">
           <div>
             <p className="eyebrow">Quick reference</p>
             <h2 id={titleId}>
@@ -86,7 +86,7 @@ export const QuickReferenceSheet = ({
           >
             Close
           </button>
-        </div>
+        </header>
 
         <span className="badge badge--feature">{content.label}</span>
 
@@ -111,7 +111,7 @@ export const QuickReferenceSheet = ({
         ) : null}
 
         {content.details ? (
-          <div className="details-block">
+          <section className="details-block" aria-label={`${content.title} additional details`}>
             <button
               type="button"
               className="details-toggle"
@@ -127,7 +127,7 @@ export const QuickReferenceSheet = ({
                 {content.details.text}
               </p>
             ) : null}
-          </div>
+          </section>
         ) : null}
       </div>
     </div>
