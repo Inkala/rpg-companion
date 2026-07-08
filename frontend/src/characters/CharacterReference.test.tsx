@@ -79,6 +79,14 @@ const testCharacter: CharacterReferenceViewModel = {
 };
 
 describe('CharacterReference', () => {
+  it('uses the guest landing back label by default', () => {
+    render(<CharacterReference character={testCharacter} onBack={vi.fn()} />);
+
+    expect(
+      screen.getByRole('button', { name: 'Back to guest landing page' }),
+    ).toBeInTheDocument();
+  });
+
   it('renders a reusable character reference from a view model', () => {
     render(<CharacterReference character={testCharacter} onBack={vi.fn()} />);
 

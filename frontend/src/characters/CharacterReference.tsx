@@ -17,11 +17,13 @@ type ActiveQuickReference = {
 interface CharacterReferenceProps {
   character: CharacterReferenceViewModel;
   onBack: () => void;
+  backLabel?: string;
 }
 
 export const CharacterReference = ({
   character,
   onBack,
+  backLabel = 'Back to guest landing page',
 }: CharacterReferenceProps) => {
   const defaultOpenSections = useMemo(
     () =>
@@ -64,9 +66,8 @@ export const CharacterReference = ({
     <>
       <main className="app-shell reference-page">
         <header className="reference-nav">
-          <button className="back-button" onClick={onBack}>
+          <button className="back-button" onClick={onBack} aria-label={backLabel}>
             Back
-            <span className="sr-only"> to guest landing page</span>
           </button>
         </header>
 

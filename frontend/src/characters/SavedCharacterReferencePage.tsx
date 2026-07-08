@@ -111,6 +111,7 @@ export const SavedCharacterReferencePage = ({
     <CharacterReference
       character={characterSheetToReference(state.character.referencePayload)}
       onBack={onBack}
+      backLabel="Back to My characters"
     />
   );
 };

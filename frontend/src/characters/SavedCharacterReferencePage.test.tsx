@@ -70,6 +70,25 @@ describe('SavedCharacterReferencePage', () => {
     expect(screen.getByRole('button', { name: /Actions/ })).toBeInTheDocument();
   });
 
+  it('uses a My characters back label for a valid saved reference', async () => {
+    getCharacterByIdMock.mockResolvedValue(savedCharacterWithPayload(
+      buildGeneratedFighterCharacterSheet('strength-melee-fighter', 'Branna Shieldhand'),
+    ));
+
+    render(
+      <SavedCharacterReferencePage
+        characterId="saved-1"
+        isSignedIn
+        onBack={vi.fn()}
+        onSignIn={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('button', { name: 'Back to My characters' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows a useful fetch error state', async () => {
     getCharacterByIdMock.mockRejectedValue(new Error('Character not found.'));
 
