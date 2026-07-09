@@ -1,10 +1,10 @@
 # Current Work
 
-Active task: none
+Active task: T-014 GM feedback triage for Character Reference
 
-State: T-013 is complete, committed, pushed, validated, and smoke-tested locally. The first MVP
-character loop works locally: Help me choose, review generated Fighter, save, return to My
-characters, and open the saved Character Reference.
+State: T-014 is a docs-only feedback triage task. It captures early Spanish GM feedback about the
+current Character Reference and in-session experience, classifies each suggestion by scope, and
+recommends keeping the first implementation slice small.
 
 T-002 status: authentication and owner-scoped character implementation completed, committed, and validated.
 
@@ -40,8 +40,9 @@ rendering in Character Reference, My characters open actions, and Open Character
 save success. Manual smoke testing found one copy bug in the saved reference back label; it was
 fixed and pushed in `70e80e6`.
 
-Next action: Review T-010 and plan or implement Fill the sheet myself V1.
+Next action: Review T-014 and decide whether the next implementation slice should be Character
+Reference compact stat/header polish.
 
-Task folder: `tasks/T-010/`
+Task folder: `tasks/T-014/`
 
-Last updated: 2026-07-08
+Last updated: 2026-07-09

@@ -60,7 +60,8 @@ Next action: Extract reusable Character Reference foundation. Implementation has
 
 Task: T-005 UI direction for home, account, Character Reference, and guided creation
 What changed: Created documentation-only planning for the next Hunin UI direction and updated stale status references after Character Reference extraction merged.
-Validation: Pending `git diff --check`.
+Validation: `git diff --check` passed. `git status --short --branch` showed docs-only changes on
+main with no staging.
 Decisions: Keep the current warm visual direction, refine hierarchy and form/button polish, design signed-in home as target IA, keep creation desktop-first, keep Character Reference mobile-first, and defer Figma work until MCP is available.
 Next action: Review and approve T-005 before starting implementation tasks.
 
@@ -195,3 +196,16 @@ follow-up back-label fix. Docs-only `git diff --check` passed.
 Decisions: Treat T-013 as complete. The only smoke-test bug found was the saved Character Reference
 back label, fixed in `70e80e6 fix(characters): label saved reference back action`.
 Next action: Review T-010 and plan or implement Fill the sheet myself V1.
+
+## 2026-07-09
+
+Task: T-014 GM feedback triage for Character Reference
+What changed: Created docs-only triage for early Spanish GM feedback, classified every suggestion
+by scope, separated small Character Reference polish from future combat assistant ideas, and
+recommended compact stat/header polish as the immediate next slice.
+Validation: Pending `git diff --check`.
+Decisions: Defer `It's my turn`, full spell/resource tracking, rest buttons, and combat/exploration
+mode. Treat attack reminder badges and calculation breakdowns as focused follow-ups, not MVP
+requirements.
+Next action: Review T-014 and decide whether to implement Character Reference compact stat/header
+polish next.
