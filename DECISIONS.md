@@ -118,3 +118,26 @@ Manual entry implementation must keep backend top-level fields limited to the cu
 Rules-rich data should stay in `CharacterSheetV1` JSON until a later task proves a relational column
 is needed. Backend validation hardening can be planned separately after the frontend payload shape is
 stable.
+
+## 2026-07-10: First public backend deployment provider
+
+Context:
+Hunin has a deployed static frontend at `https://hunin.marceramirez.com`, but public signup and
+login need a deployed Go backend, hosted PostgreSQL, HTTPS, environment variables, manual
+migrations, and a backend custom domain at `https://api.hunin.marceramirez.com`.
+
+Decision:
+Use Railway for the first public backend deployment with Railway PostgreSQL, a Go backend service
+from the `backend` directory, and the custom backend domain `api.hunin.marceramirez.com`.
+
+Reason:
+Railway is one of the course-favored options and is the simplest fit for this MVP because it can keep
+the backend service and PostgreSQL in one project, supports environment-variable references, supports
+custom domains with HTTPS, and avoids adding Docker or heavier deployment infrastructure for the
+first public test.
+
+Consequences:
+Deployment remains manual for now. Production migrations still run explicitly with
+`golang-migrate`. Frontend deployment must set
+`VITE_API_BASE_URL=https://api.hunin.marceramirez.com`. If Hunin later moves the backend to a
+different registrable domain, session cookie and CSRF settings must be reviewed again.

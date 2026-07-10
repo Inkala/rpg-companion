@@ -27,7 +27,7 @@ HttpOnly cookie session design better than a provider-generated backend URL on a
 - Database: hosted PostgreSQL.
 - Sessions: PostgreSQL-backed server sessions with the `hunin_session` HttpOnly cookie.
 - Migrations: manual `golang-migrate` execution for now.
-- Provider: pending decision.
+- Provider: Railway for the first public backend deployment.
 
 The current backend entrypoint is:
 
@@ -323,10 +323,12 @@ Public demo data expectations:
 - [ ] Testers know data may be reset unless a retention policy is announced.
 - [ ] No private campaign secrets or paid D&D book content should be entered for public testing.
 
-## Provider Decision Pending
+## Provider Decision
 
-The provider has not been chosen yet. Render, Railway, Fly.io, or another provider are all possible
-as long as the final choice supports:
+Railway has been chosen for the first public backend deployment. See `docs/railway-deployment.md`
+for the beginner-friendly manual checklist.
+
+The chosen provider must support:
 
 - Go backend service.
 - Hosted PostgreSQL or safe connection to hosted PostgreSQL.
@@ -335,4 +337,4 @@ as long as the final choice supports:
 - Access to runtime logs.
 - A way to run manual migrations or a separate one-off command.
 
-Record the final provider decision in the project decision log or provider-specific deployment docs.
+Record any future provider changes in the project decision log and provider-specific deployment docs.
