@@ -235,3 +235,22 @@ passed. `git status --short --branch` showed only documentation files modified.
 Decisions: Treat public Railway deployment as complete and smoke-tested. One disposable smoke-test
 account and character remain in production because there is no account-deletion flow.
 Next action: Start T-010 Fill the sheet myself V1 as the next product feature.
+
+## 2026-07-11
+
+Task: T-010 Fill the sheet myself V1 public smoke milestone
+What changed: Recorded that T-010 is complete, committed, pushed, validated, and publicly
+smoke-tested. Both public creation paths now work at `https://hunin.marceramirez.com`: Help me
+choose and Fill the sheet myself. Manual entry can save a signed-in character, list it in My
+characters, open saved Character Reference, survive URL refresh, show generic avatar fallback, and
+display the first optional action and first optional feature.
+Validation: Public smoke test passed. Backend health passed at
+`https://api.hunin.marceramirez.com/healthz`. Frontend availability passed. No blocking bugs were
+found. Docs-only `git diff --check` passed. `git status --short --branch` showed only documentation
+files modified.
+Decisions: Treat T-010 as complete. Manual features remain collapsed by default after refresh
+because Features is an existing collapsed Character Reference section; this is a non-blocking note.
+Disposable production data remains because no deletion flow exists:
+`t010cglx3py@example.com`, `Smoke Fighter t010cglx3py`, and `Smoke Manual t010cglx3py`.
+Next action: Ask Marcela to choose between Character Reference polish from GM feedback, public demo
+data/deletion cleanup, or party creation/join planning.

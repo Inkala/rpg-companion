@@ -10,6 +10,15 @@ fully reconciled against the recent MVP loop and Railway deployment planning com
 it to approve the next product implementation, run a separate checklist reconciliation pass with
 evidence links rather than inferring completion from old unchecked boxes.
 
+T-010 milestone, 2026-07-11: Fill the sheet myself V1 is complete, committed, pushed, validated, and
+publicly smoke-tested. Both public creation paths now work at `https://hunin.marceramirez.com`:
+Help me choose and Fill the sheet myself. Manual entry can save a signed-in character, list it in My
+characters, open saved Character Reference, survive URL refresh, and display a generic avatar
+fallback. The first optional manual action displays. The first optional manual feature displays
+after expanding the existing collapsed Features section. No blocking bugs were found. Disposable
+smoke-test account `t010cglx3py@example.com` and characters `Smoke Fighter t010cglx3py` and
+`Smoke Manual t010cglx3py` remain in production because no deletion flow exists yet.
+
 ---
 
 ## Foundation

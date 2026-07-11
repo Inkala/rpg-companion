@@ -1,28 +1,64 @@
-# T-010: Manual character entry planning
+# T-010: Fill the sheet myself V1
 
-Status: approved
+Status: complete
 
-Planning is approved. Implementation has not started.
+Planning, implementation, validation, push, and public smoke testing are complete.
 
 ## Parallel-work assessment
 
 - Classification: Green
 - Recommendation: current worktree for docs only.
-- Reason: This is a product/data planning task for a future manual entry flow. It does not touch
-  frontend implementation files, backend code, migrations, dependencies, infrastructure, generated
-  artifacts, or Git history.
+- Reason: This status update is docs-only and records the completed manual entry milestone. It does
+  not touch frontend implementation files, backend code, migrations, dependencies, infrastructure,
+  generated artifacts, or Git history.
 - Expected owned files or folders: `tasks/T-010/`.
 - Shared files or dependencies: `CURRENT.md`, `WORKLOG.md`, `DECISIONS.md`, current
   `CharacterSheetV1` direction, current character API contract.
 
 ## Goal
 
-Plan the future manual character entry flow for Hunin:
+Add the first manual character entry flow for Hunin:
 
 > Fill the sheet myself.
 
 This flow is for players who already have a D&D 5E character and want to transfer enough sheet data
-into Hunin to save, view, and share the character.
+into Hunin to save and view the character in Character Reference.
+
+## Completion Summary
+
+Completed commits:
+
+- `911fef1 feat(characters): add manual entry mapper`
+- `b3fca28 feat(characters): add manual entry form review`
+- `a0df4b9 feat(characters): save manual entry characters`
+
+Public smoke test passed on 2026-07-11 at `https://hunin.marceramirez.com`.
+
+Verified:
+
+- backend health passed at `https://api.hunin.marceramirez.com/healthz`;
+- frontend availability passed;
+- account signup, logout, and login passed;
+- Help me choose generated Fighter path still works publicly;
+- Fill the sheet myself manual entry path works publicly;
+- signed-in save works for generated and manual characters;
+- My characters lists saved generated and manual characters;
+- saved Character Reference opens and survives refresh;
+- generic avatar fallback displays when no custom portrait exists;
+- optional manual action displays in Character Reference;
+- optional manual feature displays after expanding the existing collapsed Features section;
+- Mara sample still opens;
+- quick mobile-width check found no horizontal overflow on home/My characters or sample Character
+  Reference;
+- no blocking bugs were found.
+
+Known non-blocking note: manual features are collapsed by default after refresh because Features is
+an existing collapsed Character Reference section. This is consistent with current behavior.
+
+Disposable production data remains because no deletion flow exists:
+
+- account: `t010cglx3py@example.com`;
+- characters: `Smoke Fighter t010cglx3py`, `Smoke Manual t010cglx3py`.
 
 ## Context
 
@@ -38,15 +74,15 @@ Current relevant direction:
 - The backend persists explicit character summary/core columns plus rich JSON in `referencePayload`.
 - The frontend already has a `CharacterSheetV1` type direction and Character Reference mapper
   foundation under `frontend/src/characters/`.
-- A separate frontend task is active for signed-in My characters and `GET /characters`; future
-  manual-entry implementation must not collide with that work.
+- Signed-in My characters and saved Character Reference support were completed before T-010 save
+  work, so manual entry now reuses the existing character API and saved-reference flow.
 
 Use the uploaded Mara sheet only as rough internal sample context. Do not use Ninea as an app
 fixture.
 
-## Scope
+## Historical Planning Scope
 
-In scope:
+Originally in scope:
 
 - Define first-version manual entry support.
 - Separate required and optional fields.
@@ -58,7 +94,7 @@ In scope:
 - List future tests.
 - List future implementation tasks with parallel-work assessments.
 
-Out of scope:
+Originally out of scope for the planning task:
 
 - No frontend implementation.
 - No backend implementation.
@@ -87,7 +123,7 @@ git status --short --untracked-files=all
 
 No app checks are required because this task does not change application code.
 
-## Recommended First Implementation Slice
+## Implemented First Slice
 
 - Add a one-page `Fill the sheet myself` manual entry path inside `/characters/new`.
 - Include review before save.
@@ -109,4 +145,5 @@ No app checks are required because this task does not change application code.
 
 ## Recommended next action
 
-After public backend deployment, create or approve the first T-010 implementation slice above.
+Ask Marcela to choose the next product slice: Character Reference polish from GM feedback, public
+demo data/deletion cleanup, or party creation/join planning.

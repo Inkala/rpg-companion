@@ -1,6 +1,6 @@
 # Current Work
 
-Active priority: T-010 Fill the sheet myself V1
+Active priority: choose the next product slice after T-010
 
 State: Main is expected to be clean and pushed. Railway has been selected for the first public
 backend deployment, and the public backend deployment is complete and smoke-tested.
@@ -13,8 +13,11 @@ T-006 status: Home action hierarchy and form/button polish completed, committed,
 
 T-007 status: frontend app-shell architecture refactor completed, committed, pushed, and validated.
 
-T-010 status: manual character entry planning completed and approved. Implementation has not
-started. Recommended next product feature is Fill the sheet myself V1.
+T-010 status: Fill the sheet myself V1 is complete, committed, pushed, validated, and publicly
+smoke-tested. The implementation shipped in `911fef1`, `b3fca28`, and `a0df4b9`. Users can choose
+`Fill the sheet myself` from `/characters/new`, enter required core sheet data, include one optional
+action and one optional feature or note, review, save while signed in, see the character in My
+characters, open saved Character Reference, and refresh the saved URL. No blocking bugs were found.
 
 T-011 status: character creation entry and draft foundation completed, pushed, and validated.
 
@@ -43,18 +46,26 @@ T-014 status: GM feedback triage for Character Reference completed, committed, p
 validated as a docs-only task. It recommends Character Reference compact stat/header polish as a
 future small product slice, not as the active priority.
 
-Railway deployment status: public deployment completed and smoke-tested on 2026-07-11. Backend
-health passed at `https://api.hunin.marceramirez.com/healthz`, returning
-`{"status":"ok","service":"hunin-backend"}`. Frontend availability passed at
-`https://hunin.marceramirez.com` with HTTP 200 through Cloudflare. Account UI and the public manual
-smoke loop passed: create account, signup, logout, login, generate Fighter through Help me choose,
-save Fighter, return to My characters, open saved Character Reference, refresh saved Character
-Reference URL, and confirm the saved character still displays. No Hunin app bugs were found.
+Public smoke status: public smoke testing passed on 2026-07-11 at
+`https://hunin.marceramirez.com`. Backend health passed at
+`https://api.hunin.marceramirez.com/healthz`, returning
+`{"status":"ok","service":"hunin-backend"}`. Frontend availability passed with HTTP 200 through
+Cloudflare. Account signup, logout, and login passed. Both public creation paths now work: Help me
+choose generated Fighter and Fill the sheet myself manual entry. Saving, My characters listing,
+opening saved Character Reference, refreshing the saved Character Reference URL, and generic avatar
+fallback all passed. Manual optional action displayed. Manual optional feature displayed after
+expanding the existing collapsed Features section. Mara sample still opens. A quick mobile-width
+check found no horizontal overflow on home/My characters or sample Character Reference.
 
-Production smoke-test residue: one disposable smoke-test account and character remain in production
-because there is no account-deletion flow yet.
+Known non-blocking note: manual features are collapsed by default after refresh because Features is
+an existing collapsed Character Reference section. This is consistent with current behavior.
 
-Next action: start the first approved T-010 implementation slice for Fill the sheet myself V1.
+Production smoke-test residue: disposable account `t010cglx3py@example.com` and characters
+`Smoke Fighter t010cglx3py` and `Smoke Manual t010cglx3py` remain in production because there is no
+deletion flow yet.
+
+Next action: ask Marcela to choose the next product slice: Character Reference polish from GM
+feedback, public demo data/deletion cleanup, or party creation/join planning.
 
 Task folder: `tasks/T-010/`
 

@@ -34,12 +34,29 @@ Verified:
 - Public manual smoke test passed: create account, signup, logout, login, generate Fighter through
   Help me choose, save Fighter, return to My characters, saved character listed, open saved
   Character Reference, refresh saved Character Reference URL, and saved character still displayed.
+- T-010 Fill the sheet myself V1 public smoke test passed: choose Fill the sheet myself, fill a
+  minimum valid manual character, include one optional action and one optional feature, reach
+  review, save, open saved Character Reference, refresh saved Character Reference URL, and confirm
+  the saved manual character still displayed.
+- Both public creation paths now work: Help me choose and Fill the sheet myself.
+- Generic avatar fallback displayed for saved generated and manual characters without custom
+  portraits.
+- Optional manual action displayed in Character Reference.
+- Optional manual feature displayed after expanding the existing collapsed Features section.
+- Mara sample still opens.
+- Quick mobile-width check found no horizontal overflow on home/My characters or sample Character
+  Reference.
 - No Hunin app bugs were found.
 
 Production residue:
 
-- One disposable smoke-test account and character remain in production because there is no
-  account-deletion flow yet.
+- Disposable account `t010cglx3py@example.com` and characters `Smoke Fighter t010cglx3py` and
+  `Smoke Manual t010cglx3py` remain in production because there is no deletion flow yet.
+
+Known non-blocking note:
+
+- Manual features are collapsed by default after refresh because Features is an existing collapsed
+  Character Reference section. This is consistent with current behavior.
 
 ## Recommended Architecture
 
@@ -221,6 +238,16 @@ Browser smoke:
 - [ ] Create a generated Fighter.
 - [ ] Confirm the saved character appears in My characters.
 - [ ] Open the saved Character Reference.
+- [ ] Refresh the saved Character Reference URL and confirm the generated character still displays.
+- [ ] Create a manual character through Fill the sheet myself.
+- [ ] Include one optional manual action and one optional manual feature.
+- [ ] Save the manual character.
+- [ ] Open the saved manual Character Reference.
+- [ ] Refresh the saved manual Character Reference URL and confirm the manual character still
+  displays.
+- [ ] Confirm the optional manual action displays.
+- [ ] Expand Features and confirm the optional manual feature displays.
+- [ ] Confirm generic avatar fallback appears for saved characters without custom portraits.
 - [ ] Confirm the Mara guest demo remains available without an account.
 
 API smoke, optional:
@@ -242,6 +269,7 @@ API smoke, optional:
 - Migrations are manual for now.
 - Railway is selected for the first public backend deployment.
 - Public Railway deployment is complete and smoke-tested as of 2026-07-11.
+- T-010 Fill the sheet myself V1 is complete and publicly smoke-tested as of 2026-07-11.
 - Observability and alerting are not yet production-grade.
 - Public D&D content must remain limited to content that is safe to publish.
 
