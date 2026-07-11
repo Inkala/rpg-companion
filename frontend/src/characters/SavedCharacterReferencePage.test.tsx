@@ -70,6 +70,25 @@ describe('SavedCharacterReferencePage', () => {
     expect(screen.getByRole('button', { name: /Actions/ })).toBeInTheDocument();
   });
 
+  it('renders the generic avatar for a saved generated character without a portrait', async () => {
+    getCharacterByIdMock.mockResolvedValue(savedCharacterWithPayload(
+      buildGeneratedFighterCharacterSheet('strength-melee-fighter', 'Branna Shieldhand'),
+    ));
+
+    render(
+      <SavedCharacterReferencePage
+        characterId="saved-1"
+        isSignedIn
+        onBack={vi.fn()}
+        onSignIn={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('img', { name: 'Generic character avatar' }),
+    ).toBeInTheDocument();
+  });
+
   it('uses a My characters back label for a valid saved reference', async () => {
     getCharacterByIdMock.mockResolvedValue(savedCharacterWithPayload(
       buildGeneratedFighterCharacterSheet('strength-melee-fighter', 'Branna Shieldhand'),

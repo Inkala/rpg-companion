@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import genericAvatar from '../assets/characters/generic-avatar.webp';
 import { CharacterReferenceSection } from './CharacterReferenceSection';
 import { HitPointStat, Stat } from './CharacterStats';
 import { QuickReferenceSheet } from './QuickReferenceSheet';
@@ -25,6 +26,10 @@ export const CharacterReference = ({
   onBack,
   backLabel = 'Back to guest landing page',
 }: CharacterReferenceProps) => {
+  const portrait = character.portrait ?? {
+    src: genericAvatar,
+    alt: 'Generic character avatar',
+  };
   const defaultOpenSections = useMemo(
     () =>
       Object.fromEntries(
@@ -79,13 +84,11 @@ export const CharacterReference = ({
             Character Reference
           </p>
           <header className="reference-identity">
-            {character.portrait ? (
-              <img
-                className="portrait portrait--reference"
-                src={character.portrait.src}
-                alt={character.portrait.alt}
-              />
-            ) : null}
+            <img
+              className="portrait portrait--reference"
+              src={portrait.src}
+              alt={portrait.alt}
+            />
             <div>
               <h2 className="character-name reference-character">{character.name}</h2>
               <p className="identity-line">{character.identity}</p>

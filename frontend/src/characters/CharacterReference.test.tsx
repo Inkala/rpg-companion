@@ -105,6 +105,33 @@ describe('CharacterReference', () => {
     expect(screen.queryByRole('button', { name: /Second Wind/ })).not.toBeInTheDocument();
   });
 
+  it('renders the generic avatar when a character has no portrait', () => {
+    render(<CharacterReference character={testCharacter} onBack={vi.fn()} />);
+
+    expect(screen.getByRole('img', { name: 'Generic character avatar' })).toBeInTheDocument();
+  });
+
+  it('renders a provided portrait instead of the generic avatar', () => {
+    render(
+      <CharacterReference
+        character={{
+          ...testCharacter,
+          portrait: {
+            src: '/custom-portrait.webp',
+            alt: 'Custom portrait',
+          },
+        }}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('img', { name: 'Custom portrait' })).toHaveAttribute(
+      'src',
+      '/custom-portrait.webp',
+    );
+    expect(screen.queryByRole('img', { name: 'Generic character avatar' })).not.toBeInTheDocument();
+  });
+
   it('opens generic quick-reference sheet content and returns focus to the opener', async () => {
     const { opener: secondWindRow, sheet } = openSecondWindQuickReference();
 
