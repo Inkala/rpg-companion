@@ -668,6 +668,29 @@ export const CharacterCreationPage = ({
     }
   };
 
+  const saveManualCharacter = async () => {
+    if (!manualReviewRequest || saveState.status === 'saving') {
+      return;
+    }
+
+    setSaveState({ status: 'saving' });
+
+    try {
+      const character = await createCharacter(manualReviewRequest);
+      setSaveState({
+        status: 'success',
+        characterId: character.id,
+        characterName: character.name,
+      });
+    } catch (error) {
+      const message =
+        error instanceof CharactersApiError
+          ? error.message
+          : 'Could not save the character. Check your connection and try again.';
+      setSaveState({ status: 'error', message });
+    }
+  };
+
   const renderManualTextField = ({
     field,
     label,
@@ -928,6 +951,7 @@ export const CharacterCreationPage = ({
     const characterClass = sheet.identity.classes[0];
     const action = sheet.actions[0];
     const feature = sheet.features[0];
+    const isSaving = saveState.status === 'saving';
 
     return (
       <section className="creation-review" aria-labelledby="manual-review-title">
@@ -1024,21 +1048,80 @@ export const CharacterCreationPage = ({
           ) : null}
         </div>
 
-        <div className="creation-save-panel" aria-live="polite">
-          <p className="creation-save-panel__notice">
-            Saving manual characters comes next. This slice is preview-only, so
-            nothing is sent to the backend yet.
-          </p>
-          <div className="creation-quiz__actions">
-            <button
-              type="button"
-              className="back-button"
-              onClick={() => setManualReviewRequest(null)}
-            >
-              Back to edit
-            </button>
+        {isSignedIn ? (
+          <div className="creation-save-panel" aria-live="polite">
+            {saveState.status === 'error' ? (
+              <p className="creation-save-panel__error" role="alert">
+                {saveState.message}
+              </p>
+            ) : null}
+            {saveState.status === 'success' ? (
+              <p className="creation-save-panel__success">
+                {saveState.characterName} is saved. You can return home to see
+                it in My characters.
+              </p>
+            ) : null}
+            <div className="creation-quiz__actions">
+              <button
+                type="button"
+                className="back-button"
+                onClick={() => {
+                  setManualReviewRequest(null);
+                  setSaveState({ status: 'idle' });
+                }}
+              >
+                Back to edit
+              </button>
+              <button
+                type="button"
+                className="button button--primary"
+                disabled={isSaving}
+                onClick={saveManualCharacter}
+              >
+                {isSaving ? 'Saving character...' : 'Save character'}
+              </button>
+              {saveState.status === 'success' && onOpenCharacterReference ? (
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => onOpenCharacterReference(saveState.characterId)}
+                >
+                  Open Character Reference
+                </button>
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="creation-save-panel" aria-live="polite">
+            <p className="creation-save-panel__notice">
+              Sign in to save this manual character and show it in My
+              characters. You can still review it here.
+            </p>
+            <div className="creation-quiz__actions">
+              <button
+                type="button"
+                className="back-button"
+                onClick={() => setManualReviewRequest(null)}
+              >
+                Back to edit
+              </button>
+              {onSignIn ? (
+                <button type="button" className="button button--primary" onClick={onSignIn}>
+                  Sign in
+                </button>
+              ) : null}
+              {onCreateAccount ? (
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={onCreateAccount}
+                >
+                  Create account
+                </button>
+              ) : null}
+            </div>
+          </div>
+        )}
       </section>
     );
   };

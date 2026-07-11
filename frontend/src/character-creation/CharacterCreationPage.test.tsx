@@ -34,6 +34,15 @@ const startManualEntry = () => {
   fireEvent.click(screen.getByRole('button', { name: /Fill the sheet myself/ }));
 };
 
+const reviewValidMinimumManualCharacter = (
+  props: Partial<React.ComponentProps<typeof CharacterCreationPage>> = {},
+) => {
+  renderCreationPage(props);
+  fireEvent.click(screen.getByRole('button', { name: /Fill the sheet myself/ }));
+  fillValidMinimumManualCharacter();
+  fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+};
+
 const fillValidMinimumManualCharacter = () => {
   fireEvent.change(screen.getByLabelText('Name'), {
     target: { value: 'Seren Ashfall' },
@@ -175,7 +184,7 @@ describe('CharacterCreationPage', () => {
     expect(screen.getByText('+2')).toBeInTheDocument();
     expect(screen.getByText('STR 12')).toBeInTheDocument();
     expect(screen.getByText('CHA 8')).toBeInTheDocument();
-    expect(screen.getByText(/Saving manual characters comes next/)).toBeInTheDocument();
+    expect(screen.getByText(/Sign in to save this manual character/)).toBeInTheDocument();
     expect(createCharacterMock).not.toHaveBeenCalled();
   });
 
@@ -288,6 +297,112 @@ describe('CharacterCreationPage', () => {
     expect(screen.getByRole('heading', { name: 'Fill the sheet yourself.' })).toBeInTheDocument();
     expect(screen.getByLabelText('Name')).toHaveValue('Seren Ashfall');
     expect(screen.getByLabelText('Dexterity')).toHaveValue('16');
+  });
+
+  it('shows sign-in-required copy for signed-out manual review and does not save', () => {
+    const onSignIn = vi.fn();
+    const onCreateAccount = vi.fn();
+    reviewValidMinimumManualCharacter({ onSignIn, onCreateAccount });
+
+    expect(screen.getByText(/Sign in to save this manual character/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save character' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(onSignIn).toHaveBeenCalledTimes(1);
+    expect(onCreateAccount).toHaveBeenCalledTimes(1);
+    expect(createCharacterMock).not.toHaveBeenCalled();
+  });
+
+  it('shows Save character for signed-in manual review', () => {
+    reviewValidMinimumManualCharacter({ isSignedIn: true });
+
+    expect(screen.getByRole('button', { name: 'Save character' })).toBeInTheDocument();
+    expect(screen.queryByText(/Saving manual characters comes next/)).not.toBeInTheDocument();
+  });
+
+  it('saves the manual character for signed-in users', async () => {
+    const onOpenCharacterReference = vi.fn();
+    createCharacterMock.mockResolvedValue(createdManualCharacterResponse('Seren Ashfall'));
+    reviewValidMinimumManualCharacter({ isSignedIn: true, onOpenCharacterReference });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+
+    await waitFor(() => {
+      expect(createCharacterMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Seren Ashfall',
+          className: 'Ranger',
+          subclassName: null,
+          level: 3,
+          ancestry: 'Human',
+          background: 'Outlander',
+          abilityScores: {
+            strength: 12,
+            dexterity: 16,
+            constitution: 14,
+            intelligence: 10,
+            wisdom: 15,
+            charisma: 8,
+          },
+          hitPoints: { current: 26, max: 28 },
+          armorClass: 15,
+          speedFt: 30,
+          referencePayload: expect.objectContaining({
+            schemaVersion: 'CharacterSheetV1',
+          }),
+        }),
+      );
+    });
+    expect(screen.getByText(/Seren Ashfall is saved/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Character Reference' })).toBeInTheDocument();
+  });
+
+  it('disables the manual save button while saving', async () => {
+    let resolveSave: (value: ReturnType<typeof createdManualCharacterResponse>) => void = () => {};
+    createCharacterMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSave = resolve;
+      }),
+    );
+    reviewValidMinimumManualCharacter({ isSignedIn: true });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+
+    expect(screen.getByRole('button', { name: 'Saving character...' })).toBeDisabled();
+
+    resolveSave(createdManualCharacterResponse('Seren Ashfall'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Seren Ashfall is saved/)).toBeInTheDocument();
+    });
+  });
+
+  it('keeps manual review visible and shows a retryable error when save fails', async () => {
+    createCharacterMock.mockRejectedValue(new Error('network down'));
+    reviewValidMinimumManualCharacter({ isSignedIn: true });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not save the character. Check your connection and try again.',
+    );
+    expect(screen.getByRole('heading', { name: 'Review manual character.' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save character' })).not.toBeDisabled();
+  });
+
+  it('opens saved Character Reference after manual save success', async () => {
+    const onOpenCharacterReference = vi.fn();
+    createCharacterMock.mockResolvedValue(createdManualCharacterResponse('Seren Ashfall'));
+    reviewValidMinimumManualCharacter({ isSignedIn: true, onOpenCharacterReference });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+    await screen.findByText(/Seren Ashfall is saved/);
+    fireEvent.click(screen.getByRole('button', { name: 'Open Character Reference' }));
+
+    expect(onOpenCharacterReference).toHaveBeenCalledWith(
+      '44444444-4444-4444-4444-444444444444',
+    );
   });
 
   it('shows a 5-question quiz with 4 answer options per question', () => {
@@ -645,4 +760,34 @@ const createdCharacterResponse = (name: string) => ({
   },
   createdAt: '2026-07-07T10:00:00Z',
   updatedAt: '2026-07-07T10:00:00Z',
+});
+
+const createdManualCharacterResponse = (name: string) => ({
+  id: '44444444-4444-4444-4444-444444444444',
+  ownerSubjectId: '33333333-3333-3333-3333-333333333333',
+  name,
+  className: 'Ranger',
+  subclassName: null,
+  level: 3,
+  ancestry: 'Human',
+  background: 'Outlander',
+  abilityScores: {
+    strength: 12,
+    dexterity: 16,
+    constitution: 14,
+    intelligence: 10,
+    wisdom: 15,
+    charisma: 8,
+  },
+  hitPoints: {
+    current: 26,
+    max: 28,
+  },
+  armorClass: 15,
+  speedFt: 30,
+  referencePayload: {
+    schemaVersion: 'CharacterSheetV1',
+  },
+  createdAt: '2026-07-11T10:00:00Z',
+  updatedAt: '2026-07-11T10:00:00Z',
 });
