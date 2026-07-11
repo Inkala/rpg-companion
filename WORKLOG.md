@@ -209,3 +209,29 @@ mode. Treat attack reminder badges and calculation breakdowns as focused follow-
 requirements.
 Next action: Review T-014 and decide whether to implement Character Reference compact stat/header
 polish next.
+
+## 2026-07-11
+
+Task: Status reconciliation after Rain Check audit
+What changed: Reconciled stale status docs after the audit. T-014 is now treated as complete,
+Railway deployment docs are documented as complete, and public Railway deployment is the active
+deployment priority. T-010 remains the next product feature after deployment.
+Validation: Docs-only `git diff --check` passed. `git status --short --branch` showed only the
+allowed documentation files modified.
+Decisions: Deployment is not complete until the Railway deployment and security smoke checklist
+passes. Future implementation tasks should use TDD or test-first workflow where practical, with
+explicit exceptions when tests are not added.
+Next action: Run docs-only validation, then execute the Railway public backend deployment checklist.
+
+## 2026-07-11
+
+Task: Public Railway deployment smoke test
+What changed: Updated status docs after successful public Railway deployment. Backend health passed
+at `https://api.hunin.marceramirez.com/healthz`, frontend availability passed at
+`https://hunin.marceramirez.com`, account actions were available, and the public manual smoke loop
+passed from signup through saved Character Reference refresh.
+Validation: Public smoke test passed. No Hunin app bugs were found. Docs-only `git diff --check`
+passed. `git status --short --branch` showed only documentation files modified.
+Decisions: Treat public Railway deployment as complete and smoke-tested. One disposable smoke-test
+account and character remain in production because there is no account-deletion flow.
+Next action: Start T-010 Fill the sheet myself V1 as the next product feature.

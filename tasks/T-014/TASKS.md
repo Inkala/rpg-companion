@@ -1,6 +1,9 @@
 # T-014 Tasks
 
-Status: approved
+Status: complete
+
+T-014 is complete as docs-only triage. Do not treat this task as approval to implement Character
+Reference UI changes.
 
 This is a documentation-only feedback triage task. Do not modify application code, tests, backend
 code, migrations, dependencies, CI, deployment config, branches, worktrees, staging, commits,

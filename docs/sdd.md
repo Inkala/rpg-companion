@@ -67,9 +67,16 @@ Status: approved
 
 Once approved:
 
-1. Work on one unchecked item.
-2. Run the smallest useful validation check.
-3. Mark only that item as complete.
-4. Show the diff and validation result.
-5. Ask Marcela whether to continue.
-6. Ask whether to commit.
+1. State the intended test plan before editing.
+2. Work on one unchecked item.
+3. Write or adjust focused tests first where practical.
+4. Run the smallest useful validation check.
+5. Mark only that item as complete.
+6. Show the diff and validation result.
+7. Ask Marcela whether to continue.
+8. Ask whether to commit.
+
+Every implementation slice should include meaningful tests unless the exception is documented in the
+active task notes. Cover success, error, signed-in, signed-out, and edge states when relevant.
+Frontend changes require lint, typecheck, test, and build. Backend changes require test, vet, and
+build.

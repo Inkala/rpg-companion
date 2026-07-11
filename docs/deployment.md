@@ -20,6 +20,27 @@ https://api.hunin.marceramirez.com
 This keeps the frontend and backend under the same registrable domain, which fits the current
 HttpOnly cookie session design better than a provider-generated backend URL on another domain.
 
+## Current Deployment Status
+
+Status as of 2026-07-11: public Railway deployment is complete and smoke-tested.
+
+Verified:
+
+- Backend health passed at `https://api.hunin.marceramirez.com/healthz` with
+  `{"status":"ok","service":"hunin-backend"}`.
+- Frontend availability passed at `https://hunin.marceramirez.com` with HTTP 200 through
+  Cloudflare.
+- Account UI showed Sign in and Create account.
+- Public manual smoke test passed: create account, signup, logout, login, generate Fighter through
+  Help me choose, save Fighter, return to My characters, saved character listed, open saved
+  Character Reference, refresh saved Character Reference URL, and saved character still displayed.
+- No Hunin app bugs were found.
+
+Production residue:
+
+- One disposable smoke-test account and character remain in production because there is no
+  account-deletion flow yet.
+
 ## Recommended Architecture
 
 - Frontend: static React app at `https://hunin.marceramirez.com`.
@@ -219,7 +240,8 @@ API smoke, optional:
 - Public data is early-demo data and should be treated as subject to reset unless a retention policy
   is documented.
 - Migrations are manual for now.
-- Provider decision is still pending.
+- Railway is selected for the first public backend deployment.
+- Public Railway deployment is complete and smoke-tested as of 2026-07-11.
 - Observability and alerting are not yet production-grade.
 - Public D&D content must remain limited to content that is safe to publish.
 

@@ -1,6 +1,6 @@
 # T-010 Tasks
 
-Status: approved
+Status: approved for planning. Implementation not started.
 
 This is a documentation-only planning task. Do not modify application code, backend code,
 migrations, tests, dependencies, CI, deployment config, branches, worktrees, staging, commits, or
@@ -33,8 +33,10 @@ pushes as part of the planning task itself.
 
 - [ ] Define `ManualCharacterEntryDraftV1`.
 - [ ] Add validation for required fields, numeric ranges, and repeatable-row cleanup.
+- [ ] Add or update focused tests before implementation where practical.
+- [ ] Cover validation and error states.
 
-## 3. Build manual entry flow UI
+## 3. Build first manual entry flow UI slice
 
 ## Parallel-work assessment
 
@@ -45,10 +47,12 @@ pushes as part of the planning task itself.
 - Shared files or dependencies: `frontend/src/App.tsx`, `frontend/src/app/router.ts`,
   `frontend/src/features/home/`, shared form styles.
 
-- [ ] Add `Create character` mode choice.
-- [ ] Implement `Fill the sheet myself` steps.
-- [ ] Keep optional sections skippable.
-- [ ] Add review and preview state.
+- [ ] Add a one-page `Fill the sheet myself` path inside `/characters/new`.
+- [ ] Add review before save.
+- [ ] For signed-in users, save through the existing `createCharacter` helper.
+- [ ] For signed-out users, show a save prompt and do not call the backend.
+- [ ] Cover signed-in and signed-out behavior with focused tests.
+- [ ] Keep larger multi-step optional sections deferred unless separately approved.
 
 ## 4. Map manual draft to create payload
 
@@ -65,6 +69,8 @@ pushes as part of the planning task itself.
 - [ ] Convert `ManualCharacterEntryDraftV1` to the current `POST /characters` payload.
 - [ ] Store rich data in `referencePayload` as `CharacterSheetV1`.
 - [ ] Open Character Reference from the successful save response.
+- [ ] Cover successful create/save flow.
+- [ ] Cover `CharacterSheetV1` mapping.
 
 ## 5. Expand Character Reference mapping for manual data
 
@@ -123,8 +129,15 @@ pushes as part of the planning task itself.
 
 ## Validation
 
+- [ ] Run focused tests for the changed manual entry behavior.
+- [ ] Run frontend lint.
+- [ ] Run frontend typecheck.
+- [ ] Run frontend test.
+- [ ] Run frontend build.
 - [ ] Run `git diff --check`.
 - [ ] Run `git status --short --untracked-files=all`.
+
+Implementation without tests requires an explicit justification in `NOTES.md`.
 
 ## Commit message
 

@@ -1,6 +1,8 @@
 # T-010: Manual character entry planning
 
-Status: planning
+Status: approved
+
+Planning is approved. Implementation has not started.
 
 ## Parallel-work assessment
 
@@ -85,7 +87,26 @@ git status --short --untracked-files=all
 
 No app checks are required because this task does not change application code.
 
+## Recommended First Implementation Slice
+
+- Add a one-page `Fill the sheet myself` manual entry path inside `/characters/new`.
+- Include review before save.
+- Save signed-in characters through the existing frontend `createCharacter` helper and backend
+  `POST /characters` contract.
+- Show a signed-out save prompt without calling the backend.
+- Map the manual draft to `CharacterSheetV1` in `referencePayload`.
+- Do not change the backend for the first slice.
+
+## TDD And Validation Expectations
+
+- Write or adjust focused tests before implementation where practical.
+- Cover signed-in and signed-out behavior.
+- Cover validation and error states.
+- Cover the successful create/save flow.
+- Cover `CharacterSheetV1` mapping.
+- Run frontend lint, typecheck, test, and build.
+- Do not implement without tests unless the exception is documented in `NOTES.md`.
+
 ## Recommended next action
 
-Review and approve the T-010 manual entry plan after the active signed-in My characters frontend
-task is merged and pushed.
+After public backend deployment, create or approve the first T-010 implementation slice above.

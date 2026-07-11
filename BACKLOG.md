@@ -3,6 +3,10 @@
 Index of all planned work. When a task becomes active, move it to `CURRENT.md` and track detail
 in `tasks/TASK_ID/`. The stage order in `docs/project-checklist.md` is the priority order.
 
+Status note, 2026-07-11: this is an older roadmap index. Existing `tasks/T-###/` folders,
+`CURRENT.md`, and `WORKLOG.md` are the source of truth for active/recent task IDs. Do not assume the
+IDs below match current task folders without checking `tasks/`.
+
 ---
 
 ## Active

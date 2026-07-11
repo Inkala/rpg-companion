@@ -35,3 +35,11 @@ Explicitly deferred:
 - Short-rest and long-rest system.
 - Combat/exploration mode.
 - Tactical spell/action recommendation logic.
+
+## Completion Status
+
+- Certain: T-014 is complete as a docs-only triage task.
+- Certain: The recommended compact stat/header polish is a future implementation slice, not part of
+  T-014.
+- Certain: Public Railway backend deployment is the active project priority before the next product
+  feature.

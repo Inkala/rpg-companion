@@ -71,7 +71,7 @@ See `docs/project-checklist.md` for the full staged checklist.
 
 ## Technology Choices
 
-These are pending decisions. Each will become an ADR in `DECISIONS.md` when resolved.
+Current durable decisions are recorded in `DECISIONS.md`. This summary may lag detailed task docs.
 
 Frontend: React + TypeScript (confirmed)
 
@@ -79,21 +79,24 @@ Backend: Go (confirmed)
 
 Framework (Go): TBD
 
-Data storage: TBD — PostgreSQL is the leading candidate (relational, structured character data)
+Data storage: PostgreSQL (confirmed)
 
-Auth approach: TBD — JWT, session cookies, or third-party service (Auth0, Clerk, Supabase Auth)
+Auth approach: app-managed username/email/password auth with PostgreSQL-backed server sessions and
+HttpOnly cookies (confirmed)
 
-Testing (frontend): TBD — Vitest or Jest for unit, Playwright for E2E
+Testing (frontend): Vitest plus React Testing Library for current focused tests. E2E remains future
+work.
 
-Testing (backend): Go standard library testing package (likely)
+Testing (backend): Go standard library testing package (confirmed)
 
 Error tracking: TBD — Sentry or equivalent
 
 Logging (backend): TBD — structured JSON, likely `log/slog` or zerolog
 
-Cloud provider: TBD — must support Go + PostgreSQL; Render, Railway, or Fly.io are candidates
+Cloud provider: Railway selected for the first public backend deployment. Deployment is not complete
+yet.
 
-CI: GitHub Actions (likely)
+CI: GitHub Actions (confirmed)
 
 ## Architecture Notes
 

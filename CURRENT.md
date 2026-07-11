@@ -1,10 +1,9 @@
 # Current Work
 
-Active task: T-014 GM feedback triage for Character Reference
+Active priority: T-010 Fill the sheet myself V1
 
-State: T-014 is a docs-only feedback triage task. It captures early Spanish GM feedback about the
-current Character Reference and in-session experience, classifies each suggestion by scope, and
-recommends keeping the first implementation slice small.
+State: Main is expected to be clean and pushed. Railway has been selected for the first public
+backend deployment, and the public backend deployment is complete and smoke-tested.
 
 T-002 status: authentication and owner-scoped character implementation completed, committed, and validated.
 
@@ -14,14 +13,14 @@ T-006 status: Home action hierarchy and form/button polish completed, committed,
 
 T-007 status: frontend app-shell architecture refactor completed, committed, pushed, and validated.
 
-T-010 status: manual character entry planning completed and approved. Recommended next feature is
-Fill the sheet myself V1.
+T-010 status: manual character entry planning completed and approved. Implementation has not
+started. Recommended next product feature is Fill the sheet myself V1.
 
 T-011 status: character creation entry and draft foundation completed, pushed, and validated.
 
-T-012 scope: revised Help me choose questionnaire implementation inside `frontend/src/character-creation/`.
-Adds a 5-question, 4-answer quiz with broader fantasy buckets, supported Fighter fallback scoring,
-honest future-path messaging, and no saving/backend behavior.
+T-012 status: revised Help me choose questionnaire completed, committed, pushed, and validated.
+It adds a 5-question, 4-answer quiz with broader fantasy buckets, supported Fighter fallback
+scoring, honest future-path messaging, and no saving/backend behavior.
 
 T-013 status: generated Fighter save flow completed, committed, pushed, validated, and smoke-tested
 locally. Selected Help me choose Fighter builds generate `CharacterSheetV1`, review before save,
@@ -40,9 +39,23 @@ rendering in Character Reference, My characters open actions, and Open Character
 save success. Manual smoke testing found one copy bug in the saved reference back label; it was
 fixed and pushed in `70e80e6`.
 
-Next action: Review T-014 and decide whether the next implementation slice should be Character
-Reference compact stat/header polish.
+T-014 status: GM feedback triage for Character Reference completed, committed, pushed, and
+validated as a docs-only task. It recommends Character Reference compact stat/header polish as a
+future small product slice, not as the active priority.
 
-Task folder: `tasks/T-014/`
+Railway deployment status: public deployment completed and smoke-tested on 2026-07-11. Backend
+health passed at `https://api.hunin.marceramirez.com/healthz`, returning
+`{"status":"ok","service":"hunin-backend"}`. Frontend availability passed at
+`https://hunin.marceramirez.com` with HTTP 200 through Cloudflare. Account UI and the public manual
+smoke loop passed: create account, signup, logout, login, generate Fighter through Help me choose,
+save Fighter, return to My characters, open saved Character Reference, refresh saved Character
+Reference URL, and confirm the saved character still displays. No Hunin app bugs were found.
 
-Last updated: 2026-07-09
+Production smoke-test residue: one disposable smoke-test account and character remain in production
+because there is no account-deletion flow yet.
+
+Next action: start the first approved T-010 implementation slice for Fill the sheet myself V1.
+
+Task folder: `tasks/T-010/`
+
+Last updated: 2026-07-11

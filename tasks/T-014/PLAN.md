@@ -1,6 +1,10 @@
 # T-014: GM feedback triage for Character Reference
 
-Status: approved
+Status: complete
+
+T-014 is complete as a docs-only feedback triage task. It does not authorize implementation by
+itself. Any Character Reference compact stat/header polish, attack reminder badge, or calculation
+breakdown work needs a separate approved implementation task.
 
 This is a documentation-only feedback triage task. Do not modify application code, tests, backend
 code, migrations, dependencies, CI, deployment config, branches, worktrees, staging, commits,

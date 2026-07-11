@@ -5,6 +5,11 @@
 **Item format:**
 Each item includes: why it matters, what counts as done, which course area it covers, and which stage it belongs to.
 
+Status note, 2026-07-11: this checklist is still the stage-gating reference, but it has not been
+fully reconciled against the recent MVP loop and Railway deployment planning commits. Before using
+it to approve the next product implementation, run a separate checklist reconciliation pass with
+evidence links rather than inferring completion from old unchecked boxes.
+
 ---
 
 ## Foundation
