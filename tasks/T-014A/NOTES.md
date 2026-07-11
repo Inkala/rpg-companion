@@ -39,3 +39,33 @@ availability, Mara regression behavior, and generic avatar fallback. Implement o
 - `frontend/src/characters/characterSheetToReference.test.ts`
 - `frontend/src/characters/characterSheetToReference.ts`
 - `frontend/src/characters/characters.css`
+
+## 2026-07-11 implementation
+
+- Certain: Tests were updated before production code.
+- Certain: The first focused run failed because Mara still mapped absent concentration to
+  `No concentration`. Two test queries were corrected from an unsupported implicit `group` role to
+  the existing accessible labels, after which the intended mapper failure remained alone.
+- Certain: Absent concentration now maps to `undefined`; meaningful active concentration strings
+  still render through the existing component condition.
+- Certain: HP and AC retain their existing emphasized cards. Speed remains in Primary stats with a
+  lighter scoped treatment.
+- Certain: Secondary stats use smaller gaps, padding, labels, and values with an inline compact
+  layout.
+- Certain: No component structure or data model changed. Semantic `<dl>`, `<dt>`, and `<dd>` markup
+  remains intact.
+- Certain: Existing generated and manual paths share the mapper and passed the full frontend suite.
+- Certain: The existing generic avatar test and Mara behavior tests passed.
+
+## Validation evidence
+
+- Focused command: passed, 14 files and 141 tests (the current script runs the complete Vitest
+  suite even when file arguments are supplied).
+- Frontend lint: passed.
+- Frontend typecheck: passed.
+- Full frontend tests: passed, 14 files and 141 tests.
+- Frontend production build: passed.
+- Narrow-width source review: passed. Existing `minmax(0, 1fr)` columns and the 390px reduced-gap
+  rules remain; the new rules add no fixed width or overflow behavior.
+- `git diff --check`: passed.
+- `git status --short --branch`: passed and showed only the eight approved files modified.

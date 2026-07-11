@@ -252,13 +252,39 @@
 
 .secondary-stats {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
 }
 
 .secondary-stats .stat {
-  padding: var(--space-2);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1);
+  padding: 6px var(--space-2);
+  border-color: var(--color-border-subtle);
+  background: transparent;
+}
+
+.secondary-stats .stat dt {
+  margin-bottom: 0;
+  font-size: 0.7rem;
+  line-height: 1.2;
 }
 
 .secondary-stats .stat dd {
+  flex: 0 0 auto;
+  font-size: 0.9375rem;
+}
+
+.primary-stats .stat:not(.stat--hp, .stat--ac) {
+  align-self: center;
+  padding: var(--space-2);
+  border-color: var(--color-border-subtle);
+  background: transparent;
+}
+
+.primary-stats .stat:not(.stat--hp, .stat--ac) dd {
+  color: var(--color-text-secondary);
   font-size: 1rem;
 }
 

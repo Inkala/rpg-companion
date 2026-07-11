@@ -19,7 +19,7 @@ describe('characterSheetToReference', () => {
     expect(reference.stats.hitPoints).toEqual({ current: 26, max: 26 });
     expect(reference.stats.armorClass).toBe('14');
     expect(reference.stats.speed).toBe('30 ft.');
-    expect(reference.stats.concentration).toBe('No concentration');
+    expect(reference.stats.concentration).toBeUndefined();
     expect(reference.stats.secondary).toEqual([
       { label: 'Initiative', value: '+3' },
       { label: 'Passive Perception', value: '14' },

@@ -267,3 +267,17 @@ synthesizing `No concentration` when no concentration is active. Keep backend, r
 dependencies, and larger combat-assistant ideas out of scope.
 Next action: Review T-014A planning documents and approve `TASKS.md` before starting the first
 failing test.
+
+## 2026-07-11
+
+Task: T-014A compact Character Reference header/stat polish implementation
+What changed: Removed the synthetic absent-concentration status in the reference mapper, preserved
+real active concentration display, kept HP and AC prominent, reduced Speed visual weight, and made
+secondary stats denser without changing semantic markup or data models. Added focused mapper and
+component regression coverage first.
+Validation: Recorded the expected red mapper failure before implementation. Focused tests, frontend
+lint, typecheck, all 141 tests, and the production build passed. Narrow-width CSS constraints were
+reviewed for wrapping and overflow risk.
+Decisions: Keep this slice frontend-only and presentation-focused. Preserve active concentration
+text and all existing sample, generated, manual, and generic-avatar paths.
+Next action: Review the T-014A diff and validation evidence before staging or committing.

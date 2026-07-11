@@ -16,7 +16,6 @@ const testCharacter: CharacterReferenceViewModel = {
     },
     armorClass: '19',
     speed: '30 ft.',
-    concentration: 'No concentration',
     secondary: [
       {
         label: 'Proficiency',
@@ -103,6 +102,56 @@ describe('CharacterReference', () => {
       'false',
     );
     expect(screen.queryByRole('button', { name: /Second Wind/ })).not.toBeInTheDocument();
+  });
+
+  it('does not show a synthetic concentration status when none is active', () => {
+    render(<CharacterReference character={testCharacter} onBack={vi.fn()} />);
+
+    expect(screen.queryByText('No concentration')).not.toBeInTheDocument();
+  });
+
+  it('preserves a meaningful active concentration status', () => {
+    render(
+      <CharacterReference
+        character={{
+          ...testCharacter,
+          stats: {
+            ...testCharacter.stats,
+            concentration: "Concentrating on Hunter's Mark",
+          },
+        }}
+        onBack={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Concentrating on Hunter's Mark")).toBeInTheDocument();
+  });
+
+  it('keeps identity and semantic primary stats available by accessible text', () => {
+    render(<CharacterReference character={testCharacter} onBack={vi.fn()} />);
+
+    expect(screen.getByRole('heading', { name: 'Test Character' })).toBeInTheDocument();
+    expect(screen.getByText('Human Fighter · Level 1')).toBeInTheDocument();
+    expect(screen.getByText('Soldier')).toBeInTheDocument();
+
+    const primaryStats = screen.getByLabelText('Primary stats');
+    expect(primaryStats.tagName).toBe('DL');
+    expect(within(primaryStats).getByText('HP').tagName).toBe('DT');
+    expect(within(primaryStats).getByText('AC').tagName).toBe('DT');
+    expect(within(primaryStats).getByText('Speed').tagName).toBe('DT');
+    expect(within(primaryStats).getByText('12').tagName).toBe('SPAN');
+    expect(within(primaryStats).getByText('19').tagName).toBe('DD');
+    expect(within(primaryStats).getByText('30 ft.').tagName).toBe('DD');
+  });
+
+  it('keeps semantic secondary stats available by accessible text', () => {
+    render(<CharacterReference character={maraReferenceCharacter} onBack={vi.fn()} />);
+
+    const secondaryStats = screen.getByLabelText('Secondary stats');
+    expect(secondaryStats.tagName).toBe('DL');
+    expect(within(secondaryStats).getByText('Initiative').tagName).toBe('DT');
+    expect(within(secondaryStats).getByText('Passive Perception').tagName).toBe('DT');
+    expect(within(secondaryStats).getByText('Proficiency').tagName).toBe('DT');
   });
 
   it('renders the generic avatar when a character has no portrait', () => {

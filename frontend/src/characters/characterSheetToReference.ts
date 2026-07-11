@@ -37,7 +37,7 @@ export const characterSheetToReference = (
       },
       armorClass: formatAuditedNumber(sheet.combat.armorClass.value),
       speed: formatSpeed(sheet),
-      concentration: sheet.combat.concentration ?? 'No concentration',
+      concentration: sheet.combat.concentration ?? undefined,
       secondary: [
         {
           label: 'Initiative',
