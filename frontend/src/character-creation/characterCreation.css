@@ -284,6 +284,73 @@
   outline-offset: 2px;
 }
 
+.manual-entry {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid rgba(47, 93, 70, 0.2);
+  border-radius: var(--radius-md);
+  background: rgba(247, 241, 229, 0.76);
+}
+
+.manual-entry-section {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  border: 1px solid rgba(47, 93, 70, 0.18);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  padding: var(--space-3);
+}
+
+.manual-entry-section legend {
+  padding: 0 var(--space-1);
+  color: var(--color-text-primary);
+  font-family: Fraunces, Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.manual-entry-grid {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.manual-entry-field {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-text-primary);
+  font-weight: 800;
+}
+
+.manual-entry-field input {
+  min-height: 2.75rem;
+  width: 100%;
+  border: 1px solid rgba(47, 93, 70, 0.28);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  padding: 0 var(--space-3);
+}
+
+.manual-entry-field input:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.manual-entry-field input[aria-invalid='true'] {
+  border-color: var(--color-state-hp);
+}
+
+.manual-entry-field__error {
+  color: var(--color-state-hp);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .creation-review__summary,
 .creation-review__details,
 .creation-save-panel {
@@ -347,6 +414,29 @@
   padding-left: 1.25rem;
   color: var(--color-text-primary);
   font-weight: 700;
+}
+
+.manual-review-heading {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.manual-review-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.manual-review-list--inline {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.manual-review-list--inline li {
+  padding: var(--space-2);
+  border: 1px solid rgba(47, 93, 70, 0.16);
+  border-radius: var(--radius-sm);
+  background: rgba(221, 232, 220, 0.36);
 }
 
 .creation-save-panel__notice {
@@ -415,6 +505,15 @@
   }
 
   .creation-review__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .manual-entry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .manual-entry-grid--six,
+  .manual-review-list--inline {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

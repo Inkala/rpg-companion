@@ -13,6 +13,13 @@ import {
   buildGeneratedFighterCreateRequest,
   generatedFighterBuilds,
 } from './generatedFighterBuilds';
+import {
+  buildManualCharacterCreateRequest,
+  validateManualCharacterEntryDraft,
+  type ManualCharacterCreateRequest,
+  type ManualCharacterEntryDraftV1,
+  type ManualCharacterEntryValidationError,
+} from './manualCharacterEntry';
 import './characterCreation.css';
 
 type CharacterCreationPageProps = {
@@ -44,6 +51,60 @@ const modeChoices: {
     label: 'Help me choose',
     description: 'For a quick fantasy preference quiz with an honest Fighter-only result.',
   },
+];
+
+const initialManualCharacterEntryDraft = (): ManualCharacterEntryDraftV1 => ({
+  name: '',
+  className: '',
+  subclassName: '',
+  level: '',
+  ancestry: '',
+  background: '',
+  concept: '',
+  notes: '',
+  hitPoints: {
+    current: '',
+    max: '',
+  },
+  armorClass: '',
+  speedFt: '',
+  proficiencyBonus: '',
+  initiative: '',
+  passivePerception: '',
+  abilityScores: {
+    strength: '',
+    dexterity: '',
+    constitution: '',
+    intelligence: '',
+    wisdom: '',
+    charisma: '',
+  },
+  action: {
+    name: '',
+    actionType: '',
+    attackBonus: '',
+    damage: '',
+    range: '',
+    summary: '',
+  },
+  feature: {
+    name: '',
+    category: '',
+    summary: '',
+  },
+});
+
+const abilityScoreFields: {
+  field: keyof ManualCharacterEntryDraftV1['abilityScores'];
+  label: string;
+  shortLabel: string;
+}[] = [
+  { field: 'strength', label: 'Strength', shortLabel: 'STR' },
+  { field: 'dexterity', label: 'Dexterity', shortLabel: 'DEX' },
+  { field: 'constitution', label: 'Constitution', shortLabel: 'CON' },
+  { field: 'intelligence', label: 'Intelligence', shortLabel: 'INT' },
+  { field: 'wisdom', label: 'Wisdom', shortLabel: 'WIS' },
+  { field: 'charisma', label: 'Charisma', shortLabel: 'CHA' },
 ];
 
 const buildContent: Record<
@@ -257,6 +318,10 @@ const getBuildLabel = (build: CharacterBuildId | null) => {
   return build ? buildContent[build].label : 'Not chosen';
 };
 
+const formatSignedNumber = (value: number) => {
+  return value >= 0 ? `+${value}` : String(value);
+};
+
 const findAnswer = (answerId: string) => {
   return quizQuestions.flatMap((question) => question.answers).find(
     (answer) => answer.id === answerId,
@@ -354,6 +419,12 @@ export const CharacterCreationPage = ({
   const [isShowingRecommendation, setIsShowingRecommendation] = useState(false);
   const [isShowingReview, setIsShowingReview] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>({ status: 'idle' });
+  const [manualDraft, setManualDraft] = useState<ManualCharacterEntryDraftV1>(
+    initialManualCharacterEntryDraft,
+  );
+  const [manualErrors, setManualErrors] = useState<ManualCharacterEntryValidationError[]>([]);
+  const [manualReviewRequest, setManualReviewRequest] =
+    useState<ManualCharacterCreateRequest | null>(null);
 
   const chooseMode = (mode: Exclude<CharacterCreationMode, null>) => {
     setDraft((currentDraft) => ({
@@ -365,6 +436,12 @@ export const CharacterCreationPage = ({
       setCurrentQuestionIndex(0);
       setIsShowingRecommendation(false);
       setIsShowingReview(false);
+      setSaveState({ status: 'idle' });
+    }
+
+    if (mode === 'manual') {
+      setManualErrors([]);
+      setManualReviewRequest(null);
       setSaveState({ status: 'idle' });
     }
   };
@@ -464,6 +541,106 @@ export const CharacterCreationPage = ({
     }
   };
 
+  const updateManualField = (
+    field: keyof Omit<
+      ManualCharacterEntryDraftV1,
+      'hitPoints' | 'abilityScores' | 'action' | 'feature'
+    >,
+    value: string,
+  ) => {
+    setManualDraft((currentDraft) => ({
+      ...currentDraft,
+      [field]: value,
+    }));
+    clearManualErrors();
+  };
+
+  const updateManualHitPoints = (
+    field: keyof ManualCharacterEntryDraftV1['hitPoints'],
+    value: string,
+  ) => {
+    setManualDraft((currentDraft) => ({
+      ...currentDraft,
+      hitPoints: {
+        ...currentDraft.hitPoints,
+        [field]: value,
+      },
+    }));
+    clearManualErrors();
+  };
+
+  const updateManualAbilityScore = (
+    field: keyof ManualCharacterEntryDraftV1['abilityScores'],
+    value: string,
+  ) => {
+    setManualDraft((currentDraft) => ({
+      ...currentDraft,
+      abilityScores: {
+        ...currentDraft.abilityScores,
+        [field]: value,
+      },
+    }));
+    clearManualErrors();
+  };
+
+  const updateManualAction = (
+    field: keyof ManualCharacterEntryDraftV1['action'],
+    value: string,
+  ) => {
+    setManualDraft((currentDraft) => ({
+      ...currentDraft,
+      action: {
+        ...currentDraft.action,
+        [field]: value,
+      },
+    }));
+    clearManualErrors();
+  };
+
+  const updateManualFeature = (
+    field: keyof ManualCharacterEntryDraftV1['feature'],
+    value: string,
+  ) => {
+    setManualDraft((currentDraft) => ({
+      ...currentDraft,
+      feature: {
+        ...currentDraft.feature,
+        [field]: value,
+      },
+    }));
+    clearManualErrors();
+  };
+
+  const clearManualErrors = () => {
+    if (manualErrors.length > 0) {
+      setManualErrors([]);
+    }
+  };
+
+  const getManualError = (field: string) => {
+    return manualErrors.find((error) => error.field === field)?.message;
+  };
+
+  const reviewManualCharacter = () => {
+    const validationErrors = validateManualCharacterEntryDraft(manualDraft);
+
+    if (validationErrors.length > 0) {
+      setManualErrors(validationErrors);
+      setManualReviewRequest(null);
+      return;
+    }
+
+    const result = buildManualCharacterCreateRequest(manualDraft);
+    if (!result.ok) {
+      setManualErrors(result.errors);
+      setManualReviewRequest(null);
+      return;
+    }
+
+    setManualErrors([]);
+    setManualReviewRequest(result.value);
+  };
+
   const saveGeneratedCharacter = async () => {
     if (!draft.selectedBuild || saveState.status === 'saving') {
       return;
@@ -489,6 +666,381 @@ export const CharacterCreationPage = ({
           : 'Could not save the character. Check your connection and try again.';
       setSaveState({ status: 'error', message });
     }
+  };
+
+  const renderManualTextField = ({
+    field,
+    label,
+    value,
+    onChange,
+    inputMode,
+  }: {
+    field: string;
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    inputMode?: 'numeric';
+  }) => {
+    const error = getManualError(field);
+
+    return (
+      <label key={field} className="manual-entry-field">
+        <span>{label}</span>
+        <input
+          type="text"
+          inputMode={inputMode}
+          value={value}
+          aria-invalid={error ? 'true' : undefined}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {error ? <span className="manual-entry-field__error">{error}</span> : null}
+      </label>
+    );
+  };
+
+  const renderManualForm = () => {
+    return (
+      <section className="manual-entry" aria-labelledby="manual-entry-title">
+        <div className="creation-review__header">
+          <p className="eyebrow">Fill the sheet myself</p>
+          <h2 id="manual-entry-title" className="creation-recommendation__title">
+            Fill the sheet yourself.
+          </h2>
+          <p className="creation-shell__copy">
+            Transfer the core facts from an existing sheet. Hunin checks form
+            shape only, not full D&D legality.
+          </p>
+        </div>
+
+        {manualErrors.length > 0 ? (
+          <p className="creation-save-panel__error" role="alert">
+            Fix the highlighted fields before reviewing.
+          </p>
+        ) : null}
+
+        <fieldset className="manual-entry-section">
+          <legend>Basics</legend>
+          <div className="manual-entry-grid">
+            {renderManualTextField({
+              field: 'name',
+              label: 'Name',
+              value: manualDraft.name,
+              onChange: (value) => updateManualField('name', value),
+            })}
+            {renderManualTextField({
+              field: 'className',
+              label: 'Class',
+              value: manualDraft.className,
+              onChange: (value) => updateManualField('className', value),
+            })}
+            {renderManualTextField({
+              field: 'subclassName',
+              label: 'Subclass',
+              value: manualDraft.subclassName,
+              onChange: (value) => updateManualField('subclassName', value),
+            })}
+            {renderManualTextField({
+              field: 'level',
+              label: 'Level',
+              value: manualDraft.level,
+              inputMode: 'numeric',
+              onChange: (value) => updateManualField('level', value),
+            })}
+            {renderManualTextField({
+              field: 'ancestry',
+              label: 'Ancestry',
+              value: manualDraft.ancestry,
+              onChange: (value) => updateManualField('ancestry', value),
+            })}
+            {renderManualTextField({
+              field: 'background',
+              label: 'Background',
+              value: manualDraft.background,
+              onChange: (value) => updateManualField('background', value),
+            })}
+            {renderManualTextField({
+              field: 'concept',
+              label: 'Concept',
+              value: manualDraft.concept,
+              onChange: (value) => updateManualField('concept', value),
+            })}
+            {renderManualTextField({
+              field: 'notes',
+              label: 'Notes',
+              value: manualDraft.notes,
+              onChange: (value) => updateManualField('notes', value),
+            })}
+          </div>
+        </fieldset>
+
+        <fieldset className="manual-entry-section">
+          <legend>Ability scores</legend>
+          <div className="manual-entry-grid manual-entry-grid--six">
+            {abilityScoreFields.map((ability) => renderManualTextField({
+              field: `abilityScores.${ability.field}`,
+              label: ability.label,
+              value: manualDraft.abilityScores[ability.field],
+              inputMode: 'numeric',
+              onChange: (value) => updateManualAbilityScore(ability.field, value),
+            }))}
+          </div>
+        </fieldset>
+
+        <fieldset className="manual-entry-section">
+          <legend>Combat stats</legend>
+          <div className="manual-entry-grid">
+            {renderManualTextField({
+              field: 'hitPoints.current',
+              label: 'Current HP',
+              value: manualDraft.hitPoints.current,
+              inputMode: 'numeric',
+              onChange: (value) => updateManualHitPoints('current', value),
+            })}
+            {renderManualTextField({
+              field: 'hitPoints.max',
+              label: 'Maximum HP',
+              value: manualDraft.hitPoints.max,
+              inputMode: 'numeric',
+              onChange: (value) => updateManualHitPoints('max', value),
+            })}
+            {renderManualTextField({
+              field: 'armorClass',
+              label: 'Armor Class',
+              value: manualDraft.armorClass,
+              inputMode: 'numeric',
+              onChange: (value) => updateManualField('armorClass', value),
+            })}
+            {renderManualTextField({
+              field: 'speedFt',
+              label: 'Speed',
+              value: manualDraft.speedFt,
+              inputMode: 'numeric',
+              onChange: (value) => updateManualField('speedFt', value),
+            })}
+            {renderManualTextField({
+              field: 'proficiencyBonus',
+              label: 'Proficiency bonus',
+              value: manualDraft.proficiencyBonus,
+              inputMode: 'numeric',
+              onChange: (value) => updateManualField('proficiencyBonus', value),
+            })}
+            {renderManualTextField({
+              field: 'initiative',
+              label: 'Initiative',
+              value: manualDraft.initiative,
+              onChange: (value) => updateManualField('initiative', value),
+            })}
+            {renderManualTextField({
+              field: 'passivePerception',
+              label: 'Passive Perception',
+              value: manualDraft.passivePerception,
+              inputMode: 'numeric',
+              onChange: (value) => updateManualField('passivePerception', value),
+            })}
+          </div>
+        </fieldset>
+
+        <fieldset className="manual-entry-section">
+          <legend>Optional action</legend>
+          <div className="manual-entry-grid">
+            {renderManualTextField({
+              field: 'action.name',
+              label: 'Action name',
+              value: manualDraft.action.name,
+              onChange: (value) => updateManualAction('name', value),
+            })}
+            {renderManualTextField({
+              field: 'action.actionType',
+              label: 'Action type',
+              value: manualDraft.action.actionType,
+              onChange: (value) => updateManualAction('actionType', value),
+            })}
+            {renderManualTextField({
+              field: 'action.attackBonus',
+              label: 'Attack bonus',
+              value: manualDraft.action.attackBonus,
+              onChange: (value) => updateManualAction('attackBonus', value),
+            })}
+            {renderManualTextField({
+              field: 'action.damage',
+              label: 'Damage',
+              value: manualDraft.action.damage,
+              onChange: (value) => updateManualAction('damage', value),
+            })}
+            {renderManualTextField({
+              field: 'action.range',
+              label: 'Range',
+              value: manualDraft.action.range,
+              onChange: (value) => updateManualAction('range', value),
+            })}
+            {renderManualTextField({
+              field: 'action.summary',
+              label: 'Action summary',
+              value: manualDraft.action.summary,
+              onChange: (value) => updateManualAction('summary', value),
+            })}
+          </div>
+        </fieldset>
+
+        <fieldset className="manual-entry-section">
+          <legend>Optional feature / note</legend>
+          <div className="manual-entry-grid">
+            {renderManualTextField({
+              field: 'feature.name',
+              label: 'Feature name',
+              value: manualDraft.feature.name,
+              onChange: (value) => updateManualFeature('name', value),
+            })}
+            {renderManualTextField({
+              field: 'feature.category',
+              label: 'Feature category',
+              value: manualDraft.feature.category,
+              onChange: (value) => updateManualFeature('category', value),
+            })}
+            {renderManualTextField({
+              field: 'feature.summary',
+              label: 'Feature summary',
+              value: manualDraft.feature.summary,
+              onChange: (value) => updateManualFeature('summary', value),
+            })}
+          </div>
+        </fieldset>
+
+        <div className="creation-quiz__actions">
+          <button
+            type="button"
+            className="button button--primary"
+            onClick={reviewManualCharacter}
+          >
+            Review character
+          </button>
+        </div>
+      </section>
+    );
+  };
+
+  const renderManualReview = () => {
+    if (!manualReviewRequest) {
+      return renderManualForm();
+    }
+
+    const sheet = manualReviewRequest.referencePayload;
+    const characterClass = sheet.identity.classes[0];
+    const action = sheet.actions[0];
+    const feature = sheet.features[0];
+
+    return (
+      <section className="creation-review" aria-labelledby="manual-review-title">
+        <div className="creation-review__header">
+          <p className="eyebrow">Manual character review</p>
+          <h2 id="manual-review-title" className="creation-recommendation__title">
+            Review manual character.
+          </h2>
+          <p className="creation-shell__copy">
+            This preview uses the same manual mapper that will save the
+            character in the next slice.
+          </p>
+        </div>
+
+        <div className="creation-review__summary" aria-label="Manual character summary">
+          <div>
+            <p className="eyebrow">Character</p>
+            <h3>{sheet.identity.name}</h3>
+            <p>{sheet.summary.displayLine}</p>
+            {characterClass?.subclass ? <p>{sheet.summary.supportingLine}</p> : null}
+          </div>
+          <dl className="creation-review__stats">
+            <div>
+              <dt>Ancestry</dt>
+              <dd>{manualReviewRequest.ancestry}</dd>
+            </div>
+            <div>
+              <dt>Class</dt>
+              <dd>{manualReviewRequest.className}</dd>
+            </div>
+            <div>
+              <dt>Level</dt>
+              <dd>{manualReviewRequest.level}</dd>
+            </div>
+            <div>
+              <dt>Background</dt>
+              <dd>{manualReviewRequest.background}</dd>
+            </div>
+            {characterClass?.subclass ? (
+              <div>
+                <dt>Subclass</dt>
+                <dd>{characterClass.subclass}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>HP</dt>
+              <dd>
+                {manualReviewRequest.hitPoints.current}/{manualReviewRequest.hitPoints.max}
+              </dd>
+            </div>
+            <div>
+              <dt>AC</dt>
+              <dd>{manualReviewRequest.armorClass}</dd>
+            </div>
+            <div>
+              <dt>Speed</dt>
+              <dd>{manualReviewRequest.speedFt} ft.</dd>
+            </div>
+            <div>
+              <dt>Proficiency</dt>
+              <dd>{formatSignedNumber(sheet.combat.proficiencyBonus)}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="creation-review__details">
+          <div>
+            <p className="eyebrow">Ability scores</p>
+            <ul className="manual-review-list manual-review-list--inline">
+              {abilityScoreFields.map((ability) => (
+                <li key={ability.field}>
+                  {ability.shortLabel} {manualReviewRequest.abilityScores[ability.field]}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {action ? (
+            <div>
+              <p className="eyebrow">Actions / Attacks</p>
+              <h3 className="manual-review-heading">{action.name}</h3>
+              <p>{action.meta.join(' - ')}</p>
+              <p>{action.summary}</p>
+            </div>
+          ) : null}
+
+          {feature ? (
+            <div>
+              <p className="eyebrow">Features / Notes</p>
+              <h3 className="manual-review-heading">{feature.name}</h3>
+              <p>{feature.category}</p>
+              <p>{feature.summary}</p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="creation-save-panel" aria-live="polite">
+          <p className="creation-save-panel__notice">
+            Saving manual characters comes next. This slice is preview-only, so
+            nothing is sent to the backend yet.
+          </p>
+          <div className="creation-quiz__actions">
+            <button
+              type="button"
+              className="back-button"
+              onClick={() => setManualReviewRequest(null)}
+            >
+              Back to edit
+            </button>
+          </div>
+        </div>
+      </section>
+    );
   };
 
   const renderQuiz = () => {
@@ -816,7 +1368,9 @@ export const CharacterCreationPage = ({
           </p>
         </div>
 
-        {draft.mode === 'guided' ? (
+        {draft.mode === 'manual' ? (
+          renderManualReview()
+        ) : draft.mode === 'guided' ? (
           isShowingReview ? renderReview() : isShowingRecommendation ? renderRecommendation() : renderQuiz()
         ) : (
           <fieldset className="creation-mode-group">

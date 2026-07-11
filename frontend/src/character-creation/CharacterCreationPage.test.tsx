@@ -29,6 +29,62 @@ const startQuiz = () => {
   fireEvent.click(screen.getByRole('button', { name: /Help me choose/ }));
 };
 
+const startManualEntry = () => {
+  renderCreationPage();
+  fireEvent.click(screen.getByRole('button', { name: /Fill the sheet myself/ }));
+};
+
+const fillValidMinimumManualCharacter = () => {
+  fireEvent.change(screen.getByLabelText('Name'), {
+    target: { value: 'Seren Ashfall' },
+  });
+  fireEvent.change(screen.getByLabelText('Class'), {
+    target: { value: 'Ranger' },
+  });
+  fireEvent.change(screen.getByLabelText('Level'), {
+    target: { value: '3' },
+  });
+  fireEvent.change(screen.getByLabelText('Ancestry'), {
+    target: { value: 'Human' },
+  });
+  fireEvent.change(screen.getByLabelText('Background'), {
+    target: { value: 'Outlander' },
+  });
+  fireEvent.change(screen.getByLabelText('Strength'), {
+    target: { value: '12' },
+  });
+  fireEvent.change(screen.getByLabelText('Dexterity'), {
+    target: { value: '16' },
+  });
+  fireEvent.change(screen.getByLabelText('Constitution'), {
+    target: { value: '14' },
+  });
+  fireEvent.change(screen.getByLabelText('Intelligence'), {
+    target: { value: '10' },
+  });
+  fireEvent.change(screen.getByLabelText('Wisdom'), {
+    target: { value: '15' },
+  });
+  fireEvent.change(screen.getByLabelText('Charisma'), {
+    target: { value: '8' },
+  });
+  fireEvent.change(screen.getByLabelText('Current HP'), {
+    target: { value: '26' },
+  });
+  fireEvent.change(screen.getByLabelText('Maximum HP'), {
+    target: { value: '28' },
+  });
+  fireEvent.change(screen.getByLabelText('Armor Class'), {
+    target: { value: '15' },
+  });
+  fireEvent.change(screen.getByLabelText('Speed'), {
+    target: { value: '30' },
+  });
+  fireEvent.change(screen.getByLabelText('Proficiency bonus'), {
+    target: { value: '2' },
+  });
+};
+
 const chooseAnswer = (name: RegExp | string) => {
   fireEvent.click(screen.getByLabelText(name));
 };
@@ -61,6 +117,177 @@ const getDraftValue = (label: string) => {
 describe('CharacterCreationPage', () => {
   beforeEach(() => {
     createCharacterMock.mockReset();
+  });
+
+  it('shows the one-page manual form after choosing Fill the sheet myself', () => {
+    startManualEntry();
+
+    expect(
+      screen.getByRole('heading', { name: 'Fill the sheet yourself.' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Basics' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Ability scores' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Combat stats' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Optional action' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Optional feature / note' })).toBeInTheDocument();
+  });
+
+  it('renders the required manual entry fields', () => {
+    startManualEntry();
+
+    [
+      'Name',
+      'Class',
+      'Level',
+      'Ancestry',
+      'Background',
+      'Strength',
+      'Dexterity',
+      'Constitution',
+      'Intelligence',
+      'Wisdom',
+      'Charisma',
+      'Current HP',
+      'Maximum HP',
+      'Armor Class',
+      'Speed',
+      'Proficiency bonus',
+    ].forEach((label) => {
+      expect(screen.getByLabelText(label)).toBeInTheDocument();
+    });
+  });
+
+  it('lets the user fill a valid minimum manual character and reach review', () => {
+    startManualEntry();
+    fillValidMinimumManualCharacter();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+
+    expect(
+      screen.getByRole('heading', { name: 'Review manual character.' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Seren Ashfall')).toBeInTheDocument();
+    expect(screen.getByText('Human Ranger - Level 3')).toBeInTheDocument();
+    expect(screen.getByText('Outlander')).toBeInTheDocument();
+    expect(screen.getByText('26/28')).toBeInTheDocument();
+    expect(screen.getByText('15')).toBeInTheDocument();
+    expect(screen.getByText('30 ft.')).toBeInTheDocument();
+    expect(screen.getByText('+2')).toBeInTheDocument();
+    expect(screen.getByText('STR 12')).toBeInTheDocument();
+    expect(screen.getByText('CHA 8')).toBeInTheDocument();
+    expect(screen.getByText(/Saving manual characters comes next/)).toBeInTheDocument();
+    expect(createCharacterMock).not.toHaveBeenCalled();
+  });
+
+  it('shows validation messages for blank required manual fields', () => {
+    startManualEntry();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Fix the highlighted fields before reviewing.',
+    );
+    expect(screen.getByText('Name is required.')).toBeInTheDocument();
+    expect(screen.getByText('Class is required.')).toBeInTheDocument();
+    expect(screen.getByText('Ancestry is required.')).toBeInTheDocument();
+    expect(screen.getByText('Background is required.')).toBeInTheDocument();
+    expect(screen.getByText('Strength is required.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Review manual character.' })).not.toBeInTheDocument();
+  });
+
+  it('shows validation messages for invalid manual numeric values', () => {
+    startManualEntry();
+    fillValidMinimumManualCharacter();
+    fireEvent.change(screen.getByLabelText('Level'), { target: { value: '21' } });
+    fireEvent.change(screen.getByLabelText('Speed'), { target: { value: 'fast' } });
+    fireEvent.change(screen.getByLabelText('Strength'), { target: { value: '31' } });
+    fireEvent.change(screen.getByLabelText('Proficiency bonus'), {
+      target: { value: '-1' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+
+    expect(screen.getByText('Level must be between 1 and 20.')).toBeInTheDocument();
+    expect(screen.getByText('Speed must be a number.')).toBeInTheDocument();
+    expect(screen.getByText('Strength must be between 1 and 30.')).toBeInTheDocument();
+    expect(screen.getByText('Proficiency bonus must be non-negative.')).toBeInTheDocument();
+  });
+
+  it('shows a validation message when current HP is greater than maximum HP', () => {
+    startManualEntry();
+    fillValidMinimumManualCharacter();
+    fireEvent.change(screen.getByLabelText('Current HP'), {
+      target: { value: '29' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+
+    expect(
+      screen.getByText('Current HP must be less than or equal to maximum HP.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows optional manual action and feature on review when filled', () => {
+    startManualEntry();
+    fillValidMinimumManualCharacter();
+    fireEvent.change(screen.getByLabelText('Action name'), {
+      target: { value: 'Longbow' },
+    });
+    fireEvent.change(screen.getByLabelText('Action type'), {
+      target: { value: 'Action' },
+    });
+    fireEvent.change(screen.getByLabelText('Attack bonus'), {
+      target: { value: '+5' },
+    });
+    fireEvent.change(screen.getByLabelText('Damage'), {
+      target: { value: '1d8 + 3 piercing' },
+    });
+    fireEvent.change(screen.getByLabelText('Range'), {
+      target: { value: '150 / 600 ft.' },
+    });
+    fireEvent.change(screen.getByLabelText('Action summary'), {
+      target: { value: 'A careful ranged weapon attack.' },
+    });
+    fireEvent.change(screen.getByLabelText('Feature name'), {
+      target: { value: 'Favored Terrain Notes' },
+    });
+    fireEvent.change(screen.getByLabelText('Feature category'), {
+      target: { value: 'Character note' },
+    });
+    fireEvent.change(screen.getByLabelText('Feature summary'), {
+      target: { value: 'Ask the GM when wilderness knowledge applies.' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+
+    expect(screen.getByText('Longbow')).toBeInTheDocument();
+    expect(screen.getByText('Action - +5 to hit - 1d8 + 3 piercing - 150 / 600 ft.')).toBeInTheDocument();
+    expect(screen.getByText('A careful ranged weapon attack.')).toBeInTheDocument();
+    expect(screen.getByText('Favored Terrain Notes')).toBeInTheDocument();
+    expect(screen.getByText('Character note')).toBeInTheDocument();
+    expect(screen.getByText('Ask the GM when wilderness knowledge applies.')).toBeInTheDocument();
+  });
+
+  it('omits empty optional manual action and feature on review', () => {
+    startManualEntry();
+    fillValidMinimumManualCharacter();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+
+    expect(screen.queryByText('Actions / Attacks')).not.toBeInTheDocument();
+    expect(screen.queryByText('Features / Notes')).not.toBeInTheDocument();
+  });
+
+  it('goes back from manual review to the filled form for editing', () => {
+    startManualEntry();
+    fillValidMinimumManualCharacter();
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to edit' }));
+
+    expect(screen.getByRole('heading', { name: 'Fill the sheet yourself.' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toHaveValue('Seren Ashfall');
+    expect(screen.getByLabelText('Dexterity')).toHaveValue('16');
   });
 
   it('shows a 5-question quiz with 4 answer options per question', () => {
