@@ -254,3 +254,16 @@ Disposable production data remains because no deletion flow exists:
 `t010cglx3py@example.com`, `Smoke Fighter t010cglx3py`, and `Smoke Manual t010cglx3py`.
 Next action: Ask Marcela to choose between Character Reference polish from GM feedback, public demo
 data/deletion cleanup, or party creation/join planning.
+
+## 2026-07-11
+
+Task: T-014A compact Character Reference header/stat polish planning
+What changed: Created the T-014A plan, requirements, test-first task checklist, and notes for a
+small frontend-only Character Reference polish slice. Updated current status to require explicit
+implementation approval before frontend edits.
+Validation: Pending docs-only `git diff --check` and `git status --short --branch`.
+Decisions: Preserve HP and AC prominence, keep Speed visible, compact secondary stats, and stop
+synthesizing `No concentration` when no concentration is active. Keep backend, routes, data models,
+dependencies, and larger combat-assistant ideas out of scope.
+Next action: Review T-014A planning documents and approve `TASKS.md` before starting the first
+failing test.

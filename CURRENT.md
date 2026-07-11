@@ -1,6 +1,6 @@
 # Current Work
 
-Active priority: choose the next product slice after T-010
+Active priority: plan T-014A Character Reference compact header/stat polish
 
 State: Main is expected to be clean and pushed. Railway has been selected for the first public
 backend deployment, and the public backend deployment is complete and smoke-tested.
@@ -46,6 +46,9 @@ T-014 status: GM feedback triage for Character Reference completed, committed, p
 validated as a docs-only task. It recommends Character Reference compact stat/header polish as a
 future small product slice, not as the active priority.
 
+T-014A status: planning documents created for a small frontend-only compact Character Reference
+header/stat polish slice. Implementation is not approved. No frontend files have been changed.
+
 Public smoke status: public smoke testing passed on 2026-07-11 at
 `https://hunin.marceramirez.com`. Backend health passed at
 `https://api.hunin.marceramirez.com/healthz`, returning
@@ -64,9 +67,9 @@ Production smoke-test residue: disposable account `t010cglx3py@example.com` and 
 `Smoke Fighter t010cglx3py` and `Smoke Manual t010cglx3py` remain in production because there is no
 deletion flow yet.
 
-Next action: ask Marcela to choose the next product slice: Character Reference polish from GM
-feedback, public demo data/deletion cleanup, or party creation/join planning.
+Next action: review T-014A planning documents and explicitly approve `TASKS.md` before starting the
+first failing test.
 
-Task folder: `tasks/T-010/`
+Task folder: `tasks/T-014A/`
 
 Last updated: 2026-07-11
