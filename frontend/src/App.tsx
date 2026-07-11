@@ -20,13 +20,14 @@ import { SavedCharacterReferencePage } from './characters/SavedCharacterReferenc
 import { AccountPage } from './pages/AccountPage';
 import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { ProfilePage } from './pages/ProfilePage';
 
 export const App = () => {
   const [route, setRoute] = useState<AppRoute>(() => parseAppRoute(window.location.pathname));
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [isSessionLoading, setIsSessionLoading] = useState(false);
-  const [sessionError, setSessionError] = useState<string | null>(null);
   const accountsAvailable = authApiAvailable();
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isSessionLoading, setIsSessionLoading] = useState(accountsAvailable);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -134,7 +135,7 @@ export const App = () => {
       onHome={showHome}
       onOpenAccount={showAccount}
       onSignOut={handleSignOut}
-      showAccountActions={route.name !== 'account'}
+      showAccountActions={route.name !== 'account' && route.name !== 'profile'}
     >
       {route.name === 'home' ? (
         <HomePage
@@ -150,6 +151,15 @@ export const App = () => {
           onBack={showHome}
           onAuthenticated={handleAuthenticated}
           onModeChange={showAccountMode}
+          onSignOut={handleSignOut}
+        />
+      ) : route.name === 'profile' ? (
+        <ProfilePage
+          currentUser={currentUser}
+          isSessionLoading={isSessionLoading}
+          sessionError={sessionError}
+          onBack={showHome}
+          onSignIn={() => showAccount('sign-in')}
           onSignOut={handleSignOut}
         />
       ) : route.name === 'new-character' ? (

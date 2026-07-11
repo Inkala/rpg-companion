@@ -10,6 +10,7 @@ interface AccountHeaderActionsProps {
   isSessionLoading: boolean;
   sessionError: string | null;
   onOpenAccount: (mode: AccountMode) => void;
+  onOpenProfile?: () => void;
   onSignOut: () => void;
 }
 
@@ -18,10 +19,22 @@ export const AccountHeaderActions = ({
   currentUser,
   sessionError,
   onOpenAccount,
+  onOpenProfile,
   onSignOut,
 }: AccountHeaderActionsProps) => {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const openProfile = () => {
+    setIsAccountMenuOpen(false);
+    if (onOpenProfile) {
+      onOpenProfile();
+      return;
+    }
+
+    window.history.pushState(null, '', '/profile');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
 
   useEffect(() => {
     if (!isAccountMenuOpen) {
@@ -78,7 +91,7 @@ export const AccountHeaderActions = ({
                 type="button"
                 className="account-menu__item"
                 role="menuitem"
-                onClick={() => setIsAccountMenuOpen(false)}
+                onClick={openProfile}
               >
                 <Sword aria-hidden="true" size={20} strokeWidth={2.2} />
                 <span>My profile</span>

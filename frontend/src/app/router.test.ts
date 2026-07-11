@@ -11,6 +11,7 @@ describe('router', () => {
     expect(parseAppRoute(appPaths.home)).toEqual({ name: 'home' });
     expect(parseAppRoute(appPaths.login)).toEqual({ name: 'account', mode: 'sign-in' });
     expect(parseAppRoute(appPaths.signUp)).toEqual({ name: 'account', mode: 'register' });
+    expect(parseAppRoute('/profile')).toEqual({ name: 'profile' });
     expect(parseAppRoute(appPaths.newCharacter)).toEqual({ name: 'new-character' });
     expect(parseAppRoute(appPaths.sampleCharacter)).toEqual({ name: 'sample-character' });
     expect(parseAppRoute('/characters/abc-123')).toEqual({
@@ -23,11 +24,13 @@ describe('router', () => {
     expect(parseAppRoute('/missing')).toEqual({ name: 'not-found' });
     expect(parseAppRoute('/characters')).toEqual({ name: 'not-found' });
     expect(parseAppRoute('/characters/abc-123/extra')).toEqual({ name: 'not-found' });
+    expect(parseAppRoute('/profile/edit')).toEqual({ name: 'not-found' });
   });
 
   it('normalizes trailing slashes except for home', () => {
     expect(parseAppRoute('/login/')).toEqual({ name: 'account', mode: 'sign-in' });
     expect(parseAppRoute('/sign-up/')).toEqual({ name: 'account', mode: 'register' });
+    expect(parseAppRoute('/profile/')).toEqual({ name: 'profile' });
     expect(parseAppRoute('/characters/new/')).toEqual({ name: 'new-character' });
     expect(parseAppRoute('/characters/sample/')).toEqual({ name: 'sample-character' });
     expect(parseAppRoute('/characters/abc-123/')).toEqual({
@@ -44,6 +47,7 @@ describe('router', () => {
     expect(pathForRoute({ name: 'home' })).toBe(appPaths.home);
     expect(pathForRoute({ name: 'account', mode: 'sign-in' })).toBe(appPaths.login);
     expect(pathForRoute({ name: 'account', mode: 'register' })).toBe(appPaths.signUp);
+    expect(pathForRoute({ name: 'profile' })).toBe('/profile');
     expect(pathForRoute({ name: 'new-character' })).toBe(appPaths.newCharacter);
     expect(pathForRoute({ name: 'sample-character' })).toBe(appPaths.sampleCharacter);
     expect(pathForRoute({ name: 'saved-character', id: 'abc-123' })).toBe(

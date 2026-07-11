@@ -47,3 +47,38 @@ Implementation must not begin until `TASKS.md` is explicitly changed to `Status:
 - `frontend/src/App.test.tsx`
 - `frontend/src/pages/ProfilePage.tsx`
 - `frontend/src/pages/ProfilePage.test.tsx`
+
+## 2026-07-11 implementation
+
+- Certain: implementation was explicitly approved and `TASKS.md` was changed to
+  `Status: approved` before frontend edits.
+- Certain: tests were added before implementation for the route contract, account-menu navigation,
+  isolated profile states, and app integration.
+- Certain: the first test command was blocked by the shell's Node 20 runtime because pnpm requires
+  Node 22.13 or newer. The unchanged tests were rerun with the bundled workspace Node and pnpm.
+- Certain: the resulting red run had 9 expected failures and 138 passing regression tests. Missing
+  route behavior, profile navigation, the profile component, and app integration caused the
+  failures.
+- Certain: the bundled pnpm restored the lockfile-defined frontend modules from local cache before
+  that red run. No package manifest, lockfile, or dependency version changed.
+- Certain: the profile route now parses and serializes as `/profile`; `/profile/edit` remains not
+  found.
+- Certain: the desktop `My profile` action closes its menu and navigates through the History API.
+  `App` receives the existing `popstate` event and renders the central profile route.
+- Certain: the profile page shows username-only signed-in content, signed-out sign-in guidance, a
+  private-content-safe loading state, and a recoverable error announced with `role="alert"`.
+- Certain: header account actions are hidden on the profile route to avoid duplicate account
+  controls.
+- Certain: no backend, API contract, dependency declaration, Character Reference, or T-014A file
+  changed.
+
+## Validation evidence
+
+- Focused requested command: passed. The project test script ran all 15 test files and all 152
+  tests passed.
+- Frontend lint: passed.
+- Frontend typecheck: passed.
+- Full frontend tests: 15 files passed, 152 tests passed.
+- Frontend production build: passed, 1,847 modules transformed.
+- Manual narrow-width browser check: not run because this task did not authorize starting a server.
+- Final diff and status checks are recorded in the implementation report.

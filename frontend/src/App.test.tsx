@@ -102,6 +102,78 @@ describe('App', () => {
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
   });
 
+  it('opens the profile from the signed-in account menu', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', signedInFetchMock());
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Mara account menu' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'My profile' }));
+
+    expect(window.location.pathname).toBe('/profile');
+    expect(await screen.findByRole('heading', { name: 'Mara' })).toBeInTheDocument();
+  });
+
+  it('restores a signed-in session on direct profile navigation', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', signedInFetchMock());
+    window.history.replaceState(null, '', '/profile');
+
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: 'Checking your account...' })).toBeInTheDocument();
+    expect(screen.queryByText('Mara')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Mara' })).toBeInTheDocument();
+  });
+
+  it('shows signed-out profile behavior and opens sign in', async () => {
+    stubSignedOutBackend();
+    window.history.replaceState(null, '', '/profile');
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in to view your profile.' }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(window.location.pathname).toBe('/login');
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('shows a recoverable profile error when session lookup fails', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ error: 'failed' }, 500)));
+    window.history.replaceState(null, '', '/profile');
+
+    render(<App />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not check your session.');
+    expect(screen.getByRole('heading', { name: 'Could not load your profile' })).toBeInTheDocument();
+    expect(screen.queryByText('Mara')).not.toBeInTheDocument();
+  });
+
+  it('signs out from the profile and returns home', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const fetchMock = signedInFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/profile');
+
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:8080/auth/session',
+        expect.objectContaining({ credentials: 'include', method: 'DELETE' }),
+      );
+    });
+    expect(window.location.pathname).toBe('/');
+    expect(screen.getAllByRole('button', { name: 'Create account' })[0]).toBeInTheDocument();
+  });
+
   it('renders the sample Character Reference route from /characters/sample', () => {
     window.history.replaceState(null, '', '/characters/sample');
 

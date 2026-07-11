@@ -4,6 +4,7 @@ export const appPaths = {
   home: '/',
   login: '/login',
   signUp: '/sign-up',
+  profile: '/profile',
   newCharacter: '/characters/new',
   sampleCharacter: '/characters/sample',
 } as const;
@@ -18,6 +19,8 @@ export const parseAppRoute = (pathname: string): AppRoute => {
       return { name: 'account', mode: 'sign-in' };
     case appPaths.signUp:
       return { name: 'account', mode: 'register' };
+    case appPaths.profile:
+      return { name: 'profile' };
     case appPaths.newCharacter:
       return { name: 'new-character' };
     case appPaths.sampleCharacter:
@@ -44,6 +47,8 @@ export const pathForRoute = (route: AppRoute) => {
       return appPaths.home;
     case 'account':
       return pathForAccountMode(route.mode);
+    case 'profile':
+      return appPaths.profile;
     case 'new-character':
       return appPaths.newCharacter;
     case 'sample-character':

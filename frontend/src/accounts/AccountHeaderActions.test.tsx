@@ -17,6 +17,7 @@ const renderActions = (
     isSessionLoading: false,
     sessionError: null,
     onOpenAccount: vi.fn(),
+    onOpenProfile: vi.fn(),
     onSignOut: vi.fn(),
     ...options,
   };
@@ -72,6 +73,7 @@ describe('AccountHeaderActions', () => {
           isSessionLoading={false}
           sessionError={null}
           onOpenAccount={vi.fn()}
+          onOpenProfile={vi.fn()}
           onSignOut={vi.fn()}
         />
         <button type="button">Outside</button>
@@ -81,6 +83,16 @@ describe('AccountHeaderActions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mara account menu' }));
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Outside' }));
 
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('opens the profile route and closes the account menu', () => {
+    const { onOpenProfile } = renderActions({ currentUser: maraUser });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mara account menu' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'My profile' }));
+
+    expect(onOpenProfile).toHaveBeenCalledOnce();
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
