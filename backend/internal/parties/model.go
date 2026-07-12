@@ -47,3 +47,9 @@ type PartyMemberCharacter struct {
 	ID   uuid.UUID
 	Name string
 }
+
+type PartyInvite struct {
+	Token     string
+	CreatedAt time.Time
+	ExpiresAt time.Time
+}

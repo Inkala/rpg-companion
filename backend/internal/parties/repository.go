@@ -6,15 +6,18 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var ErrPartyNotFound = errors.New("party not found")
+var ErrPartyForbidden = errors.New("party operation is forbidden")
 
 type Repository struct {
-	pool  *pgxpool.Pool
-	newID func() uuid.UUID
-	now   func() time.Time
+	pool           *pgxpool.Pool
+	newID          func() uuid.UUID
+	newInviteToken func() (string, error)
+	now            func() time.Time
 }
 
 func NewRepository(pool *pgxpool.Pool) *Repository {
@@ -27,9 +30,10 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 
 func newRepository(pool *pgxpool.Pool, newID func() uuid.UUID, now func() time.Time) *Repository {
 	return &Repository{
-		pool:  pool,
-		newID: newID,
-		now:   now,
+		pool:           pool,
+		newID:          newID,
+		newInviteToken: NewInviteToken,
+		now:            now,
 	}
 }
 
@@ -223,4 +227,83 @@ ORDER BY
 	}
 
 	return detail, nil
+}
+
+func (repository *Repository) CreateOrRegenerateInvite(
+	ctx context.Context,
+	partyID uuid.UUID,
+	requesterID uuid.UUID,
+) (PartyInvite, error) {
+	transaction, err := repository.pool.Begin(ctx)
+	if err != nil {
+		return PartyInvite{}, err
+	}
+	defer func() { _ = transaction.Rollback(ctx) }()
+
+	const lockPartyAndLoadRole = `
+SELECT membership.role
+FROM parties p
+JOIN party_memberships membership
+  ON membership.party_id = p.id
+ AND membership.user_id = $2::uuid
+WHERE p.id = $1::uuid
+FOR UPDATE OF p`
+
+	var role string
+	err = transaction.QueryRow(ctx, lockPartyAndLoadRole, partyID.String(), requesterID.String()).Scan(&role)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PartyInvite{}, ErrPartyNotFound
+	}
+	if err != nil {
+		return PartyInvite{}, err
+	}
+	if role != RoleGM {
+		return PartyInvite{}, ErrPartyForbidden
+	}
+
+	rawToken, err := repository.newInviteToken()
+	if err != nil {
+		return PartyInvite{}, errors.New("could not generate invite token")
+	}
+	tokenHash, err := InviteTokenHash(rawToken)
+	if err != nil {
+		return PartyInvite{}, err
+	}
+
+	createdAt := repository.now().UTC()
+	invite := PartyInvite{
+		Token:     rawToken,
+		CreatedAt: createdAt,
+		ExpiresAt: createdAt.Add(7 * 24 * time.Hour),
+	}
+
+	const revokeActiveInvite = `
+UPDATE party_invites
+SET revoked_at = $2
+WHERE party_id = $1::uuid
+  AND revoked_at IS NULL`
+	if _, err := transaction.Exec(ctx, revokeActiveInvite, partyID.String(), invite.CreatedAt); err != nil {
+		return PartyInvite{}, err
+	}
+
+	const insertInvite = `
+INSERT INTO party_invites (
+  id, party_id, created_by_user_id, token_hash, created_at, expires_at, revoked_at
+) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, NULL)`
+	if _, err := transaction.Exec(ctx, insertInvite,
+		repository.newID().String(),
+		partyID.String(),
+		requesterID.String(),
+		tokenHash,
+		invite.CreatedAt,
+		invite.ExpiresAt,
+	); err != nil {
+		return PartyInvite{}, err
+	}
+
+	if err := transaction.Commit(ctx); err != nil {
+		return PartyInvite{}, err
+	}
+
+	return invite, nil
 }
