@@ -44,6 +44,7 @@ func TestAuthSessionFlow(t *testing.T) {
 	if registerRecorder.Code != http.StatusCreated {
 		t.Fatalf("expected register status %d, got %d with body %s", http.StatusCreated, registerRecorder.Code, registerRecorder.Body.String())
 	}
+	assertNoStore(t, registerRecorder)
 	assertCredentialCORS(t, registerRecorder)
 	sessionCookie := requireSessionCookie(t, registerRecorder)
 	if !sessionCookie.HttpOnly {
@@ -130,6 +131,7 @@ func TestAuthSessionFlow(t *testing.T) {
 	if usernameLoginRecorder.Code != http.StatusOK {
 		t.Fatalf("expected username login status %d, got %d with body %s", http.StatusOK, usernameLoginRecorder.Code, usernameLoginRecorder.Body.String())
 	}
+	assertNoStore(t, usernameLoginRecorder)
 
 	emailLoginRecorder := httptest.NewRecorder()
 	emailLoginRequest := jsonRequest(http.MethodPost, "/auth/sessions", `{
@@ -148,6 +150,7 @@ func TestAuthSessionFlow(t *testing.T) {
 	if currentRecorder.Code != http.StatusOK {
 		t.Fatalf("expected current session status %d, got %d with body %s", http.StatusOK, currentRecorder.Code, currentRecorder.Body.String())
 	}
+	assertNoStore(t, currentRecorder)
 
 	expiredToken := "expired-session-token"
 	_, err := authRepository.CreateSession(context.Background(), auth.Session{
@@ -176,6 +179,7 @@ func TestAuthSessionFlow(t *testing.T) {
 	if logoutRecorder.Code != http.StatusNoContent {
 		t.Fatalf("expected logout status %d, got %d with body %s", http.StatusNoContent, logoutRecorder.Code, logoutRecorder.Body.String())
 	}
+	assertNoStore(t, logoutRecorder)
 
 	revokedRecorder := httptest.NewRecorder()
 	revokedRequest := httptest.NewRequest(http.MethodGet, "/auth/session", nil)
@@ -350,6 +354,7 @@ func TestCharacterOwnershipThroughAuthenticatedServer(t *testing.T) {
 	if ownerRecorder.Code != http.StatusCreated {
 		t.Fatalf("expected character create status %d, got %d with body %s", http.StatusCreated, ownerRecorder.Code, ownerRecorder.Body.String())
 	}
+	assertNoStore(t, ownerRecorder)
 
 	var created characterResponse
 	decodeResponse(t, ownerRecorder, &created)
@@ -364,6 +369,7 @@ func TestCharacterOwnershipThroughAuthenticatedServer(t *testing.T) {
 	if ownerListRecorder.Code != http.StatusOK {
 		t.Fatalf("expected owner list status %d, got %d with body %s", http.StatusOK, ownerListRecorder.Code, ownerListRecorder.Body.String())
 	}
+	assertNoStore(t, ownerListRecorder)
 	var ownerList characterListResponse
 	decodeResponse(t, ownerListRecorder, &ownerList)
 	if len(ownerList.Characters) != 1 {
@@ -388,6 +394,7 @@ func TestCharacterOwnershipThroughAuthenticatedServer(t *testing.T) {
 	if ownerGetRecorder.Code != http.StatusOK {
 		t.Fatalf("expected owner get status %d, got %d with body %s", http.StatusOK, ownerGetRecorder.Code, ownerGetRecorder.Body.String())
 	}
+	assertNoStore(t, ownerGetRecorder)
 
 	otherGetRecorder := httptest.NewRecorder()
 	otherGetRequest := httptest.NewRequest(http.MethodGet, "/characters/"+created.ID, nil)
@@ -430,6 +437,115 @@ func TestCORSAndOriginChecks(t *testing.T) {
 	handler.ServeHTTP(missingOriginRecorder, missingOriginRequest)
 	if missingOriginRecorder.Code != http.StatusForbidden {
 		t.Fatalf("expected missing origin status %d, got %d", http.StatusForbidden, missingOriginRecorder.Code)
+	}
+}
+
+func TestAPISecurityHeadersApplyToSuccessAndErrorResponses(t *testing.T) {
+	handler := New(nil, nil, Options{AllowedOrigins: []string{localOrigin}})
+	tests := []struct {
+		name    string
+		request *http.Request
+	}{
+		{
+			name:    "health success",
+			request: httptest.NewRequest(http.MethodGet, "/healthz", nil),
+		},
+		{
+			name: "CORS error",
+			request: func() *http.Request {
+				request := httptest.NewRequest(http.MethodPost, "/auth/register", strings.NewReader(`{}`))
+				request.Header.Set("Content-Type", "application/json")
+				request.Header.Set("Origin", "https://evil.example")
+				return request
+			}(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(recorder, tt.request)
+
+			assertSecurityHeaders(t, recorder)
+		})
+	}
+}
+
+func TestStrictTransportSecurityOnlyWhenCookiesAreSecure(t *testing.T) {
+	tests := []struct {
+		name         string
+		cookieSecure bool
+		wantHeader   string
+	}{
+		{name: "local", cookieSecure: false, wantHeader: ""},
+		{name: "production", cookieSecure: true, wantHeader: "max-age=31536000"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := New(nil, nil, Options{CookieSecure: tt.cookieSecure})
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+
+			handler.ServeHTTP(recorder, request)
+
+			if got := recorder.Header().Get("Strict-Transport-Security"); got != tt.wantHeader {
+				t.Fatalf("expected Strict-Transport-Security %q, got %q", tt.wantHeader, got)
+			}
+		})
+	}
+}
+
+func TestPrivateRoutesSetNoStoreOnSuccessAndErrors(t *testing.T) {
+	handler := New(nil, nil, Options{AllowedOrigins: []string{localOrigin}})
+	tests := []struct {
+		name       string
+		method     string
+		path       string
+		body       string
+		origin     string
+		wantStatus int
+	}{
+		{name: "registration error", method: http.MethodPost, path: "/auth/register", body: `{}`, origin: localOrigin, wantStatus: http.StatusServiceUnavailable},
+		{name: "login error", method: http.MethodPost, path: "/auth/sessions", body: `{}`, origin: localOrigin, wantStatus: http.StatusServiceUnavailable},
+		{name: "current session unauthorized", method: http.MethodGet, path: "/auth/session", wantStatus: http.StatusUnauthorized},
+		{name: "logout success", method: http.MethodDelete, path: "/auth/session", wantStatus: http.StatusNoContent},
+		{name: "character create unauthorized", method: http.MethodPost, path: "/characters", body: `{}`, origin: localOrigin, wantStatus: http.StatusUnauthorized},
+		{name: "character list unauthorized", method: http.MethodGet, path: "/characters", wantStatus: http.StatusUnauthorized},
+		{name: "character detail unauthorized", method: http.MethodGet, path: "/characters/00000000-0000-0000-0000-000000000001", wantStatus: http.StatusUnauthorized},
+		{name: "CORS rejection", method: http.MethodPost, path: "/auth/register", body: `{}`, origin: "https://evil.example", wantStatus: http.StatusForbidden},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(tt.method, tt.path, strings.NewReader(tt.body))
+			if tt.body != "" {
+				request.Header.Set("Content-Type", "application/json")
+			}
+			if tt.origin != "" {
+				request.Header.Set("Origin", tt.origin)
+			}
+
+			handler.ServeHTTP(recorder, request)
+
+			if recorder.Code != tt.wantStatus {
+				t.Fatalf("expected status %d, got %d with body %s", tt.wantStatus, recorder.Code, recorder.Body.String())
+			}
+			assertNoStore(t, recorder)
+		})
+	}
+}
+
+func TestHealthResponseDoesNotSetNoStore(t *testing.T) {
+	handler := New(nil, nil, Options{})
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+
+	handler.ServeHTTP(recorder, request)
+
+	if got := recorder.Header().Get("Cache-Control"); got != "" {
+		t.Fatalf("expected health response without Cache-Control, got %q", got)
 	}
 }
 
@@ -511,6 +627,31 @@ func assertCredentialCORS(t *testing.T, recorder *httptest.ResponseRecorder) {
 	}
 	if recorder.Header().Get("Access-Control-Allow-Credentials") != "true" {
 		t.Fatalf("expected credentialed CORS, got %q", recorder.Header().Get("Access-Control-Allow-Credentials"))
+	}
+}
+
+func assertSecurityHeaders(t *testing.T, recorder *httptest.ResponseRecorder) {
+	t.Helper()
+
+	want := map[string]string{
+		"X-Content-Type-Options":  "nosniff",
+		"Referrer-Policy":         "no-referrer",
+		"X-Frame-Options":         "DENY",
+		"Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+		"Permissions-Policy":      "camera=(), microphone=(), geolocation=()",
+	}
+	for name, value := range want {
+		if got := recorder.Header().Get(name); got != value {
+			t.Errorf("expected %s %q, got %q", name, value, got)
+		}
+	}
+}
+
+func assertNoStore(t *testing.T, recorder *httptest.ResponseRecorder) {
+	t.Helper()
+
+	if got := recorder.Header().Get("Cache-Control"); got != "no-store" {
+		t.Fatalf("expected Cache-Control no-store, got %q", got)
 	}
 }
 

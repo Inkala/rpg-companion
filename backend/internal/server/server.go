@@ -32,5 +32,7 @@ func New(characterRepository *characters.Repository, authRepository *auth.Reposi
 	mux.Handle("GET /characters", authenticator.RequireSession(http.HandlerFunc(characterHandler.List)))
 	mux.Handle("GET /characters/{id}", authenticator.RequireSession(http.HandlerFunc(characterHandler.GetByID)))
 
-	return withCORS(mux, options.AllowedOrigins)
+	handler := withCORS(mux, options.AllowedOrigins)
+	handler = withPrivateResponseNoStore(handler)
+	return withSecurityHeaders(handler, options.CookieSecure)
 }
