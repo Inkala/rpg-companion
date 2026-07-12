@@ -260,6 +260,126 @@ func TestSlidingWindowLimiterResetRemovesOnlySelectedKey(t *testing.T) {
 	}
 }
 
+func TestSlidingWindowLimiterAllowAllRecordsEveryRuleAtomically(t *testing.T) {
+	clock := newLimiterTestClock()
+	limiter := NewSlidingWindowLimiter(clock.Now)
+	rules := []LimitRule{
+		{Key: "global", Limit: 10, Window: time.Minute},
+		{Key: "username", Limit: 5, Window: time.Hour},
+		{Key: "email", Limit: 5, Window: time.Hour},
+	}
+
+	result := limiter.AllowAll(rules)
+	if !result.Allowed {
+		t.Fatalf("expected all rules to be allowed, got retry after %s", result.RetryAfter)
+	}
+
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+	for _, rule := range rules {
+		bucket, exists := limiter.buckets[rule.Key]
+		if !exists {
+			t.Fatalf("expected bucket %q to be created", rule.Key)
+		}
+		if len(bucket.events) != 1 {
+			t.Fatalf("expected one event for %q, got %d", rule.Key, len(bucket.events))
+		}
+	}
+}
+
+func TestSlidingWindowLimiterAllowAllRejectedRuleRecordsNothing(t *testing.T) {
+	clock := newLimiterTestClock()
+	limiter := NewSlidingWindowLimiter(clock.Now)
+	limiter.Allow("at-limit", 1, time.Hour)
+	limiter.Allow("below-limit", 2, time.Hour)
+
+	result := limiter.AllowAll([]LimitRule{
+		{Key: "new-key", Limit: 5, Window: time.Hour},
+		{Key: "below-limit", Limit: 2, Window: time.Hour},
+		{Key: "at-limit", Limit: 1, Window: time.Hour},
+	})
+	if result.Allowed {
+		t.Fatal("expected multi-rule operation to be rejected")
+	}
+	if result.RetryAfter != time.Hour || result.Window != time.Hour {
+		t.Fatalf("expected one-hour rejection, got retry %s and window %s", result.RetryAfter, result.Window)
+	}
+
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+	if _, exists := limiter.buckets["new-key"]; exists {
+		t.Fatal("expected rejected operation not to create a new bucket")
+	}
+	if got := len(limiter.buckets["below-limit"].events); got != 1 {
+		t.Fatalf("expected rejected operation not to record below-limit rule, got %d events", got)
+	}
+	if got := len(limiter.buckets["at-limit"].events); got != 1 {
+		t.Fatalf("expected rejected operation not to alter rejecting rule, got %d events", got)
+	}
+}
+
+func TestSlidingWindowLimiterAllowAllPreventsConcurrentCheckThenRecordRace(t *testing.T) {
+	clock := newLimiterTestClock()
+	limiter := NewSlidingWindowLimiter(clock.Now)
+	rules := []LimitRule{
+		{Key: "global", Limit: 50, Window: time.Minute},
+		{Key: "username", Limit: 50, Window: time.Hour},
+		{Key: "email", Limit: 50, Window: time.Hour},
+	}
+	var allowed atomic.Int64
+	var waitGroup sync.WaitGroup
+
+	for attempt := 0; attempt < 200; attempt++ {
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			if limiter.AllowAll(rules).Allowed {
+				allowed.Add(1)
+			}
+		}()
+	}
+	waitGroup.Wait()
+
+	if got := allowed.Load(); got != 50 {
+		t.Fatalf("expected exactly 50 atomic allowances, got %d", got)
+	}
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+	for _, rule := range rules {
+		if got := len(limiter.buckets[rule.Key].events); got != 50 {
+			t.Fatalf("expected 50 events for %q, got %d", rule.Key, got)
+		}
+	}
+}
+
+func TestSlidingWindowLimiterAllowAllPreservesCapacityAndEveryRuleKey(t *testing.T) {
+	clock := newLimiterTestClock()
+	limiter := NewSlidingWindowLimiter(clock.Now)
+	for index := 0; index < maxLimiterKeys-2; index++ {
+		limiter.Allow(fmt.Sprintf("existing-%05d", index), 2, 24*time.Hour)
+	}
+	rules := []LimitRule{
+		{Key: "new-global", Limit: 10, Window: time.Minute},
+		{Key: "new-username", Limit: 5, Window: time.Hour},
+		{Key: "new-email", Limit: 5, Window: time.Hour},
+	}
+
+	if result := limiter.AllowAll(rules); !result.Allowed {
+		t.Fatalf("expected multi-rule operation at capacity to be allowed, got retry after %s", result.RetryAfter)
+	}
+
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+	if got := len(limiter.buckets); got != maxLimiterKeys {
+		t.Fatalf("expected capacity %d, got %d", maxLimiterKeys, got)
+	}
+	for _, rule := range rules {
+		if _, exists := limiter.buckets[rule.Key]; !exists {
+			t.Fatalf("expected protected rule key %q to remain", rule.Key)
+		}
+	}
+}
+
 type limiterTestClock struct {
 	mu  sync.RWMutex
 	now time.Time

@@ -133,13 +133,13 @@ func TestLoginCanonicalIdentifiersShareHashedBucketsWithoutRawValues(t *testing.
 			assertLoginThrottleStatus(t, rejected, http.StatusTooManyRequests)
 
 			expectedKey := loginIdentifierFailureKey(tt.variants[0])
-			handler.loginLimiter.mu.Lock()
-			_, expectedKeyExists := handler.loginLimiter.buckets[expectedKey]
-			keys := make([]string, 0, len(handler.loginLimiter.buckets))
-			for key := range handler.loginLimiter.buckets {
+			handler.authLimiter.mu.Lock()
+			_, expectedKeyExists := handler.authLimiter.buckets[expectedKey]
+			keys := make([]string, 0, len(handler.authLimiter.buckets))
+			for key := range handler.authLimiter.buckets {
 				keys = append(keys, key)
 			}
-			handler.loginLimiter.mu.Unlock()
+			handler.authLimiter.mu.Unlock()
 			if !expectedKeyExists {
 				t.Fatalf("expected hashed identifier bucket %q", expectedKey)
 			}
@@ -193,9 +193,9 @@ func TestSuccessfulLoginClearsIdentifierFailuresAcrossHandlerCopies(t *testing.T
 	passwordMatches.Store(false)
 	assertLoginThrottleStatus(t, performLoginThrottleRequest(handler, "mara"), http.StatusUnauthorized)
 	key := loginIdentifierFailureKey("mara")
-	handler.loginLimiter.mu.Lock()
-	eventCount := len(handler.loginLimiter.buckets[key].events)
-	handler.loginLimiter.mu.Unlock()
+	handler.authLimiter.mu.Lock()
+	eventCount := len(handler.authLimiter.buckets[key].events)
+	handler.authLimiter.mu.Unlock()
 	if eventCount != 1 {
 		t.Fatalf("expected one failure after successful reset, got %d", eventCount)
 	}
@@ -342,7 +342,7 @@ func newLoginThrottleTestHandler(clock *limiterTestClock, repository *loginThrot
 	handler := NewHandler(nil, testPasswordConfig(), SessionConfig{Lifetime: time.Hour})
 	handler.repository = repository
 	handler.now = clock.Now
-	handler.loginLimiter = NewSlidingWindowLimiter(clock.Now)
+	handler.authLimiter = NewSlidingWindowLimiter(clock.Now)
 	return handler
 }
 

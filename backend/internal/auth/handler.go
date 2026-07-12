@@ -16,13 +16,20 @@ import (
 )
 
 const (
-	authRequestBodyLimit       int64 = 8192
-	globalLoginLimit                 = 30
-	globalLoginWindow                = time.Minute
-	identifierFailureLimit           = 10
-	identifierFailureWindow          = 10 * time.Minute
-	globalLoginLimiterKey            = "login-global"
-	identifierFailureKeyPrefix       = "login-identifier-failure:"
+	authRequestBodyLimit          int64 = 8192
+	globalLoginLimit                    = 30
+	globalLoginWindow                   = time.Minute
+	identifierFailureLimit              = 10
+	identifierFailureWindow             = 10 * time.Minute
+	globalLoginLimiterKey               = "login-global"
+	identifierFailureKeyPrefix          = "login-identifier-failure:"
+	globalRegistrationLimit             = 10
+	globalRegistrationWindow            = time.Minute
+	registrationIdentityLimit           = 5
+	registrationIdentityWindow          = time.Hour
+	globalRegistrationLimiterKey        = "registration-global"
+	registrationUsernameKeyPrefix       = "registration-username:"
+	registrationEmailKeyPrefix          = "registration-email:"
 )
 
 type handlerRepository interface {
@@ -39,7 +46,7 @@ type Handler struct {
 	passwordConfig    PasswordConfig
 	sessionConfig     SessionConfig
 	argonGate         *ArgonGate
-	loginLimiter      *SlidingWindowLimiter
+	authLimiter       *SlidingWindowLimiter
 	dummyPasswordHash string
 	hashPassword      func(string, PasswordConfig) (string, error)
 	verifyPassword    func(string, string) (bool, error)
@@ -60,7 +67,7 @@ func NewHandler(repository *Repository, passwordConfig PasswordConfig, sessionCo
 		passwordConfig:    passwordConfig,
 		sessionConfig:     sessionConfig,
 		argonGate:         NewArgonGate(2),
-		loginLimiter:      NewSlidingWindowLimiter(clock),
+		authLimiter:       NewSlidingWindowLimiter(clock),
 		dummyPasswordHash: dummyPasswordHash(passwordConfig),
 		hashPassword:      HashPassword,
 		verifyPassword:    VerifyPassword,
@@ -104,6 +111,27 @@ func (handler Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	if !validatePassword(request.Password) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "Use 8–128 characters with an uppercase letter, lowercase letter, number, and special character."})
+		return
+	}
+	registrationResult := handler.authLimiter.AllowAll([]LimitRule{
+		{
+			Key:    globalRegistrationLimiterKey,
+			Limit:  globalRegistrationLimit,
+			Window: globalRegistrationWindow,
+		},
+		{
+			Key:    registrationUsernameKey(usernameCanonical),
+			Limit:  registrationIdentityLimit,
+			Window: registrationIdentityWindow,
+		},
+		{
+			Key:    registrationEmailKey(emailCanonical),
+			Limit:  registrationIdentityLimit,
+			Window: registrationIdentityWindow,
+		},
+	})
+	if !registrationResult.Allowed {
+		writeLoginThrottleExceeded(w, registrationResult.RetryAfter, registrationResult.Window)
 		return
 	}
 
@@ -159,13 +187,13 @@ func (handler Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &request) {
 		return
 	}
-	globalResult := handler.loginLimiter.Allow(globalLoginLimiterKey, globalLoginLimit, globalLoginWindow)
+	globalResult := handler.authLimiter.Allow(globalLoginLimiterKey, globalLoginLimit, globalLoginWindow)
 	if !globalResult.Allowed {
 		writeLoginThrottleExceeded(w, globalResult.RetryAfter, globalLoginWindow)
 		return
 	}
 	identifierFailureKey := loginIdentifierFailureKey(request.UsernameOrEmail)
-	identifierResult := handler.loginLimiter.Check(
+	identifierResult := handler.authLimiter.Check(
 		identifierFailureKey,
 		identifierFailureLimit,
 		identifierFailureWindow,
@@ -212,13 +240,13 @@ func (handler Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 	if !handler.createSessionCookie(w, r, user) {
 		return
 	}
-	handler.loginLimiter.Reset(identifierFailureKey)
+	handler.authLimiter.Reset(identifierFailureKey)
 
 	writeJSON(w, http.StatusOK, sessionResponse{User: PublicUserFromUser(user)})
 }
 
 func (handler Handler) recordInvalidLoginFailure(w http.ResponseWriter, identifierFailureKey string) bool {
-	result := handler.loginLimiter.Allow(
+	result := handler.authLimiter.Allow(
 		identifierFailureKey,
 		identifierFailureLimit,
 		identifierFailureWindow,
@@ -232,8 +260,20 @@ func (handler Handler) recordInvalidLoginFailure(w http.ResponseWriter, identifi
 
 func loginIdentifierFailureKey(identifier string) string {
 	canonical := canonicalLoginIdentifier(identifier)
+	return hashedLimiterKey(identifierFailureKeyPrefix, canonical)
+}
+
+func registrationUsernameKey(usernameCanonical string) string {
+	return hashedLimiterKey(registrationUsernameKeyPrefix, usernameCanonical)
+}
+
+func registrationEmailKey(emailCanonical string) string {
+	return hashedLimiterKey(registrationEmailKeyPrefix, emailCanonical)
+}
+
+func hashedLimiterKey(prefix string, canonical string) string {
 	digest := sha256.Sum256([]byte(canonical))
-	return identifierFailureKeyPrefix + hex.EncodeToString(digest[:])
+	return prefix + hex.EncodeToString(digest[:])
 }
 
 func canonicalLoginIdentifier(identifier string) string {
