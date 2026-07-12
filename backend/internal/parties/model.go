@@ -59,3 +59,11 @@ type InviteInspection struct {
 	PartyName string
 	ExpiresAt time.Time
 }
+
+type PartyMembership struct {
+	ID          uuid.UUID
+	PartyID     uuid.UUID
+	Role        string
+	CharacterID uuid.UUID
+	JoinedAt    time.Time
+}

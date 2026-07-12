@@ -610,6 +610,293 @@ func TestRepositoryInspectInvitePreservesDatabaseErrors(t *testing.T) {
 	}
 }
 
+func TestPartyMembershipModelExposesJoinResultFields(t *testing.T) {
+	requireStructFields(t, PartyMembership{}, []string{"ID", "PartyID", "Role", "CharacterID", "JoinedAt"})
+}
+
+func TestRepositoryJoinPartyCreatesPlayerMembershipAtomically(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	now := time.Date(2026, 7, 14, 13, 0, 0, 0, time.UTC)
+	rawToken := validInviteToken(0x81)
+	partyID := seedJoinRepositoryParty(t, pool, rawToken, now.Add(-time.Hour))
+	membershipID := uuid.MustParse("45000000-0000-0000-0000-000000000001")
+	repository := newRepository(
+		pool,
+		sequentialPartyIDs(t, membershipID),
+		func() time.Time { return now },
+	)
+
+	membership, err := repository.JoinParty(
+		context.Background(),
+		rawToken,
+		uuid.MustParse(testOtherUserID),
+		uuid.MustParse(testThirdCharacterID),
+	)
+	if err != nil {
+		t.Fatalf("join Party: %v", err)
+	}
+	assertJoinedMembership(t, membership, membershipID, partyID, uuid.MustParse(testThirdCharacterID), now)
+
+	var storedRole string
+	var storedCharacterID string
+	var storedJoinedAt time.Time
+	if err := pool.QueryRow(context.Background(), `
+SELECT role, character_id::text, joined_at
+FROM party_memberships
+WHERE id = $1::uuid`, membershipID.String()).Scan(&storedRole, &storedCharacterID, &storedJoinedAt); err != nil {
+		t.Fatalf("load joined membership: %v", err)
+	}
+	if storedRole != RolePlayer || storedCharacterID != testThirdCharacterID || !storedJoinedAt.Equal(now) {
+		t.Fatal("stored membership does not match the join result")
+	}
+}
+
+func TestRepositoryJoinPartyMakesUnavailableInvitesIndistinguishable(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	partyID := seedInviteRepositoryParty(t, pool)
+	now := time.Date(2026, 7, 14, 14, 0, 0, 0, time.UTC)
+	repository := NewRepository(pool)
+	repository.now = func() time.Time { return now }
+
+	replacedToken := validInviteToken(0x86)
+	tests := []struct {
+		name    string
+		token   string
+		prepare func(t *testing.T)
+	}{
+		{name: "malformed token", token: "private-malformed-join-token"},
+		{name: "unknown token", token: validInviteToken(0x82)},
+		{
+			name:  "expired token",
+			token: validInviteToken(0x83),
+			prepare: func(t *testing.T) {
+				insertInviteForRepositoryTest(t, pool, partyID, testGMUserID, validInviteToken(0x83), now.Add(-8*24*time.Hour))
+			},
+		},
+		{
+			name:  "revoked token",
+			token: validInviteToken(0x84),
+			prepare: func(t *testing.T) {
+				token := validInviteToken(0x84)
+				createdAt := now.Add(-time.Hour)
+				insertInviteForRepositoryTest(t, pool, partyID, testGMUserID, token, createdAt)
+				tokenHash := sha256.Sum256([]byte(token))
+				if _, err := pool.Exec(context.Background(), `
+UPDATE party_invites SET revoked_at = $1 WHERE token_hash = $2`, now.Add(-30*time.Minute), tokenHash[:]); err != nil {
+					t.Fatalf("revoke join invite fixture: %v", err)
+				}
+			},
+		},
+		{
+			name:  "token expiring exactly now",
+			token: validInviteToken(0x85),
+			prepare: func(t *testing.T) {
+				insertInviteForRepositoryTest(t, pool, partyID, testGMUserID, validInviteToken(0x85), now.Add(-7*24*time.Hour))
+			},
+		},
+		{
+			name:  "replaced token",
+			token: replacedToken,
+			prepare: func(t *testing.T) {
+				creationRepository := NewRepository(pool)
+				creationRepository.now = func() time.Time { return now.Add(-time.Hour) }
+				creationRepository.newInviteToken = sequentialInviteTokens(t, replacedToken, validInviteToken(0x87))
+				if _, err := creationRepository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID)); err != nil {
+					t.Fatalf("create replaced join invite: %v", err)
+				}
+				creationRepository.now = func() time.Time { return now }
+				if _, err := creationRepository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID)); err != nil {
+					t.Fatalf("replace join invite: %v", err)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := pool.Exec(context.Background(), `DELETE FROM party_invites`); err != nil {
+				t.Fatalf("reset join invite fixtures: %v", err)
+			}
+			if tt.prepare != nil {
+				tt.prepare(t)
+			}
+
+			_, err := repository.JoinParty(
+				context.Background(),
+				tt.token,
+				uuid.MustParse(testOtherUserID),
+				uuid.MustParse(testThirdCharacterID),
+			)
+			if !errors.Is(err, ErrInviteUnavailable) {
+				t.Fatalf("expected ErrInviteUnavailable, got %v", err)
+			}
+			if strings.Contains(err.Error(), tt.token) {
+				t.Fatal("join error exposed the raw invite token")
+			}
+			requireUserMembershipCount(t, pool, partyID, uuid.MustParse(testOtherUserID), 0)
+		})
+	}
+}
+
+func TestRepositoryJoinPartyHidesUnknownAndForeignCharacters(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	now := time.Date(2026, 7, 14, 15, 0, 0, 0, time.UTC)
+	rawToken := validInviteToken(0x88)
+	partyID := seedJoinRepositoryParty(t, pool, rawToken, now.Add(-time.Hour))
+	repository := NewRepository(pool)
+	repository.now = func() time.Time { return now }
+
+	tests := []struct {
+		name        string
+		characterID uuid.UUID
+	}{
+		{name: "unknown character", characterID: uuid.MustParse("25000000-0000-0000-0000-000000000099")},
+		{name: "foreign character", characterID: uuid.MustParse(testCharacterID)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := repository.JoinParty(context.Background(), rawToken, uuid.MustParse(testOtherUserID), tt.characterID)
+			if !errors.Is(err, ErrCharacterNotFound) {
+				t.Fatalf("expected ErrCharacterNotFound, got %v", err)
+			}
+			if strings.Contains(err.Error(), rawToken) {
+				t.Fatal("character error exposed the raw invite token")
+			}
+			requireUserMembershipCount(t, pool, partyID, uuid.MustParse(testOtherUserID), 0)
+		})
+	}
+}
+
+func TestRepositoryJoinPartyIsIdempotentForIdenticalRequest(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	now := time.Date(2026, 7, 14, 16, 0, 0, 0, time.UTC)
+	rawToken := validInviteToken(0x89)
+	partyID := seedJoinRepositoryParty(t, pool, rawToken, now.Add(-time.Hour))
+	membershipID := uuid.MustParse("45000000-0000-0000-0000-000000000010")
+	repository := newRepository(pool, sequentialPartyIDs(t, membershipID), func() time.Time { return now })
+
+	first, err := repository.JoinParty(context.Background(), rawToken, uuid.MustParse(testOtherUserID), uuid.MustParse(testThirdCharacterID))
+	if err != nil {
+		t.Fatalf("perform first identical join: %v", err)
+	}
+	second, err := repository.JoinParty(context.Background(), rawToken, uuid.MustParse(testOtherUserID), uuid.MustParse(testThirdCharacterID))
+	if err != nil {
+		t.Fatalf("repeat identical join: %v", err)
+	}
+	if first != second {
+		t.Fatal("identical join did not return the existing membership")
+	}
+	requireUserMembershipCount(t, pool, partyID, uuid.MustParse(testOtherUserID), 1)
+}
+
+func TestRepositoryJoinPartyRejectsDifferentJoinForExistingMember(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	now := time.Date(2026, 7, 14, 17, 0, 0, 0, time.UTC)
+	rawToken := validInviteToken(0x8a)
+	partyID := seedJoinRepositoryParty(t, pool, rawToken, now.Add(-time.Hour))
+	repository := NewRepository(pool)
+	repository.now = func() time.Time { return now }
+
+	_, err := repository.JoinParty(
+		context.Background(),
+		rawToken,
+		uuid.MustParse(testPlayerUserID),
+		uuid.MustParse(testOtherCharacterID),
+	)
+	if !errors.Is(err, ErrAlreadyMember) {
+		t.Fatalf("expected ErrAlreadyMember, got %v", err)
+	}
+	requireUserMembershipCount(t, pool, partyID, uuid.MustParse(testPlayerUserID), 1)
+}
+
+func TestRepositoryJoinPartyRejectsCharacterLinkedToAnotherParty(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	now := time.Date(2026, 7, 14, 18, 0, 0, 0, time.UTC)
+	rawToken := validInviteToken(0x8b)
+	partyID := seedJoinRepositoryParty(t, pool, rawToken, now.Add(-time.Hour))
+	otherPartyID := "35000000-0000-0000-0000-000000000002"
+	insertTestParty(t, pool, otherPartyID, "Character Link Party", testOtherGMUserID)
+	insertTestMembership(t, pool, "45000000-0000-0000-0000-000000000020", otherPartyID, testOtherGMUserID, RoleGM, nil)
+	characterID := testThirdCharacterID
+	insertTestMembership(t, pool, "45000000-0000-0000-0000-000000000021", otherPartyID, testOtherUserID, RolePlayer, &characterID)
+	repository := NewRepository(pool)
+	repository.now = func() time.Time { return now }
+
+	_, err := repository.JoinParty(context.Background(), rawToken, uuid.MustParse(testOtherUserID), uuid.MustParse(testThirdCharacterID))
+	if !errors.Is(err, ErrCharacterAlreadyLinked) {
+		t.Fatalf("expected ErrCharacterAlreadyLinked, got %v", err)
+	}
+	requireUserMembershipCount(t, pool, partyID, uuid.MustParse(testOtherUserID), 0)
+}
+
+func TestRepositoryJoinPartyRollsBackFailedMembershipInsertion(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	now := time.Date(2026, 7, 14, 19, 0, 0, 0, time.UTC)
+	rawToken := validInviteToken(0x8c)
+	partyID := seedJoinRepositoryParty(t, pool, rawToken, now.Add(-time.Hour))
+	existingMembershipID := uuid.MustParse("44000000-0000-0000-0000-000000000001")
+	repository := newRepository(pool, sequentialPartyIDs(t, existingMembershipID), func() time.Time { return now })
+
+	_, err := repository.JoinParty(context.Background(), rawToken, uuid.MustParse(testOtherUserID), uuid.MustParse(testThirdCharacterID))
+	if err == nil {
+		t.Fatal("expected duplicate membership ID to fail join")
+	}
+	if strings.Contains(err.Error(), rawToken) {
+		t.Fatal("failed join error exposed the raw invite token")
+	}
+	requireUserMembershipCount(t, pool, partyID, uuid.MustParse(testOtherUserID), 0)
+	if _, inspectionErr := repository.InspectInvite(context.Background(), rawToken); inspectionErr != nil {
+		t.Fatalf("invite became unavailable after rolled-back join: %v", inspectionErr)
+	}
+}
+
+func TestRepositoryJoinPartySerializesConcurrentIdenticalJoins(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	now := time.Date(2026, 7, 14, 20, 0, 0, 0, time.UTC)
+	rawToken := validInviteToken(0x8d)
+	partyID := seedJoinRepositoryParty(t, pool, rawToken, now.Add(-time.Hour))
+	firstMembershipID := uuid.MustParse("45000000-0000-0000-0000-000000000030")
+	firstRepository := newRepository(
+		pool,
+		func() uuid.UUID { return firstMembershipID },
+		func() time.Time { return now },
+	)
+	secondMembershipID := uuid.MustParse("45000000-0000-0000-0000-000000000031")
+	secondRepository := newRepository(
+		pool,
+		func() uuid.UUID { return secondMembershipID },
+		func() time.Time { return now },
+	)
+
+	type joinResult struct {
+		membership PartyMembership
+		err        error
+	}
+	start := make(chan struct{})
+	results := make(chan joinResult, 2)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	join := func(repository *Repository) {
+		<-start
+		membership, err := repository.JoinParty(ctx, rawToken, uuid.MustParse(testOtherUserID), uuid.MustParse(testThirdCharacterID))
+		results <- joinResult{membership: membership, err: err}
+	}
+	go join(firstRepository)
+	go join(secondRepository)
+	close(start)
+
+	first := <-results
+	second := <-results
+	if first.err != nil || second.err != nil {
+		t.Fatal("expected concurrent identical joins to succeed")
+	}
+	if first.membership != second.membership {
+		t.Fatal("concurrent identical joins returned different memberships")
+	}
+	requireUserMembershipCount(t, pool, partyID, uuid.MustParse(testOtherUserID), 1)
+}
+
 func setupPartyRepositoryTest(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	databaseURL := os.Getenv("TEST_DATABASE_URL")
@@ -796,5 +1083,44 @@ WHERE party_id = $1::uuid`, partyID.String()).Scan(&total, &active); err != nil 
 	}
 	if total != totalWant || active != activeWant {
 		t.Fatalf("expected %d total and %d active invites, got %d total and %d active", totalWant, activeWant, total, active)
+	}
+}
+
+func seedJoinRepositoryParty(t *testing.T, pool *pgxpool.Pool, rawToken string, createdAt time.Time) uuid.UUID {
+	t.Helper()
+	partyID := seedInviteRepositoryParty(t, pool)
+	insertInviteForRepositoryTest(t, pool, partyID, testGMUserID, rawToken, createdAt)
+	return partyID
+}
+
+func assertJoinedMembership(
+	t *testing.T,
+	membership PartyMembership,
+	membershipID uuid.UUID,
+	partyID uuid.UUID,
+	characterID uuid.UUID,
+	joinedAt time.Time,
+) {
+	t.Helper()
+	if membership.ID != membershipID || membership.PartyID != partyID || membership.Role != RolePlayer || membership.CharacterID != characterID {
+		t.Fatal("join returned unexpected membership identity")
+	}
+	if !membership.JoinedAt.Equal(joinedAt) {
+		t.Fatal("join returned unexpected membership timestamp")
+	}
+}
+
+func requireUserMembershipCount(t *testing.T, pool *pgxpool.Pool, partyID uuid.UUID, userID uuid.UUID, want int) {
+	t.Helper()
+	var count int
+	if err := pool.QueryRow(context.Background(), `
+SELECT count(*)
+FROM party_memberships
+WHERE party_id = $1::uuid
+  AND user_id = $2::uuid`, partyID.String(), userID.String()).Scan(&count); err != nil {
+		t.Fatalf("count user memberships: %v", err)
+	}
+	if count != want {
+		t.Fatalf("expected %d user memberships, got %d", want, count)
 	}
 }

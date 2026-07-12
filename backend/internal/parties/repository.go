@@ -7,12 +7,16 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var ErrPartyNotFound = errors.New("party not found")
 var ErrPartyForbidden = errors.New("party operation is forbidden")
 var ErrInviteUnavailable = errors.New("invite is unavailable")
+var ErrCharacterNotFound = errors.New("character not found")
+var ErrAlreadyMember = errors.New("user is already a Party member")
+var ErrCharacterAlreadyLinked = errors.New("character is already linked to a Party")
 
 type Repository struct {
 	pool           *pgxpool.Pool
@@ -347,4 +351,198 @@ WHERE invite.token_hash = $1
 	inspection.PartyID = parsedPartyID
 
 	return inspection, nil
+}
+
+func (repository *Repository) JoinParty(
+	ctx context.Context,
+	rawToken string,
+	requesterID uuid.UUID,
+	characterID uuid.UUID,
+) (PartyMembership, error) {
+	tokenHash, err := InviteTokenHash(rawToken)
+	if err != nil {
+		return PartyMembership{}, ErrInviteUnavailable
+	}
+
+	transaction, err := repository.pool.Begin(ctx)
+	if err != nil {
+		return PartyMembership{}, err
+	}
+	defer func() { _ = transaction.Rollback(ctx) }()
+
+	const findInviteParty = `
+SELECT party_id::text
+FROM party_invites
+WHERE token_hash = $1`
+	var partyIDText string
+	err = transaction.QueryRow(ctx, findInviteParty, tokenHash).Scan(&partyIDText)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PartyMembership{}, ErrInviteUnavailable
+	}
+	if err != nil {
+		return PartyMembership{}, err
+	}
+
+	partyID, err := uuid.Parse(partyIDText)
+	if err != nil {
+		return PartyMembership{}, err
+	}
+
+	const lockParty = `
+SELECT id::text
+FROM parties
+WHERE id = $1::uuid
+FOR UPDATE`
+	var lockedPartyID string
+	err = transaction.QueryRow(ctx, lockParty, partyID.String()).Scan(&lockedPartyID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PartyMembership{}, ErrInviteUnavailable
+	}
+	if err != nil {
+		return PartyMembership{}, err
+	}
+
+	joinedAt := repository.now().UTC()
+	const lockCurrentInvite = `
+SELECT party_id::text
+FROM party_invites
+WHERE token_hash = $1
+  AND party_id = $2::uuid
+  AND revoked_at IS NULL
+  AND expires_at > $3
+FOR UPDATE`
+	var currentInvitePartyID string
+	err = transaction.QueryRow(ctx, lockCurrentInvite, tokenHash, partyID.String(), joinedAt).Scan(&currentInvitePartyID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PartyMembership{}, ErrInviteUnavailable
+	}
+	if err != nil {
+		return PartyMembership{}, err
+	}
+
+	const lockOwnedCharacter = `
+SELECT id::text
+FROM characters
+WHERE id = $1::uuid
+  AND owner_subject_id = $2::uuid
+FOR UPDATE`
+	var lockedCharacterID string
+	err = transaction.QueryRow(ctx, lockOwnedCharacter, characterID.String(), requesterID.String()).Scan(&lockedCharacterID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PartyMembership{}, ErrCharacterNotFound
+	}
+	if err != nil {
+		return PartyMembership{}, err
+	}
+
+	existing, found, err := loadExistingPartyMembership(ctx, transaction, partyID, requesterID)
+	if err != nil {
+		return PartyMembership{}, err
+	}
+	if found {
+		if existing.Role == RolePlayer && existing.CharacterID == characterID {
+			return existing, nil
+		}
+		return PartyMembership{}, ErrAlreadyMember
+	}
+
+	const findLinkedCharacter = `
+SELECT id::text
+FROM party_memberships
+WHERE character_id = $1::uuid
+FOR UPDATE`
+	var linkedMembershipID string
+	err = transaction.QueryRow(ctx, findLinkedCharacter, characterID.String()).Scan(&linkedMembershipID)
+	if err == nil {
+		return PartyMembership{}, ErrCharacterAlreadyLinked
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return PartyMembership{}, err
+	}
+
+	membership := PartyMembership{
+		ID:          repository.newID(),
+		PartyID:     partyID,
+		Role:        RolePlayer,
+		CharacterID: characterID,
+		JoinedAt:    joinedAt,
+	}
+	const insertMembership = `
+INSERT INTO party_memberships (id, party_id, user_id, role, character_id, joined_at)
+VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::uuid, $6)`
+	_, err = transaction.Exec(ctx, insertMembership,
+		membership.ID.String(),
+		membership.PartyID.String(),
+		requesterID.String(),
+		membership.Role,
+		membership.CharacterID.String(),
+		membership.JoinedAt,
+	)
+	if isPartyConstraint(err, "party_memberships_party_id_user_id_key") {
+		return PartyMembership{}, ErrAlreadyMember
+	}
+	if isPartyConstraint(err, "party_memberships_character_id_key") {
+		return PartyMembership{}, ErrCharacterAlreadyLinked
+	}
+	if err != nil {
+		return PartyMembership{}, err
+	}
+
+	if err := transaction.Commit(ctx); err != nil {
+		return PartyMembership{}, err
+	}
+
+	return membership, nil
+}
+
+func loadExistingPartyMembership(
+	ctx context.Context,
+	transaction pgx.Tx,
+	partyID uuid.UUID,
+	requesterID uuid.UUID,
+) (PartyMembership, bool, error) {
+	const query = `
+SELECT id::text, role, character_id::text, joined_at
+FROM party_memberships
+WHERE party_id = $1::uuid
+  AND user_id = $2::uuid
+FOR UPDATE`
+
+	var membershipID string
+	var characterID *string
+	var membership PartyMembership
+	err := transaction.QueryRow(ctx, query, partyID.String(), requesterID.String()).Scan(
+		&membershipID,
+		&membership.Role,
+		&characterID,
+		&membership.JoinedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PartyMembership{}, false, nil
+	}
+	if err != nil {
+		return PartyMembership{}, false, err
+	}
+
+	parsedMembershipID, err := uuid.Parse(membershipID)
+	if err != nil {
+		return PartyMembership{}, false, err
+	}
+	membership.ID = parsedMembershipID
+	membership.PartyID = partyID
+	membership.JoinedAt = membership.JoinedAt.UTC()
+	if characterID != nil {
+		parsedCharacterID, err := uuid.Parse(*characterID)
+		if err != nil {
+			return PartyMembership{}, false, err
+		}
+		membership.CharacterID = parsedCharacterID
+	}
+
+	return membership, true, nil
+}
+
+func isPartyConstraint(err error, constraintName string) bool {
+	var databaseError *pgconn.PgError
+	return errors.As(err, &databaseError) && databaseError.ConstraintName == constraintName
 }
