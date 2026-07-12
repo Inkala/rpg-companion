@@ -1,0 +1,237 @@
+import { useEffect, useState } from 'react';
+import type { PartyDetailDTO, PartyMemberDTO, PartyRoleDTO } from './apiTypes';
+
+type PartyPageProps = {
+  partyId: string;
+  isSignedIn: boolean;
+  loadParty: PartyLoader;
+  onSignIn: () => void;
+  onBack: () => void;
+  onOpenCharacter: (characterId: string) => void;
+};
+
+type PartyLoader = (partyId: string) => Promise<PartyDetailDTO>;
+
+type PartyRequestKey = {
+  requestedPartyId: string;
+  requestedLoader: PartyLoader;
+  requestedAttempt: number;
+};
+
+type PartyPageState = PartyRequestKey & (
+  | { status: 'loading' }
+  | { status: 'loaded'; party: PartyDetailDTO }
+  | { status: 'error' }
+);
+
+export const PartyPage = ({
+  partyId,
+  isSignedIn,
+  loadParty,
+  onSignIn,
+  onBack,
+  onOpenCharacter,
+}: PartyPageProps) => {
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [state, setState] = useState<PartyPageState>({
+    status: 'loading',
+    requestedPartyId: partyId,
+    requestedLoader: loadParty,
+    requestedAttempt: loadAttempt,
+  });
+  const currentRequestKey: PartyRequestKey = {
+    requestedPartyId: partyId,
+    requestedLoader: loadParty,
+    requestedAttempt: loadAttempt,
+  };
+  const stateMatchesCurrentRequest =
+    state.requestedPartyId === currentRequestKey.requestedPartyId &&
+    state.requestedLoader === currentRequestKey.requestedLoader &&
+    state.requestedAttempt === currentRequestKey.requestedAttempt;
+  const visibleState: PartyPageState = stateMatchesCurrentRequest
+    ? state
+    : { status: 'loading', ...currentRequestKey };
+
+  useEffect(() => {
+    let isActive = true;
+    const requestKey: PartyRequestKey = {
+      requestedPartyId: partyId,
+      requestedLoader: loadParty,
+      requestedAttempt: loadAttempt,
+    };
+
+    if (!isSignedIn) {
+      setState({ status: 'loading', ...requestKey });
+      return () => {
+        isActive = false;
+      };
+    }
+
+    setState({ status: 'loading', ...requestKey });
+    loadParty(partyId)
+      .then((party) => {
+        if (isActive) {
+          setState({ status: 'loaded', party, ...requestKey });
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setState({ status: 'error', ...requestKey });
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isSignedIn, loadAttempt, loadParty, partyId]);
+
+  return (
+    <main className="app-shell account-page">
+      <header className="reference-nav">
+        <button type="button" className="back-button" onClick={onBack}>
+          Back
+        </button>
+      </header>
+
+      {!isSignedIn ? (
+        <SignedOutPartyState onSignIn={onSignIn} />
+      ) : visibleState.status === 'loading' ? (
+        <PartyLoadingState />
+      ) : visibleState.status === 'error' ? (
+        <PartyErrorState onRetry={() => setLoadAttempt((current) => current + 1)} />
+      ) : (
+        <LoadedParty
+          party={visibleState.party}
+          onOpenCharacter={onOpenCharacter}
+        />
+      )}
+    </main>
+  );
+};
+
+const SignedOutPartyState = ({ onSignIn }: { onSignIn: () => void }) => {
+  return (
+    <section className="account-card" aria-labelledby="signed-out-party-title">
+      <p className="eyebrow">Party</p>
+      <h1 id="signed-out-party-title" className="account-title">
+        Sign in to view this party
+      </h1>
+      <p>Party details and rosters are private to party members.</p>
+      <button type="button" className="button button--primary" onClick={onSignIn}>
+        Sign in
+      </button>
+    </section>
+  );
+};
+
+const PartyLoadingState = () => {
+  return (
+    <section className="account-card" aria-labelledby="loading-party-title">
+      <h1 id="loading-party-title" className="account-title">
+        Party
+      </h1>
+      <p role="status">Loading party...</p>
+    </section>
+  );
+};
+
+const PartyErrorState = ({ onRetry }: { onRetry: () => void }) => {
+  return (
+    <section className="account-card" aria-labelledby="party-error-title">
+      <p className="eyebrow">Party</p>
+      <h1 id="party-error-title" className="account-title">
+        Could not load party
+      </h1>
+      <p role="alert">Could not load this party. Please try again.</p>
+      <button type="button" className="button button--secondary" onClick={onRetry}>
+        Retry
+      </button>
+    </section>
+  );
+};
+
+const LoadedParty = ({
+  party,
+  onOpenCharacter,
+}: {
+  party: PartyDetailDTO;
+  onOpenCharacter: (characterId: string) => void;
+}) => {
+  const roleLabel = displayRole(party.role);
+
+  return (
+    <section aria-labelledby="party-title">
+      <p className="eyebrow">Party</p>
+      <h1 id="party-title">{party.name}</h1>
+      <p>
+        <span>Your role:</span> <strong>{roleLabel}</strong>
+      </p>
+
+      <section aria-labelledby="party-roster-title">
+        <h2 id="party-roster-title">Roster</h2>
+        <ul aria-label={`${party.name} roster`}>
+          {party.members.map((member, index) => (
+            <PartyMember
+              key={`${member.username}-${index}`}
+              member={member}
+              currentUserRole={party.role}
+              index={index}
+              onOpenCharacter={onOpenCharacter}
+            />
+          ))}
+        </ul>
+      </section>
+    </section>
+  );
+};
+
+const PartyMember = ({
+  member,
+  currentUserRole,
+  index,
+  onOpenCharacter,
+}: {
+  member: PartyMemberDTO;
+  currentUserRole: PartyRoleDTO;
+  index: number;
+  onOpenCharacter: (characterId: string) => void;
+}) => {
+  const titleId = `party-member-title-${index}`;
+  const character = member.character;
+  const canOpenCharacter =
+    currentUserRole === 'gm' && member.role === 'player' && character !== null;
+
+  return (
+    <li>
+      <article aria-labelledby={titleId}>
+        <h3 id={titleId}>{member.username}</h3>
+        <p>
+          Role: <strong>{displayRole(member.role)}</strong>
+        </p>
+        {character ? (
+          <>
+            <p>
+              Character: <strong>{character.name}</strong>
+            </p>
+            {canOpenCharacter ? (
+              <button
+                type="button"
+                className="button button--secondary"
+                aria-label={`Open ${character.name} Character Reference`}
+                onClick={() => onOpenCharacter(character.id)}
+              >
+                Open Character Reference
+              </button>
+            ) : null}
+          </>
+        ) : (
+          <p>No character linked</p>
+        )}
+      </article>
+    </li>
+  );
+};
+
+const displayRole = (role: PartyRoleDTO) => {
+  return role === 'gm' ? 'GM' : 'Player';
+};
