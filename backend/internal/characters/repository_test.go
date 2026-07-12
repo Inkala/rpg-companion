@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func TestMapCharacterCreateErrorMapsKnownPostgresClientDataFailures(t *testing.T) {
@@ -178,5 +180,288 @@ func validRepositoryCharacter(ownerID uuid.UUID) Character {
 		ReferencePayload: json.RawMessage(`{"schemaVersion":"CharacterSheetV1"}`),
 		CreatedAt:        now,
 		UpdatedAt:        now,
+	}
+}
+
+func TestGetByIDForPartyGMReturnsCompleteLinkedCharacter(t *testing.T) {
+	fixture := setupPartyGMCharacterFixture(t)
+
+	character, err := fixture.repository.GetByIDForPartyGM(
+		context.Background(),
+		fixture.linkedCharacterID,
+		fixture.partyAID,
+		fixture.gmAID,
+	)
+	if err != nil {
+		t.Fatalf("get linked character for Party GM: %v", err)
+	}
+
+	if character.ID != fixture.linkedCharacterID {
+		t.Fatalf("expected linked character ID %s, got %s", fixture.linkedCharacterID, character.ID)
+	}
+	if character.OwnerSubjectID == nil || *character.OwnerSubjectID != fixture.targetPlayerID {
+		t.Fatal("authorized character did not preserve its owner")
+	}
+	if character.Name != "Complete Hero" || character.ClassName != "Ranger" || character.Level != 7 {
+		t.Fatal("authorized character did not preserve its identity fields")
+	}
+	if character.SubclassName == nil || *character.SubclassName != "Hunter" {
+		t.Fatal("authorized character did not preserve its subclass")
+	}
+	if character.Ancestry != "Wood Elf" || character.Background != "Outlander" {
+		t.Fatal("authorized character did not preserve its ancestry and background")
+	}
+	if character.AbilityScores != (AbilityScores{Strength: 10, Dexterity: 18, Constitution: 14, Intelligence: 11, Wisdom: 16, Charisma: 9}) {
+		t.Fatal("authorized character did not preserve its ability scores")
+	}
+	if character.HitPoints != (HitPoints{Current: 41, Max: 52}) || character.ArmorClass != 16 || character.SpeedFt != 35 {
+		t.Fatal("authorized character did not preserve its combat values")
+	}
+	var expectedReferencePayload any
+	if err := json.Unmarshal(fixture.referencePayload, &expectedReferencePayload); err != nil {
+		t.Fatalf("decode expected referencePayload: %v", err)
+	}
+	var actualReferencePayload any
+	if err := json.Unmarshal(character.ReferencePayload, &actualReferencePayload); err != nil {
+		t.Fatalf("decode actual referencePayload: %v", err)
+	}
+	if !reflect.DeepEqual(actualReferencePayload, expectedReferencePayload) {
+		t.Fatal("authorized character did not preserve referencePayload")
+	}
+	if !character.CreatedAt.Equal(fixture.characterCreatedAt) || !character.UpdatedAt.Equal(fixture.characterUpdatedAt) {
+		t.Fatal("authorized character did not preserve timestamps")
+	}
+}
+
+func TestGetByIDForPartyGMEnforcesBrokenAccessControlMatrix(t *testing.T) {
+	fixture := setupPartyGMCharacterFixture(t)
+
+	tests := []struct {
+		name        string
+		characterID uuid.UUID
+		partyID     uuid.UUID
+		requesterID uuid.UUID
+	}{
+		{
+			name:        "unknown Party",
+			characterID: fixture.linkedCharacterID,
+			partyID:     uuid.MustParse("61000000-0000-0000-0000-000000000099"),
+			requesterID: fixture.gmAID,
+		},
+		{
+			name:        "non-member requester",
+			characterID: fixture.linkedCharacterID,
+			partyID:     fixture.partyAID,
+			requesterID: fixture.nonMemberID,
+		},
+		{
+			name:        "Player requester",
+			characterID: fixture.linkedCharacterID,
+			partyID:     fixture.partyAID,
+			requesterID: fixture.playerRequesterID,
+		},
+		{
+			name:        "GM from another Party",
+			characterID: fixture.linkedCharacterID,
+			partyID:     fixture.partyAID,
+			requesterID: fixture.gmBID,
+		},
+		{
+			name:        "unknown character",
+			characterID: uuid.MustParse("62000000-0000-0000-0000-000000000099"),
+			partyID:     fixture.partyAID,
+			requesterID: fixture.gmAID,
+		},
+		{
+			name:        "foreign unlinked character",
+			characterID: fixture.foreignCharacterID,
+			partyID:     fixture.partyAID,
+			requesterID: fixture.gmAID,
+		},
+		{
+			name:        "requester-owned but unlinked character",
+			characterID: fixture.gmOwnedUnlinkedCharacterID,
+			partyID:     fixture.partyAID,
+			requesterID: fixture.gmAID,
+		},
+		{
+			name:        "character linked to another Party",
+			characterID: fixture.otherPartyCharacterID,
+			partyID:     fixture.partyAID,
+			requesterID: fixture.gmAID,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := fixture.repository.GetByIDForPartyGM(context.Background(), tt.characterID, tt.partyID, tt.requesterID); !errors.Is(err, ErrNotFound) {
+				t.Fatalf("expected ErrNotFound, got %v", err)
+			}
+		})
+	}
+}
+
+func TestGetByIDForPartyGMPreservesDatabaseErrors(t *testing.T) {
+	pool := setupIntegrationDatabase(t)
+	repository := NewRepository(pool)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := repository.GetByIDForPartyGM(ctx, uuid.New(), uuid.New(), uuid.New())
+	if err == nil {
+		t.Fatal("expected canceled authorization query to fail")
+	}
+	if errors.Is(err, ErrNotFound) {
+		t.Fatal("database error must remain distinct from ErrNotFound")
+	}
+}
+
+type partyGMCharacterFixture struct {
+	repository                 *Repository
+	partyAID                   uuid.UUID
+	gmAID                      uuid.UUID
+	gmBID                      uuid.UUID
+	targetPlayerID             uuid.UUID
+	playerRequesterID          uuid.UUID
+	nonMemberID                uuid.UUID
+	linkedCharacterID          uuid.UUID
+	foreignCharacterID         uuid.UUID
+	gmOwnedUnlinkedCharacterID uuid.UUID
+	otherPartyCharacterID      uuid.UUID
+	referencePayload           json.RawMessage
+	characterCreatedAt         time.Time
+	characterUpdatedAt         time.Time
+}
+
+func setupPartyGMCharacterFixture(t *testing.T) partyGMCharacterFixture {
+	t.Helper()
+	pool := setupIntegrationDatabase(t)
+	repository := NewRepository(pool)
+
+	fixture := partyGMCharacterFixture{
+		repository:                 repository,
+		partyAID:                   uuid.MustParse("61000000-0000-0000-0000-000000000001"),
+		gmAID:                      uuid.MustParse("60000000-0000-0000-0000-000000000001"),
+		gmBID:                      uuid.MustParse("60000000-0000-0000-0000-000000000002"),
+		targetPlayerID:             uuid.MustParse("60000000-0000-0000-0000-000000000003"),
+		playerRequesterID:          uuid.MustParse("60000000-0000-0000-0000-000000000004"),
+		nonMemberID:                uuid.MustParse("60000000-0000-0000-0000-000000000005"),
+		linkedCharacterID:          uuid.MustParse("62000000-0000-0000-0000-000000000001"),
+		foreignCharacterID:         uuid.MustParse("62000000-0000-0000-0000-000000000002"),
+		gmOwnedUnlinkedCharacterID: uuid.MustParse("62000000-0000-0000-0000-000000000003"),
+		otherPartyCharacterID:      uuid.MustParse("62000000-0000-0000-0000-000000000004"),
+		referencePayload:           json.RawMessage(`{"actions":[{"name":"Longbow","damage":"1d8+4"}],"features":[{"name":"Colossus Slayer"}],"spells":[{"name":"Hunter's Mark"}]}`),
+		characterCreatedAt:         time.Date(2026, 7, 14, 8, 0, 0, 0, time.UTC),
+		characterUpdatedAt:         time.Date(2026, 7, 14, 9, 0, 0, 0, time.UTC),
+	}
+	otherPartyID := uuid.MustParse("61000000-0000-0000-0000-000000000002")
+	otherPartyPlayerID := uuid.MustParse("60000000-0000-0000-0000-000000000006")
+
+	users := []struct {
+		id       uuid.UUID
+		username string
+	}{
+		{id: fixture.gmAID, username: "gm-a"},
+		{id: fixture.gmBID, username: "gm-b"},
+		{id: fixture.targetPlayerID, username: "target-player"},
+		{id: fixture.playerRequesterID, username: "requester-player"},
+		{id: fixture.nonMemberID, username: "non-member"},
+		{id: otherPartyPlayerID, username: "other-party-player"},
+	}
+	for _, user := range users {
+		insertTestUser(t, pool, user.id, user.username)
+	}
+
+	createPartyGMCharacter(t, repository, fixture.linkedCharacterID, fixture.targetPlayerID, "Complete Hero", fixture.referencePayload, fixture.characterCreatedAt, fixture.characterUpdatedAt)
+	createPartyGMCharacter(t, repository, fixture.foreignCharacterID, fixture.nonMemberID, "Foreign Hero", json.RawMessage(`{"secret":"foreign"}`), fixture.characterCreatedAt, fixture.characterUpdatedAt)
+	createPartyGMCharacter(t, repository, fixture.gmOwnedUnlinkedCharacterID, fixture.gmAID, "GM Hero", json.RawMessage(`{"secret":"gm-owned"}`), fixture.characterCreatedAt, fixture.characterUpdatedAt)
+	createPartyGMCharacter(t, repository, fixture.otherPartyCharacterID, otherPartyPlayerID, "Other Party Hero", json.RawMessage(`{"secret":"other-party"}`), fixture.characterCreatedAt, fixture.characterUpdatedAt)
+	playerRequesterCharacterID := uuid.MustParse("62000000-0000-0000-0000-000000000005")
+	createPartyGMCharacter(t, repository, playerRequesterCharacterID, fixture.playerRequesterID, "Requester Hero", json.RawMessage(`{"secret":"requester"}`), fixture.characterCreatedAt, fixture.characterUpdatedAt)
+
+	insertCharacterRepositoryParty(t, pool, fixture.partyAID, "Party A", fixture.gmAID)
+	insertCharacterRepositoryParty(t, pool, otherPartyID, "Party B", fixture.gmBID)
+	insertCharacterRepositoryMembership(t, pool, "63000000-0000-0000-0000-000000000001", fixture.partyAID, fixture.gmAID, "gm", nil)
+	insertCharacterRepositoryMembership(t, pool, "63000000-0000-0000-0000-000000000002", fixture.partyAID, fixture.targetPlayerID, "player", &fixture.linkedCharacterID)
+	insertCharacterRepositoryMembership(t, pool, "63000000-0000-0000-0000-000000000003", fixture.partyAID, fixture.playerRequesterID, "player", &playerRequesterCharacterID)
+	insertCharacterRepositoryMembership(t, pool, "63000000-0000-0000-0000-000000000004", otherPartyID, fixture.gmBID, "gm", nil)
+	insertCharacterRepositoryMembership(t, pool, "63000000-0000-0000-0000-000000000005", otherPartyID, otherPartyPlayerID, "player", &fixture.otherPartyCharacterID)
+
+	return fixture
+}
+
+func createPartyGMCharacter(
+	t *testing.T,
+	repository *Repository,
+	id uuid.UUID,
+	ownerID uuid.UUID,
+	name string,
+	referencePayload json.RawMessage,
+	createdAt time.Time,
+	updatedAt time.Time,
+) {
+	t.Helper()
+	subclass := "Hunter"
+	_, err := repository.Create(context.Background(), Character{
+		ID:             id,
+		OwnerSubjectID: &ownerID,
+		Name:           name,
+		ClassName:      "Ranger",
+		SubclassName:   &subclass,
+		Level:          7,
+		Ancestry:       "Wood Elf",
+		Background:     "Outlander",
+		AbilityScores: AbilityScores{
+			Strength:     10,
+			Dexterity:    18,
+			Constitution: 14,
+			Intelligence: 11,
+			Wisdom:       16,
+			Charisma:     9,
+		},
+		HitPoints:        HitPoints{Current: 41, Max: 52},
+		ArmorClass:       16,
+		SpeedFt:          35,
+		ReferencePayload: referencePayload,
+		CreatedAt:        createdAt,
+		UpdatedAt:        updatedAt,
+	})
+	if err != nil {
+		t.Fatalf("create Party GM character fixture: %v", err)
+	}
+}
+
+func insertCharacterRepositoryParty(t *testing.T, pool *pgxpool.Pool, id uuid.UUID, name string, creatorID uuid.UUID) {
+	t.Helper()
+	now := time.Date(2026, 7, 14, 10, 0, 0, 0, time.UTC)
+	_, err := pool.Exec(context.Background(), `
+INSERT INTO parties (id, name, created_by_user_id, created_at, updated_at)
+VALUES ($1::uuid, $2, $3::uuid, $4, $4)`, id.String(), name, creatorID.String(), now)
+	if err != nil {
+		t.Fatalf("insert character repository Party: %v", err)
+	}
+}
+
+func insertCharacterRepositoryMembership(
+	t *testing.T,
+	pool *pgxpool.Pool,
+	id string,
+	partyID uuid.UUID,
+	userID uuid.UUID,
+	role string,
+	characterID *uuid.UUID,
+) {
+	t.Helper()
+	var characterIDText *string
+	if characterID != nil {
+		value := characterID.String()
+		characterIDText = &value
+	}
+	_, err := pool.Exec(context.Background(), `
+INSERT INTO party_memberships (id, party_id, user_id, role, character_id, joined_at)
+VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::uuid, $6)`,
+		id, partyID.String(), userID.String(), role, characterIDText, time.Date(2026, 7, 14, 10, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("insert character repository membership: %v", err)
 	}
 }

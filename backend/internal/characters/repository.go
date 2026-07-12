@@ -178,6 +178,63 @@ WHERE id = $1::uuid
 	return character, nil
 }
 
+func (repository *Repository) GetByIDForPartyGM(
+	ctx context.Context,
+	id uuid.UUID,
+	partyID uuid.UUID,
+	requesterID uuid.UUID,
+) (Character, error) {
+	const query = `
+SELECT
+  c.id::text,
+  c.owner_subject_id::text,
+  c.name,
+  c.class_name,
+  c.subclass_name,
+  c.level,
+  c.ancestry,
+  c.background,
+  c.strength_score,
+  c.dexterity_score,
+  c.constitution_score,
+  c.intelligence_score,
+  c.wisdom_score,
+  c.charisma_score,
+  c.hp_current,
+  c.hp_max,
+  c.armor_class,
+  c.speed_ft,
+  c.reference_payload,
+  c.created_at,
+  c.updated_at
+FROM characters c
+JOIN party_memberships linked_membership
+  ON linked_membership.character_id = c.id
+ AND linked_membership.party_id = $2::uuid
+ AND linked_membership.role = 'player'
+JOIN party_memberships requester_membership
+  ON requester_membership.party_id = linked_membership.party_id
+ AND requester_membership.user_id = $3::uuid
+ AND requester_membership.role = 'gm'
+WHERE c.id = $1::uuid`
+
+	character, err := scanCharacter(repository.pool.QueryRow(
+		ctx,
+		query,
+		id.String(),
+		partyID.String(),
+		requesterID.String(),
+	))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Character{}, ErrNotFound
+	}
+	if err != nil {
+		return Character{}, err
+	}
+
+	return character, nil
+}
+
 func (repository *Repository) ListSummariesForOwner(ctx context.Context, ownerID uuid.UUID) ([]CharacterSummary, error) {
 	const query = `
 SELECT
