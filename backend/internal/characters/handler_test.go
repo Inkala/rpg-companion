@@ -407,6 +407,37 @@ func TestCharacterCreateRejectsInconsistentCharacterSheetIdentityBeforePersisten
 	}
 }
 
+func TestCharacterCreateRejectsInvalidCharacterSheetSummaryBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	testSummary(envelope)["displayLine"] = "must-not-be-reflected"
+	delete(testSummary(envelope), "landingConcept")
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected summary: %s", recorder.Body.String())
+	}
+}
+
 func withAuthenticatedUser(request *http.Request, userID uuid.UUID) *http.Request {
 	user := auth.AuthenticatedUser{ID: userID, UsernameCanonical: "mara", Username: "Mara"}
 	return request.WithContext(auth.WithAuthenticatedUser(request.Context(), user))
@@ -588,7 +619,7 @@ func validCharacterJSON() []byte {
 			"schemaVersion": "CharacterSheetV1",
 			"ruleset": {"system":"dnd5e","version":"2014","sourceStatus":"audited-sample"},
 			"identity": {"name":"Mara Vale","ancestry":"Human","background":"Outlander","classes":[{"name":"Ranger","level":3,"subclass":"Hunter"}]},
-			"summary": {},
+			"summary": {"displayLine":"Human Ranger - Level 3","landingConcept":"A steady wilderness scout.","featuredAbilities":[],"referenceSections":[]},
 			"abilities": {"scores":{"strength":10,"dexterity":16,"constitution":14,"intelligence":10,"wisdom":14,"charisma":8}},
 			"combat": {},
 			"proficiencies": {},

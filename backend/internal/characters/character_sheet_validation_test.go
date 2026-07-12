@@ -182,7 +182,7 @@ func TestCharacterSheetEnvelopeRejectsCaseVariantFieldNames(t *testing.T) {
 
 func TestCharacterSheetEnvelopeAllowsOtherOpaqueNestedFields(t *testing.T) {
 	envelope := testCharacterSheetEnvelope()
-	envelope["summary"].(map[string]any)["futureNestedField"] = map[string]any{"anything": true}
+	envelope["combat"].(map[string]any)["futureNestedField"] = map[string]any{"anything": true}
 	assertValidCharacterSheetPayload(t, envelope)
 }
 
@@ -229,7 +229,12 @@ func testCharacterSheetEnvelope() map[string]any {
 				map[string]any{"name": "Ranger", "level": 3, "subclass": "Hunter"},
 			},
 		},
-		"summary": map[string]any{},
+		"summary": map[string]any{
+			"displayLine":       "Human Ranger - Level 3",
+			"landingConcept":    "A steady wilderness scout.",
+			"featuredAbilities": []any{},
+			"referenceSections": []any{},
+		},
 		"abilities": map[string]any{
 			"scores": map[string]any{
 				"strength":     10,
@@ -254,6 +259,19 @@ func testCharacterSheetEnvelope() map[string]any {
 func maraAuditedSampleEnvelope() map[string]any {
 	envelope := testCharacterSheetEnvelope()
 	envelope["ruleset"].(map[string]any)["sourceStatus"] = "audited-sample"
+	envelope["summary"] = map[string]any{
+		"displayLine":       "Human Ranger · Level 3",
+		"supportingLine":    "Hunter · Outlander",
+		"landingConcept":    "A steady wilderness scout with quick rules reminders.",
+		"portraitAssetId":   "mara-vale-portrait",
+		"portraitAlt":       "Portrait of Mara Velard",
+		"featuredAbilities": []any{"Longbow", "Colossus Slayer"},
+		"referenceSections": []any{
+			map[string]any{"id": "actions", "label": "Actions", "defaultOpen": true},
+			map[string]any{"id": "features", "label": "Features", "defaultOpen": false},
+			map[string]any{"id": "spells", "label": "Spells", "defaultOpen": false},
+		},
+	}
 	envelope["actions"] = []any{map[string]any{"id": "longbow", "name": "Longbow"}}
 	envelope["features"] = []any{map[string]any{"id": "colossus-slayer", "name": "Colossus Slayer"}}
 	envelope["spellcasting"] = map[string]any{"ability": "wisdom", "spells": []any{}}
@@ -269,6 +287,16 @@ func generatedFighterEnvelope() map[string]any {
 		"classes":    []any{map[string]any{"name": "Fighter", "level": 1}},
 	}
 	envelope["abilities"] = map[string]any{"scores": abilityScoreMap(16, 11, 15, 9, 13, 14)}
+	envelope["summary"] = map[string]any{
+		"displayLine":       "Human Fighter - Level 1",
+		"supportingLine":    "Strength melee Fighter - Soldier",
+		"landingConcept":    "A sturdy beginner Fighter built to protect allies.",
+		"featuredAbilities": []any{"Longsword", "Second Wind"},
+		"referenceSections": []any{
+			map[string]any{"id": "actions", "label": "Actions", "defaultOpen": true},
+			map[string]any{"id": "features", "label": "Features", "defaultOpen": false},
+		},
+	}
 	envelope["actions"] = []any{map[string]any{"id": "longsword", "name": "Longsword"}}
 	envelope["features"] = []any{map[string]any{"id": "second-wind", "name": "Second Wind"}}
 	return envelope
@@ -284,6 +312,12 @@ func minimumManualEnvelope() map[string]any {
 		"classes":    []any{map[string]any{"name": "Cleric", "level": 1}},
 	}
 	envelope["abilities"] = map[string]any{"scores": abilityScoreMap(10, 10, 10, 10, 10, 10)}
+	envelope["summary"] = map[string]any{
+		"displayLine":       "Human Cleric - Level 1",
+		"landingConcept":    "Manual character transferred from an existing sheet.",
+		"featuredAbilities": []any{},
+		"referenceSections": []any{},
+	}
 	return envelope
 }
 
@@ -298,7 +332,16 @@ func fullManualEnvelope() map[string]any {
 		"classes":    []any{map[string]any{"name": "Cleric", "level": 3, "subclass": "Life Domain"}},
 	}
 	envelope["abilities"] = map[string]any{"scores": abilityScoreMap(10, 12, 14, 10, 16, 8)}
-	envelope["summary"] = map[string]any{"displayLine": "Human Cleric - Level 3", "featuredAbilities": []any{"Mace", "Channel Divinity"}}
+	envelope["summary"] = map[string]any{
+		"displayLine":       "Human Cleric - Level 3",
+		"supportingLine":    "Life Domain - Acolyte",
+		"landingConcept":    "Traveling healer",
+		"featuredAbilities": []any{"Mace", "Channel Divinity"},
+		"referenceSections": []any{
+			map[string]any{"id": "actions", "label": "Actions", "defaultOpen": true},
+			map[string]any{"id": "features", "label": "Features", "defaultOpen": false},
+		},
+	}
 	envelope["actions"] = []any{map[string]any{"id": "mace", "name": "Mace"}}
 	envelope["features"] = []any{map[string]any{"id": "channel-divinity", "name": "Channel Divinity"}}
 	envelope["personality"] = map[string]any{"notes": []any{"Transferred from an existing sheet."}}

@@ -721,7 +721,7 @@ func validCharacterJSON() string {
 			"schemaVersion": "CharacterSheetV1",
 			"ruleset": {"system":"dnd5e","version":"2014","sourceStatus":"audited-sample"},
 			"identity": {"name":"Mara Vale","ancestry":"Human","background":"Outlander","classes":[{"name":"Ranger","level":3,"subclass":"Hunter"}]},
-			"summary": {},
+			"summary": {"displayLine":"Human Ranger - Level 3","landingConcept":"A steady wilderness scout.","featuredAbilities":[],"referenceSections":[]},
 			"abilities": {"scores":{"strength":10,"dexterity":16,"constitution":14,"intelligence":10,"wisdom":14,"charisma":8}},
 			"combat": {},
 			"proficiencies": {},
