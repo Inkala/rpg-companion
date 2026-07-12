@@ -7,6 +7,9 @@ Lightweight SDD instructions for the RPG Companion project.
 Help build a D&D 5E player companion app through small, complete, user-testable releases.
 One task at a time, spec before code, no invented requirements.
 
+Until the 20 July 2026 TFM deadline, protect the formal submission package before adding optional
+feature breadth. The application only needs to remain operational through teacher review.
+
 ## Communication
 
 - Be direct, resourceful, opinionated, friendly, and concise.
@@ -17,12 +20,14 @@ One task at a time, spec before code, no invented requirements.
 
 ## Key documents to know
 
-- `docs/project-checklist.md` — source of truth for what needs to be built and when
-- `docs/course-rubric.md` — engineering practices this project is evaluated on
-- `docs/product-decisions.md` — product scope, user flows, and feature roadmap (v1 through v5)
-- `docs/design.md` — visual direction, screen priorities, accessibility requirements
-- `docs/risks.md` — known risks and their mitigations
-- `docs/course-material-index.md` — course content index (for rubric traceability)
+- `docs/submission-checklist.md`: final-week delivery source of truth
+- `docs/orchestration.md`: orchestrator, worker-session, worktree, and reporting contract
+- `docs/project-checklist.md`: broader course-evidence checklist, not the formal TFM contract
+- `docs/course-rubric.md`: engineering practices this project is evaluated on
+- `docs/product-decisions.md`: product scope, user flows, and feature roadmap (v1 through v5)
+- `docs/design.md`: visual direction, screen priorities, accessibility requirements
+- `docs/risks.md`: known risks and their mitigations
+- `docs/course-material-index.md`: course content index (for rubric traceability)
 
 ## Startup
 
@@ -30,6 +35,8 @@ One task at a time, spec before code, no invented requirements.
 2. Read `CURRENT.md`.
 3. If a task is active, read only `tasks/TASK_ID/PLAN.md` and `tasks/TASK_ID/TASKS.md` first.
 4. State the active task, its state, and the single next action.
+5. Worker sessions must also confirm that the current path and branch match their prompt before any
+   edit.
 
 Lazy-load detail only when needed:
 
@@ -50,6 +57,10 @@ Lazy-load detail only when needed:
 7. Commit only when explicitly asked.
 
 See `docs/sdd.md` for the full workflow.
+
+Worker sessions normally update only their assigned task folder and declared implementation files.
+The orchestrator owns shared status records and GitHub planning metadata. See
+`docs/orchestration.md`.
 
 ## Parallel Worktrees
 
@@ -72,9 +83,12 @@ coding task starts, state:
   section 4 before implementation.
 - Accessibility is built in, not retrofitted. Check `docs/design.md` accessibility requirements
   before starting any UI task.
-- No feature should be implemented without a matching entry in `docs/project-checklist.md`.
-- `docs/project-checklist.md` is the stage gating mechanism. A checklist item must be checked
-  before moving to the next one.
+- No feature should be implemented without a matching approved task and a reason tied to
+  `docs/submission-checklist.md` or an explicit product decision.
+- `docs/project-checklist.md` is a course-evidence backlog. It does not override the formal TFM
+  deliverables or force unfinished roadmap stages into the submission.
+- Only the orchestrator updates `CURRENT.md`, `WORKLOG.md`, `DECISIONS.md`, `BACKLOG.md`, shared
+  checklists, and GitHub planning state unless a worker prompt explicitly assigns that integration.
 
 ## Safety
 
@@ -83,5 +97,9 @@ services, running destructive commands, rewriting large areas of code.
 
 ## End of session
 
-Update the active task checklist and notes, append a short `WORKLOG.md` entry, update `CURRENT.md`
-with one clear next action, and record any durable decisions in `DECISIONS.md`.
+Worker session: update the assigned task checklist/notes when authorized and return the standard
+report from `docs/orchestration.md`. Do not edit shared coordination files by default.
+
+Orchestrator session: reconcile the worker report, update shared checklists and notes, append a short
+`WORKLOG.md` entry, update `CURRENT.md` with one clear next action, and record durable decisions in
+`DECISIONS.md`.

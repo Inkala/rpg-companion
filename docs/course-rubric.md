@@ -1,11 +1,16 @@
 # Course Rubric: RPG Companion
 
+**Status note, 2026-07-11:** This is an internal mapping of course topics to possible project
+evidence. It is intentionally broader than the formal TFM submission requirements. During the final
+week, use `docs/submission-checklist.md` first. Unfinished items here are evidence opportunities, not
+automatic blockers to submission.
+
 **Purpose:** Extract the engineering practices the course evaluates, mapped to what this specific project needs. This is not a feature list and not a summary of lessons. It answers: *what must the project demonstrate, and when.*
 
 **What is not in this file:** feature requirements, UI decisions, D&D rules logic. Those live in `product-decisions.md` and `design.md`. Open architectural choices (which DB, which auth library, which cloud provider) are listed as open questions at the end.
 
 **Release stages:**
-- **v1** — Core party and character access (must ship)
+- **v1** — Core party and character access (original product roadmap target)
 - **v2** — Character reference and quick explanations
 - **v3** — Guided onboarding
 - **v4** — Character progression

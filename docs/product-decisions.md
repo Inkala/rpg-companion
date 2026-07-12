@@ -1,9 +1,13 @@
 # Product Decisions — RPG Player Companion
 
-**Status:** Active decision record  
-**Last updated:** 20 June 2026  
-**Working name:** TBD — one-word fantasy/mythological animal or wisdom-guide name  
-**Tagline direction:** “Your party companion” / “Join the adventure, not the homework.”
+**Status:** Long-term product direction. See `CURRENT.md` for implemented state.
+**Last reconciled:** 11 July 2026
+**Product name:** Hunin
+**Tagline:** “Your party companion.”
+
+Final-week note: the formal TFM package takes priority over this future roadmap until 20 July 2026.
+The supported public/demo ruleset is D&D 5E 2014. AI is deferred from the submission unless the
+required artifacts and review path are already secure.
 
 ---
 
@@ -681,16 +685,16 @@ Character creation guidance is important, but comes after the existing-character
 
 # Open Decisions
 
-- [ ] Confirm whether the current party uses D&D 2014 rules, D&D 2024 rules, or a mixed/house-rule version.
-- [ ] Choose final app name.
+- [x] Support D&D 5E 2014 for the public/demo scope.
+- [x] Use Hunin as the product name.
 - [ ] Decide whether invite links, invite codes, or both are needed.
 - [ ] Decide the minimum character fields required before a player can use Character Reference.
 - [ ] Decide which class/race/background options are supported in guided creation first.
-- [ ] Decide whether character PDF export is required for MVP or Scooter stage.
+- [x] Defer character PDF export from the TFM submission.
 - [ ] Decide which open/SRD rules source will support search and quick-reference content.
 - [ ] Decide the exact visual direction after reviewing examples.
 - [ ] Decide whether party members can see each other’s full sheets or only the GM can.
-- [ ] Decide whether AI is included before submission or treated as a final optional enhancement.
+- [x] Treat AI as a post-submission optional enhancement.
 
 ---
 

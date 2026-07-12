@@ -1,76 +1,70 @@
 # Current Work
 
-Active priority: review T-014A Character Reference compact header/stat polish
+Submission deadline: 20 July 2026
 
-State: Main is expected to be clean and pushed. Railway has been selected for the first public
-backend deployment, and the public backend deployment is complete and smoke-tested.
+Most recent coordination task: T-016 Orchestration reset and TFM submission alignment
 
-T-002 status: authentication and owner-scoped character implementation completed, committed, and validated.
+State: docs-only implementation complete and validated. This coordination checkpoint changed no
+product code.
 
-T-004 status: reusable Character Reference extraction has merged into main.
+## Source of truth
 
-T-006 status: Home action hierarchy and form/button polish completed, committed, and validated.
+1. `docs/submission-checklist.md`: final-week delivery priorities.
+2. This file: active worktrees, integration state, and one next action.
+3. Active task documents: scope, checklist, and validation evidence.
+4. `docs/project-checklist.md`: broader course-evidence backlog.
+5. GitHub project board: mirrored planning view.
 
-T-007 status: frontend app-shell architecture refactor completed, committed, pushed, and validated.
+## In-flight implementation
 
-T-010 status: Fill the sheet myself V1 is complete, committed, pushed, validated, and publicly
-smoke-tested. The implementation shipped in `911fef1`, `b3fca28`, and `a0df4b9`. Users can choose
-`Fill the sheet myself` from `/characters/new`, enter required core sheet data, include one optional
-action and one optional feature or note, review, save while signed in, see the character in My
-characters, open saved Character Reference, and refresh the saved URL. No blocking bugs were found.
+### T-015 mobile profile navigation follow-up
 
-T-011 status: character creation entry and draft foundation completed, pushed, and validated.
+- Status: committed and pushed as `0a724fb fix(accounts): improve mobile account menu`.
+- CI: passed on 2026-07-12.
+- Integrated files:
+  - `frontend/src/App.tsx`
+  - `frontend/src/app/AppShell.tsx`
+  - `frontend/src/app/AppShell.test.tsx`
+- Outcome: mobile `My profile` now navigates to `/profile` and closes the menu. Desktop profile
+  navigation and mobile sign-out remain intact.
+- TDD evidence: expected red tests for mobile profile navigation and icon state, followed by 154
+  passing tests.
+- Validation: focused/full frontend tests, lint, typecheck, build, `git diff --check`, and GitHub CI
+  passed.
 
-T-012 status: revised Help me choose questionnaire completed, committed, pushed, and validated.
-It adds a 5-question, 4-answer quiz with broader fantasy buckets, supported Fighter fallback
-scoring, honest future-path messaging, and no saving/backend behavior.
+The original T-015 worktree is clean:
 
-T-013 status: generated Fighter save flow completed, committed, pushed, validated, and smoke-tested
-locally. Selected Help me choose Fighter builds generate `CharacterSheetV1`, review before save,
-persist through authenticated `POST /characters`, appear in My characters, and open in Character
-Reference.
+- Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-profile-page`
+- Branch: `marcela.ramirez/T-profile/read_only_profile_page`
+- HEAD: `86fe342`
+- Status: implementation already merged to main; worktree cleanup requires explicit approval later.
 
-T-013A scope: add pure frontend generated Fighter data and mappers only. No review step, save UI,
-backend calls, routes, My characters card changes, or Character Reference loading changes.
+## Delivered baseline
 
-T-013B scope: add generated character review after Help me choose selection, signed-in
-authenticated save, signed-out save prompt, loading/error/success states, and create-character API
-helper. No saved-character route or Character Reference loading.
+- Public frontend and backend are deployed and smoke-tested.
+- Registration, sign-in, sign-out, and session restoration work.
+- Signed-in users can create and save generated Fighter characters.
+- Signed-in users can transfer a manual character sheet and save it.
+- My characters lists owner-scoped characters.
+- Saved characters open and refresh in Character Reference.
+- Mara Vale remains a public guest sample with quick reference.
+- T-014A compact Character Reference polish is merged.
+- T-015 read-only profile page is merged.
+- T-015 mobile profile navigation and account-menu icon follow-up is merged.
+- CI passed on `0a724fb`.
 
-T-013C status: added `/characters/:id`, saved character detail loading, valid `CharacterSheetV1`
-rendering in Character Reference, My characters open actions, and Open Character Reference after
-save success. Manual smoke testing found one copy bug in the saved reference back label; it was
-fixed and pushed in `70e80e6`.
+## Final-week constraints
 
-T-014 status: GM feedback triage for Character Reference completed, committed, pushed, and
-validated as a docs-only task. It recommends Character Reference compact stat/header polish as a
-future small product slice, not as the active priority.
+- Formal submission artifacts outrank optional product features.
+- No new coding task starts in the dirty main checkout.
+- Parallel coding uses separate worktrees with disjoint ownership.
+- Worker sessions do not edit shared coordination records.
+- Party features, guest draft migration, account hardening, resource tracking, and AI remain deferred
+  unless the submission checklist is secure or Marcela explicitly reprioritizes them.
 
-T-014A status: implementation complete and validated locally. Absent concentration no longer
-becomes synthetic `No concentration` copy, HP and AC remain prominent, Speed remains visible with
-lower visual weight, and secondary stats are more compact. No backend, route, API, data model, or
-dependency changes were made.
+## Single next action
 
-Public smoke status: public smoke testing passed on 2026-07-11 at
-`https://hunin.marceramirez.com`. Backend health passed at
-`https://api.hunin.marceramirez.com/healthz`, returning
-`{"status":"ok","service":"hunin-backend"}`. Frontend availability passed with HTTP 200 through
-Cloudflare. Account signup, logout, and login passed. Both public creation paths now work: Help me
-choose generated Fighter and Fill the sheet myself manual entry. Saving, My characters listing,
-opening saved Character Reference, refreshing the saved Character Reference URL, and generic avatar
-fallback all passed. Manual optional action displayed. Manual optional feature displayed after
-expanding the existing collapsed Features section. Mara sample still opens. A quick mobile-width
-check found no horizontal overflow on home/My characters or sample Character Reference.
+Select the next product priority and create its requirements before starting another coding
+worktree.
 
-Known non-blocking note: manual features are collapsed by default after refresh because Features is
-an existing collapsed Character Reference section. This is consistent with current behavior.
-
-Production smoke-test residue: disposable account `t010cglx3py@example.com` and characters
-`Smoke Fighter t010cglx3py` and `Smoke Manual t010cglx3py` remain in production because there is no
-deletion flow yet.
-
-Next action: review the T-014A diff and validation evidence before staging or committing.
-
-Task folder: `tasks/T-014A/`
-
-Last updated: 2026-07-11
+Last updated: 2026-07-12

@@ -1,72 +1,65 @@
 # Backlog
 
-Index of all planned work. When a task becomes active, move it to `CURRENT.md` and track detail
-in `tasks/TASK_ID/`. The stage order in `docs/project-checklist.md` is the priority order.
+This is a concise future-work index. It is not the final-week source of truth.
 
-Status note, 2026-07-11: this is an older roadmap index. Existing `tasks/T-###/` folders,
-`CURRENT.md`, and `WORKLOG.md` are the source of truth for active/recent task IDs. Do not assume the
-IDs below match current task folders without checking `tasks/`.
+Use, in order:
 
----
+1. `docs/submission-checklist.md` for delivery priority.
+2. `CURRENT.md` for active work and ownership.
+3. `tasks/T-*/` for approved task scope and evidence.
+4. This file only when selecting future work.
 
-## Active
+Task IDs reflect actual task folders and do not map reliably to the older GitHub issue numbering.
 
-- [x] T-001: Foundation — design, decisions, and project setup
+## Active integration
 
----
+- [x] T-015 follow-up: mobile profile navigation and account-menu icon improvements integrated in
+  `0a724fb`; CI passed.
+- [ ] T-016: complete the orchestration, documentation, submission, and GitHub synchronization reset.
 
-## v1: Core Party and Character Access
+## P0: TFM submission package
 
-- [ ] T-002: Auth and user profile (register, log in, log out, display name, picture, settings)
-- [ ] T-003: Guest character creation flow (localStorage draft, disabled save, migration on sign-up)
-- [ ] T-004: Standalone characters (add a character not linked to a party, character list)
-- [ ] T-005: Party creation and invite flow (GM creates party, invite link or code, player joins)
-- [ ] T-006: Party roster and GM character sheet access
-- [ ] T-007: Server-side permission enforcement and 401/403 tests
-- [ ] T-008: OpenAPI spec for all v1 endpoints
-- [ ] T-009: README (local setup, run tests, deploy)
+- [ ] Create a dedicated teacher-review account and saved demo character.
+- [ ] Add teacher-review credentials to README and the submission form.
+- [ ] Create and publish project slides.
+- [ ] Record and publish the narrated screen-capture video.
+- [ ] Run final CI and public smoke validation.
+- [ ] Record the final submission commit and complete the submission form.
 
----
+## P1: High-value course evidence
 
-## v2: Character Reference and Quick Explanations
+Recommended parallel tasks after the current dirty-main integration is resolved:
 
-- [ ] T-010: Abilities, features, and spells (storage and display)
-- [ ] T-011: Quick-reference card (tap to open, effect, action type, resource, duration)
-- [ ] T-012: Action type tags and resource tracking (HP, temp HP, spell slots, limited-use)
-- [ ] T-013: Mobile Character Reference
-- [ ] T-014: Character search within own character
-- [ ] T-015: Accessibility (semantic HTML, ARIA, contrast, touch targets, keyboard nav, axe-core CI)
-- [ ] T-016: Observability (Sentry on frontend, structured logging on backend, one alert)
-- [ ] T-017: E2E test — primary user journey
+- [ ] ADR pack: architecture, PostgreSQL, authentication, and Railway decisions.
+- [ ] OpenAPI specification for implemented auth and character endpoints.
+- [ ] Playwright critical-path E2E test with axe-core accessibility audit.
+- [ ] Coverage reporting and lightweight pre-commit quality gate.
+- [ ] Structured Go request logging and request IDs.
+- [ ] Focused deployed accessibility/contrast audit.
 
----
+## Deferred product work
 
-## v3: Guided Onboarding
+- [ ] Guest draft localStorage persistence and account conversion.
+- [ ] Party creation, invite link/code, joining, and character linking.
+- [ ] GM roster and server-side party authorization.
+- [ ] Profile editing, email verification, and password reset.
+- [ ] Account, character, and production test-data deletion.
+- [ ] Attack reminder badges and calculation breakdowns.
+- [ ] HP/resource tracking and saved-character editing.
+- [ ] Character search, broader rules content, and additional classes.
+- [ ] Level-up guidance.
+- [ ] AI explanation or recommendation feature.
 
-- [ ] T-018: Step-by-step character creation (Help me choose / I know what I want / Decide later)
-- [ ] T-019: Play-style quiz leading to class shortlist
-- [ ] T-020: Character creation form accessibility
+## Completed baseline
 
----
-
-## v4: Character Progression
-
-- [ ] T-021: Level-up flow (automatic updates vs. required decisions)
-- [ ] T-022: Level history and rest tracking
-
----
-
-## If time allows
-
-- [ ] AI: explain ability in plain language (one scoped use case)
-- [ ] Rules search across supported SRD dataset
-- [ ] Printable/exportable character sheet view
-- [ ] Conditions tracking
-- [ ] Shared campaign notes
-- [ ] PDF export
-
----
-
-## Done
-
-(nothing yet)
+- [x] Public guest landing and Mara sample.
+- [x] Mobile Character Reference and Colossus Slayer quick reference.
+- [x] React/TypeScript frontend and Go backend scaffold.
+- [x] PostgreSQL persistence and migrations.
+- [x] Registration, sign-in, sign-out, and owner-scoped sessions.
+- [x] Generated Fighter creation and save.
+- [x] Manual existing-character transfer and save.
+- [x] My characters list and saved Character Reference.
+- [x] Public frontend, Railway backend, PostgreSQL, and smoke testing.
+- [x] Compact Character Reference header/stat polish.
+- [x] Read-only profile page.

@@ -58,3 +58,20 @@ Examples:
 Shared task bookkeeping includes files such as `CURRENT.md`, `WORKLOG.md`, project checklists, and
 active task-status files. Treat these as Red while another active task owns them unless the merge
 order is explicitly coordinated.
+
+## Orchestrator ownership
+
+The orchestrator owns shared coordination records and GitHub planning metadata. Coding worktrees
+must not edit `CURRENT.md`, `WORKLOG.md`, `DECISIONS.md`, `BACKLOG.md`, shared checklists, or the
+GitHub board unless their prompt explicitly assigns a final integration step.
+
+Worker reports replace independent shared bookkeeping. The orchestrator applies shared updates once
+the worker diff and validation evidence have been reviewed.
+
+## Main checkout
+
+Use the main checkout as the integration and orchestration workspace. Prefer separate worktrees for
+Green and planned Yellow coding tasks. Do not start new product work in a dirty main checkout.
+
+An existing dirty main checkout must be registered in `CURRENT.md` with its owner, exact files,
+validation state, and next action before any parallel task begins.

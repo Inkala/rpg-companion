@@ -281,3 +281,19 @@ reviewed for wrapping and overflow risk.
 Decisions: Keep this slice frontend-only and presentation-focused. Preserve active concentration
 text and all existing sample, generated, manual, and generic-avatar paths.
 Next action: Review the T-014A diff and validation evidence before staging or committing.
+
+## 2026-07-11
+
+Task: T-016 orchestration reset and TFM submission alignment
+What changed: Verified the authoritative TFM requirements and 20 July 2026 deadline, added the
+formal submission checklist and parallel-session orchestration contract, rewrote stale current,
+backlog, and README state, reconciled high-context status documents, and updated durable workflow
+decisions. Closed completed GitHub issue 8, narrowed issue 7 to remaining guest-draft conversion,
+and populated project-board Status, Priority, Release, and Area metadata.
+Validation: Visually reviewed the two-page TFM PDF, read back GitHub issue and board state, confirmed
+T-016 changed no product code, and passed `git diff --check` before final bookkeeping.
+Decisions: Formal submission artifacts and a stable review path outrank optional feature breadth.
+The orchestrator owns shared coordination records and GitHub planning state; worker sessions use
+isolated worktrees and return structured reports.
+Next action: Review the validated T-015 mobile profile diff and explicitly decide whether to commit
+it before committing the separate T-016 docs reset.

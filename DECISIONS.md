@@ -141,3 +141,47 @@ Deployment remains manual for now. Production migrations still run explicitly wi
 `golang-migrate`. Frontend deployment must set
 `VITE_API_BASE_URL=https://api.hunin.marceramirez.com`. If Hunin later moves the backend to a
 different registrable domain, session cookie and CSRF settings must be reviewed again.
+
+## 2026-07-11: Final-week submission priority
+
+Context:
+The course-derived project checklist contains a broad set of engineering and product ambitions. The
+authoritative TFM document requires a complete README, source repository, deployment when possible,
+slides, a narrated screen-capture video, and test credentials. The deadline is 20 July 2026.
+
+Decision:
+Use `docs/submission-checklist.md` as the final-week delivery source of truth. Formal submission
+artifacts and a stable review path outrank optional product breadth. Treat
+`docs/project-checklist.md` as a broader course-evidence backlog, not as the formal submission
+contract. Defer AI and large new product flows until the submission package is secure.
+
+Reason:
+The project is educational and only needs to remain operational through teacher review. Shipping
+slides, video, credentials, accurate documentation, and a reliable demo is more valuable than
+starting incomplete party, account, or combat features.
+
+Consequences:
+Long-term production operation, indefinite data retention, deletion cleanup, and optional feature
+continuity are not final-week requirements. High-value engineering evidence such as ADRs, OpenAPI,
+E2E accessibility, coverage, and structured logging may proceed in isolated tasks after required
+artifacts are safely scheduled.
+
+## 2026-07-11: Orchestrator owns shared coordination state
+
+Context:
+Multiple Codex sessions can work in parallel worktrees, but independent edits to `CURRENT.md`,
+`WORKLOG.md`, checklists, and GitHub planning metadata create conflicts and stale status.
+
+Decision:
+Use one orchestrator session to assign worktrees, declare file ownership, prepare worker prompts,
+review reports, coordinate integration, and update shared local/GitHub planning state. Worker
+sessions normally edit only their task folder and declared implementation files.
+
+Reason:
+Central shared-state ownership preserves parallel coding while keeping one reliable status record
+and merge order.
+
+Consequences:
+Worker prompts must require a structured investigation or implementation report. Workers must not
+edit shared coordination files, stage, commit, push, rebase, merge, or alter infrastructure unless
+explicitly authorized. `docs/orchestration.md` defines the operating contract.

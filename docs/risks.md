@@ -1,5 +1,10 @@
 # Project Risks
 
+**Final-week note, 2026-07-11:** The highest delivery risk is spending the remaining time on optional
+product scope while README, review credentials, slides, video, final CI, and smoke testing are not
+complete. The deployment only needs to remain available through teacher review. Use
+`docs/submission-checklist.md` for mitigation priority.
+
 **Purpose:** Track risks that could affect scope, architecture, delivery, legal safety, or user trust.
 
 **Status labels:** Open · Monitoring · Mitigated · Accepted

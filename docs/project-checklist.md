@@ -1,14 +1,20 @@
 # Project Checklist
 
-**How to use this:** Each stage is self-contained and presentable. Completing v1 = minimum submittable product. Everything beyond v1 is "if time allows" — move items to "not in this submission" at presentation time if needed. The deployment pipeline is set up in Foundation so the app is live from the first meaningful commit.
+**Status note, 2026-07-11:** This checklist was derived from course topics and records strong
+engineering/product evidence opportunities. It is not the formal TFM submission contract. The
+authoritative final-week priorities are in `docs/submission-checklist.md`. Do not start unfinished
+roadmap stages merely to clear old boxes while README, credentials, slides, video, final CI, or smoke
+testing remain incomplete.
+
+**How to use this:** Use it to select high-value course evidence after formal submission work is
+safe. A checked item needs the stated evidence. An unchecked item may be partially implemented and
+should not be inferred as absent without checking task notes and code.
 
 **Item format:**
 Each item includes: why it matters, what counts as done, which course area it covers, and which stage it belongs to.
 
-Status note, 2026-07-11: this checklist is still the stage-gating reference, but it has not been
-fully reconciled against the recent MVP loop and Railway deployment planning commits. Before using
-it to approve the next product implementation, run a separate checklist reconciliation pass with
-evidence links rather than inferring completion from old unchecked boxes.
+Reconciliation note: recent task folders, `CURRENT.md`, and `WORKLOG.md` remain the implementation
+evidence source. This file should be checked only when its exact evidence statement is satisfied.
 
 T-010 milestone, 2026-07-11: Fill the sheet myself V1 is complete, committed, pushed, validated, and
 publicly smoke-tested. Both public creation paths now work at `https://hunin.marceramirez.com`:
@@ -58,11 +64,13 @@ Engineering and design decisions that everything else depends on. Not a stage �
 
 ---
 
-- [ ] **Permission model documented**
+- [x] **Permission model documented**
   Why: Roles permeate every feature that involves parties, characters, and users. Defining the model once — before building any of it — prevents inconsistent enforcement across endpoints.
   Evidence: A written permission matrix covering: guest, player, GM. Rules documented: roles are per-party (not global); one character per party per user; a user can be GM in one party and player in another; players edit only their own character; GMs access only characters in parties they manage.
   Course: M6/L5 (secure architecture), R-006 in risks.md
   Stage: Foundation
+  Current evidence: `docs/architecture/data-auth-permissions-options.md` includes the guest,
+  player, GM, membership, ownership, and cross-party permission matrix.
 
 ---
 
@@ -74,11 +82,13 @@ Engineering and design decisions that everything else depends on. Not a stage �
 
 ---
 
-- [ ] **Git repository initialized**
+- [x] **Git repository initialized**
   Why: Secrets excluded from version control from the first commit, not patched in later.
   Evidence: `.gitignore` excludes `.env` and build artifacts. `.env.example` committed with all required variable names and no values. No secrets appear in git history.
   Course: M6/L5 (secrets management), M4/L5 (ENV variables)
   Stage: Foundation
+  Current evidence: public GitHub repository, `.gitignore`, and frontend/backend `.env.example`
+  files are present. No secret was observed in the current tracked files.
 
 ---
 
@@ -98,11 +108,13 @@ Engineering and design decisions that everything else depends on. Not a stage �
 
 ---
 
-- [ ] **CI pipeline configured**
+- [x] **CI pipeline configured**
   Why: Without CI, regressions accumulate silently. With it, every push confirms the project is still in a working state — especially important in the last days before submission.
   Evidence: GitHub Actions (or equivalent) workflow running on push to main and on pull requests. Steps: lint + type-check (frontend and backend) → unit tests → integration tests → build → deploy (if main). Pipeline passes on main branch.
   Course: M5/L1 (DevOps, CI/CD, GitHub Actions), M6/L4 (DevSecOps, security in CI)
   Stage: Foundation
+  Current evidence: `.github/workflows/ci.yml` runs frontend lint, typecheck, tests, and build plus
+  backend tests, vet, integration tests with PostgreSQL, and build. CI passed on `86fe342`.
 
 ---
 
@@ -122,11 +134,12 @@ Goal: a real party can join the app, add their characters, and the GM can see th
 
 ### Auth and user identity
 
-- [ ] **Register, log in, and log out**
+- [x] **Register, log in, and log out**
   Why: Every persistent feature in the app requires an identity. Auth failure cases (wrong password, expired token) must be tested — not just the happy path.
   Evidence: Register, log in, log out working end-to-end. Tests covering: unauthenticated request returns 401; invalid credentials return the correct error; token or session invalidated on logout.
   Course: M6/L5 (auth and credential management), M6/L2 (OWASP: Identification and Authentication Failures)
   Stage: v1
+  Current evidence: T-002, auth backend/frontend tests, and the 2026-07-11 public smoke test.
 
 ---
 
@@ -166,11 +179,13 @@ Goal: a real party can join the app, add their characters, and the GM can see th
 
 ### Characters
 
-- [ ] **Add a character not linked to a party**
+- [x] **Add a character not linked to a party**
   Why: Users should be able to build and manage characters independently of party membership. Not every character belongs to an active campaign.
   Evidence: User can create or transfer a character without selecting a party. Character appears in their character list with "No party" indicated. Can be linked to a party later.
   Course: M2/L2 (use cases, domain model)
   Stage: v1
+  Current evidence: generated and manual standalone character creation, owner-scoped persistence,
+  My characters listing, and saved Character Reference are deployed and smoke-tested.
 
 ---
 
@@ -242,11 +257,13 @@ Goal: a real party can join the app, add their characters, and the GM can see th
 
 ### Permissions (server-side)
 
-- [ ] **Auth middleware: 401 for unauthenticated requests**
+- [x] **Auth middleware: 401 for unauthenticated requests**
   Why: Every protected endpoint must reject unauthenticated requests at the middleware layer, not per-handler.
   Evidence: A request to any protected endpoint without a valid token or session returns 401. Covered by at least one test per endpoint group.
   Course: M6/L5 (auth middleware), M6/L2 (OWASP: Identification and Authentication Failures)
   Stage: v1
+  Current evidence: the Go session middleware protects character create/list/detail routes and is
+  covered by backend handler/server tests.
 
 ---
 
@@ -268,11 +285,13 @@ Goal: a real party can join the app, add their characters, and the GM can see th
 
 ---
 
-- [ ] **README: local setup, run tests, and deploy**
+- [x] **README: local setup, run tests, and deploy**
   Why: An evaluator must be able to run the project without asking questions. A real-world collaborator must be able to get started without onboarding.
   Evidence: README covers: prerequisites, how to copy `.env.example` and fill it in, how to start the app locally with Docker Compose, how to run the test suite, and where the deployed app lives.
   Course: M4/L6 (docs-as-code), M9 (TFM submission)
   Stage: v1
+  Current evidence: README documents prerequisites, setup, execution, test/build commands, project
+  structure, deployed URLs, and known submission placeholders.
 
 ---
 
@@ -284,27 +303,33 @@ Goal: the app helps players understand and reference their character more clearl
 
 ### Character content
 
-- [ ] **Abilities, features, and spells stored and displayed**
+- [x] **Abilities, features, and spells stored and displayed**
   Why: These are the content a player needs to understand what their character can do. Without them, the app is only a character header.
   Evidence: Player can add abilities, class features, and spells to their character. All appear on the character view, organized by type.
   Course: M2/L2 (use cases, domain model), product-decisions.md
   Stage: v2
+  Current evidence: versioned CharacterSheetV1 reference payloads persist structured reference
+  content and render through saved Character Reference. Manual actions/features and generated
+  Fighter content are covered by tests and public smoke testing.
 
 ---
 
-- [ ] **Quick-reference card on tap**
+- [x] **Quick-reference card on tap**
   Why: The core product promise is answering "how does this work again?" within seconds. The card is the mechanism.
   Evidence: Tapping any ability, spell, or feature opens a reference card showing: plain-language effect, action type, resource cost, duration, usage limit, and any important reminders. Card is readable on a small phone screen without scrolling for the most common content.
   Course: M4/L7 (usability, progressive disclosure), design.md
   Stage: v2
+  Current evidence: Mara's Colossus Slayer opens the implemented accessible quick-reference sheet.
 
 ---
 
-- [ ] **Action type tags**
+- [x] **Action type tags**
   Why: Action economy is one of the most commonly forgotten parts of D&D. Tagging each ability removes the need to look it up.
   Evidence: Every ability, spell, and feature is tagged with at least one of: Action / Bonus Action / Reaction / Passive / Concentration / Short Rest / Long Rest. Tags visible without opening the full card.
   Course: product-decisions.md, M4/L7 (information hierarchy)
   Stage: v2
+  Current evidence: Character Reference rows display structured metadata/action tags for the
+  supported sample and saved-character content.
 
 ---
 

@@ -143,13 +143,16 @@ Expected JSON:
 - [ ] Log back in as GM and confirm the player and their character appear on the roster.
 - [ ] Open the player's character sheet as GM.
 
-### Future character reference persistence flow (not part of the current auth milestone)
-- [ ] Log in as a player.
-- [ ] Open the Character Reference for a character with abilities and spells.
-- [ ] Confirm the layout is usable on a phone screen (no horizontal scroll, readable text).
-- [ ] Tap an ability and confirm the quick-reference card opens with the correct information.
-- [ ] Adjust HP and confirm it persists after page refresh.
-- [ ] Mark a spell slot as used and confirm it persists.
+### Current saved Character Reference flow
+- [x] Log in as a player.
+- [x] Create or transfer and save a character.
+- [x] Confirm it appears in My characters.
+- [x] Open its saved Character Reference.
+- [x] Refresh the saved URL and confirm it still loads.
+- [x] Confirm the generic avatar fallback renders when no portrait exists.
+- [ ] Confirm the layout on a real phone (no horizontal scroll, readable text).
+- [ ] Adjust HP and confirm it persists after page refresh (future feature).
+- [ ] Mark a spell slot as used and confirm it persists (future feature).
 
 ### Future permission checks
 - [ ] Attempt to access another player's character URL directly. Confirm 403.

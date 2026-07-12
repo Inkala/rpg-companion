@@ -19,6 +19,18 @@ player needs a reminder.
 
 Full product context: `docs/product-decisions.md`
 
+## Academic Delivery Context
+
+Hunin is the final project for a Master's program in Software Development with AI. The goal is to
+demonstrate applied product, architecture, AI-assisted development, testing, security, cloud, and
+documentation practices through a real application.
+
+Formal deadline: 20 July 2026.
+
+The deployment only needs to remain usable through teacher review. Long-term commercial operation,
+indefinite data retention, and post-review feature continuity are not requirements. During the final
+week, `docs/submission-checklist.md` takes priority over optional roadmap breadth.
+
 ## Users
 
 Primary: the player. Uses the app to create or bring in a character, understand abilities and
@@ -77,7 +89,7 @@ Frontend: React + TypeScript (confirmed)
 
 Backend: Go (confirmed)
 
-Framework (Go): TBD
+Framework (Go): standard library `net/http`
 
 Data storage: PostgreSQL (confirmed)
 
@@ -89,12 +101,11 @@ work.
 
 Testing (backend): Go standard library testing package (confirmed)
 
-Error tracking: TBD — Sentry or equivalent
+Error tracking: not implemented
 
-Logging (backend): TBD — structured JSON, likely `log/slog` or zerolog
+Logging (backend): structured request logging not implemented
 
-Cloud provider: Railway selected for the first public backend deployment. Deployment is not complete
-yet.
+Cloud provider: Railway for the deployed Go backend and PostgreSQL
 
 CI: GitHub Actions (confirmed)
 
@@ -125,30 +136,45 @@ Full permission matrix: `docs/project-checklist.md` Foundation section.
 
 ## Setup Commands
 
-TBD — will be filled in after technology choices are made and the repo is scaffolded.
+Prerequisites: Node 24, pnpm 11.7.0, Go 1.26, Docker, and `golang-migrate`.
 
 Install:
 
 ```sh
-# TBD
+cd frontend
+pnpm install
 ```
 
 Run locally:
 
 ```sh
-docker compose up
+docker compose up -d postgres
+
+migrate -path backend/migrations \
+  -database "postgres://hunin:hunin@localhost:5432/hunin?sslmode=disable" up
+
+cd backend
+DATABASE_URL="postgres://hunin:hunin@localhost:5432/hunin?sslmode=disable" \
+ALLOWED_ORIGINS="http://localhost:5173" \
+go run ./cmd/server
+
+# In another shell
+cd frontend
+VITE_API_BASE_URL="http://localhost:8080" pnpm dev
 ```
 
 Test:
 
 ```sh
-# TBD
+cd frontend && pnpm test
+cd ../backend && go test ./...
 ```
 
 Build:
 
 ```sh
-# TBD
+cd frontend && pnpm build
+cd ../backend && go build ./...
 ```
 
 ## Design Principles

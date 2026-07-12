@@ -1,7 +1,11 @@
 # Design Direction
 
-**Status:** Early draft
+**Status:** Implemented foundation with future design options
 **Purpose:** Record design decisions, priorities, and open questions for the app.
+
+Current shipped identity: Hunin, with Mara Vale as the guest sample. The guest landing page,
+Character Reference, quick-reference sheet, character creation flows, and shared application shell
+are implemented. Open items below are future refinements, not final-week blockers.
 
 ---
 
@@ -317,12 +321,12 @@ Primary use:
 
 ## Open Design Decisions
 
-* [ ] Final app name
+* [x] Final app name: Hunin
 * [ ] Final color palette
 * [ ] Mascot, animal, or familiar motif
 * [ ] Exact fantasy-vs-modern visual balance
 * [ ] Whether Character Reference has light and dark modes
 * [ ] Whether printable character sheets use a parchment-inspired appearance
-* [ ] Which sample character to use for guest exploration
+* [x] Guest sample character: Mara Vale
 * [ ] Whether the app uses illustration, icons only, or both
-* [ ] Which first screen to prototype in Figma
+* [x] First implemented screen family: guest landing, Character Reference, and quick-reference sheet
