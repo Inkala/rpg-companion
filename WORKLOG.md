@@ -337,3 +337,22 @@ base.
   and completes deployed verification.
 - Marcela approved the whole-application T-018 scope. Exact implementation values remain gated on
   the Security worker's investigation report.
+
+## 2026-07-12: Reconciled the T-018 implementation-readiness report
+
+- Confirmed the Security worktree remained clean at `5c57fa1` and no system or repository state was
+  changed during investigation.
+- Reconciled evidence-based request, payload, character, HTTP, authentication, cache, configuration,
+  logging, dependency, and deployment proposals into the T-018 design.
+- Preserved separate approval gates for file deletion, CI/external actions, production configuration,
+  and deployed mutation/smoke testing.
+- Proposed approval of the exact contract followed by Slice 1 only, with a required diff and
+  validation report before advancing.
+
+## 2026-07-12: Approved T-018 exact contract and Slice 1
+
+- Marcela approved the evidence-based implementation values, file ownership, and six-slice order.
+- Authorized only bounded JSON decoding and current auth/character endpoint body limits.
+- Kept server/configuration, auth limiter, deep character validation, repository/CI, production, and
+  deployment work gated on later reports and prompts.
+- Kept file deletion and CI/external actions behind separate explicit approval.

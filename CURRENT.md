@@ -8,7 +8,8 @@ State: the dedicated whole-repository Security review is complete. It found no c
 data-access vulnerability or secret exposure, but confirmed medium-risk weaknesses in the current
 application. Marcela directed that whole-app security hardening and verification finish before new
 feature work continues. T-018 requirements, design, and plan are approved. Exact implementation
-values and file ownership remain pending the Security worker's read-only investigation report.
+values and file ownership are approved. Slice 1, bounded JSON decoding and endpoint body limits, is
+authorized in the dedicated Security worktree.
 
 T-017 Party is paused. Its original product defaults remain approved, while its Party-specific
 security amendment remains pending until T-018 is complete.
@@ -22,10 +23,10 @@ T-017 planning was committed and pushed in `3a327e2`; CI passed.
 - Branch: `codex/t018-security-hardening`
 - Base: the approved T-018 orchestration commit on `main`.
 - Classification: Red, one sequential Security worker.
-- Status: create after the planning checkpoint is committed and CI passes; investigation only until
-  `tasks/T-018/TASKS.md` becomes approved.
-- Expected ownership: exact paths pending investigation; likely backend auth, characters,
-  server/config/startup and tests, Compose, dependency/CI configuration, and task-local evidence.
+- Status: implementation-readiness report complete; exact contract approved; synchronize to the
+  contract commit and implement Slice 1 only.
+- Expected ownership: sequential slices across backend auth, characters, server/config/startup and
+  tests, narrow frontend API/validation files, Compose, and separately approved dependency/CI work.
 - Prohibited: Party implementation and orchestrator-owned shared records.
 
 ## Paused T-017 investigation worktrees
@@ -108,8 +109,7 @@ The original T-015 worktree is clean:
 
 ## Single next action
 
-Commit and push the approved T-018 planning checkpoint, create the dedicated Security worktree, and
-have the existing Security session return exact implementation values, files, tests, production
-checks, and proposed deferrals before code changes.
+Synchronize the approved contract to the clean Security worktree, implement Slice 1 test-first, and
+return its diff, red/green evidence, validation, status, risks, and readiness report before Slice 2.
 
 Last updated: 2026-07-12

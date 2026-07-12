@@ -1,27 +1,47 @@
 # T-018 Tasks: Whole-application security baseline
 
-Status: pending exact implementation contract
+Status: approved
 
 Marcela approved the whole-application scope on 2026-07-12. Implementation remains gated on the
-Security worker's exact numeric limits, proxy/configuration assumptions, file ownership, test-first
-slices, and proposed deferrals. The orchestrator must reconcile that report and change this status to
-`approved` before code edits begin.
+Security worker's implementation-readiness report arrived on 2026-07-12. The orchestrator reconciled
+its proposed numeric limits, proxy/configuration assumptions, file ownership, test-first slices, and
+deferrals into `DESIGN.md`. Marcela approved the exact contract and authorized Slice 1 on
+2026-07-12. Later slices still require an orchestrator prompt, and deletion, CI/infrastructure, and
+production changes retain their explicit approval gates.
 
 ## 1. Freeze the security contract
 
-- [ ] Confirm the report covers the full current application and record every finding disposition.
-- [ ] Freeze exact request, string, numeric, collection, and CharacterSheetV1 limits.
-- [ ] Freeze HTTP timeout and header-size values.
-- [ ] Freeze proxy-aware authentication limiter keys, limits, windows, cleanup, and response behavior.
-- [ ] Freeze generic registration-collision and missing-user timing behavior.
-- [ ] Decide which dependency/secret scans enter CI now and which are explicitly deferred.
-- [ ] Freeze deployed frontend/backend header and configuration verification steps.
-- [ ] Approve exact file ownership and implementation slices.
+- [x] Confirm the report covers the full current application and record every finding disposition.
+- [x] Freeze exact request, string, numeric, collection, and CharacterSheetV1 limits.
+- [x] Freeze HTTP timeout and header-size values.
+- [x] Freeze proxy-aware authentication limiter keys, limits, windows, cleanup, and response behavior.
+- [x] Freeze generic registration-collision and missing-user timing behavior.
+- [x] Decide which dependency/secret scans enter CI now and which are explicitly deferred.
+- [x] Freeze deployed frontend/backend header and configuration verification steps.
+- [x] Approve exact file ownership and implementation slices.
+
+Proposed sequential slices after approval:
+
+1. bounded JSON decoder and current endpoint limits;
+2. server timeouts, fail-closed config, no-store, API headers, and safe startup logs;
+3. authentication limiter, Argon2 concurrency gate, dummy verification, generic collisions, and
+   logout failure;
+4. backend/frontend CharacterSheetV1 validation;
+5. Compose, lockfile, dependency, and secret CI changes, with separate deletion/infrastructure
+   approval;
+6. full validation and deployed evidence.
 
 ## 2. Backend request and server baseline
 
+- [x] Authorize Slice 1 ownership only:
+  - add `backend/internal/httpjson/decode.go` and `decode_test.go`;
+  - add `backend/internal/auth/handler_test.go` if focused tests cannot remain in server tests;
+  - edit `backend/internal/auth/handler.go`;
+  - edit `backend/internal/characters/handler.go` and `handler_test.go`.
 - [ ] Add failing tests for bounded JSON bodies and required media types.
 - [ ] Implement bounded shared decoding across current JSON-writing endpoints.
+- [ ] Stop after Slice 1 diff and validation report. Do not begin server/configuration work without
+  orchestrator approval.
 - [ ] Add failing server timeout, header-size, safe-startup-error, and production-config tests.
 - [ ] Implement the approved server and configuration hardening.
 - [ ] Add and verify `Cache-Control: no-store` on private responses.
@@ -50,6 +70,8 @@ slices, and proposed deferrals. The orchestrator must reconcile that report and 
 - [ ] Bind local PostgreSQL to loopback unless investigation finds a documented need not to.
 - [ ] Run and record pnpm and Go dependency verification.
 - [ ] Add or explicitly defer lightweight dependency and secret scanning.
+- [ ] Obtain explicit infrastructure approval before editing `.github/workflows/ci.yml` or adding
+  external security actions.
 
 ## 6. Validation and deployment evidence
 

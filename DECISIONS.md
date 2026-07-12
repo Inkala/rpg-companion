@@ -242,3 +242,29 @@ The existing Party worktrees remain paused and must be rebased or recreated afte
 One dedicated Security worktree will implement sequential approved slices because the task crosses
 shared server, auth, validation, configuration, and CI boundaries. Enterprise controls and unrelated
 account features remain eligible for explicit educational-review deferral.
+
+## 2026-07-12: Whole-app security implementation boundaries
+
+Context:
+The T-018 implementation-readiness investigation measured current character fixtures, examined
+Railway proxy constraints, identified existing handler seams, and proposed exact resource and
+validation limits for the current application.
+
+Decision:
+Implement T-018 as six sequential TDD slices. Start with one shared bounded JSON decoder using an
+8 KiB auth-body limit and a 128 KiB character-body limit. Later approved slices will add a 64 KiB
+CharacterSheetV1 payload limit with deep semantic validation; explicit 5/15/30/60-second HTTP
+timeouts and a 32 KiB header limit; generic registration collisions and dummy missing-user Argon2
+work; and a bounded in-process limiter that does not trust unverified proxy IP headers. Preserve
+opaque hashed server sessions and owner-scoped character queries.
+
+Reason:
+Measured valid requests are at most 4,002 bytes and payloads at most 6,601 bytes, so the limits retain
+substantial compatibility headroom while bounding resource use. Sequential slices keep a Red shared
+security task reviewable and make regressions easier to isolate.
+
+Consequences:
+Each slice stops for orchestrator review. Only Slice 1 is currently authorized. File deletion,
+CI/external security actions, production configuration changes, and deployed mutation remain
+separate approval gates. T-017 stays paused until T-018 integrates and passes CI and deployed
+verification.
