@@ -23,31 +23,34 @@ type handlerRepository interface {
 }
 
 type Handler struct {
-	repository     handlerRepository
-	authenticator  Authenticator
-	passwordConfig PasswordConfig
-	sessionConfig  SessionConfig
-	argonGate      *ArgonGate
-	hashPassword   func(string, PasswordConfig) (string, error)
-	verifyPassword func(string, string) (bool, error)
-	now            func() time.Time
+	repository        handlerRepository
+	authenticator     Authenticator
+	passwordConfig    PasswordConfig
+	sessionConfig     SessionConfig
+	argonGate         *ArgonGate
+	dummyPasswordHash string
+	hashPassword      func(string, PasswordConfig) (string, error)
+	verifyPassword    func(string, string) (bool, error)
+	now               func() time.Time
 }
 
 func NewHandler(repository *Repository, passwordConfig PasswordConfig, sessionConfig SessionConfig) Handler {
 	sessionConfig = sessionConfig.withDefaults()
+	passwordConfig = passwordConfig.withDefaults()
 	var handlerStore handlerRepository
 	if repository != nil {
 		handlerStore = repository
 	}
 	return Handler{
-		repository:     handlerStore,
-		authenticator:  NewAuthenticator(repository, sessionConfig),
-		passwordConfig: passwordConfig.withDefaults(),
-		sessionConfig:  sessionConfig,
-		argonGate:      NewArgonGate(2),
-		hashPassword:   HashPassword,
-		verifyPassword: VerifyPassword,
-		now:            func() time.Time { return time.Now().UTC() },
+		repository:        handlerStore,
+		authenticator:     NewAuthenticator(repository, sessionConfig),
+		passwordConfig:    passwordConfig,
+		sessionConfig:     sessionConfig,
+		argonGate:         NewArgonGate(2),
+		dummyPasswordHash: dummyPasswordHash(passwordConfig),
+		hashPassword:      HashPassword,
+		verifyPassword:    VerifyPassword,
+		now:               func() time.Time { return time.Now().UTC() },
 	}
 }
 
@@ -116,12 +119,8 @@ func (handler Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	created, err := handler.repository.CreateUser(r.Context(), user)
-	if errors.Is(err, ErrDuplicateUsername) {
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "That username is already taken."})
-		return
-	}
-	if errors.Is(err, ErrDuplicateEmail) {
-		writeJSON(w, http.StatusConflict, map[string]string{"error": "That email is already in use."})
+	if errors.Is(err, ErrDuplicateUsername) || errors.Is(err, ErrDuplicateEmail) {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": "Account could not be created with those details."})
 		return
 	}
 	if err != nil {
@@ -147,11 +146,6 @@ func (handler Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(request.UsernameOrEmail) == "" || request.Password == "" {
-		writeInvalidCredentials(w)
-		return
-	}
-
 	release, acquired := handler.argonGate.TryAcquire()
 	if !acquired {
 		writeArgonCapacityExceeded(w)
@@ -161,6 +155,7 @@ func (handler Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 
 	user, err := handler.findUserForSignIn(r, request.UsernameOrEmail)
 	if errors.Is(err, ErrNotFound) {
+		_, _ = handler.verifyPassword(request.Password, handler.dummyPasswordHash)
 		writeInvalidCredentials(w)
 		return
 	}

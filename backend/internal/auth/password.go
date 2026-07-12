@@ -2,15 +2,29 @@ package auth
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"golang.org/x/crypto/argon2"
 )
+
+const (
+	publicDummyPassword = "hunin-public-dummy-password-v1"
+	publicDummySaltSeed = "hunin-public-dummy-salt-v1"
+)
+
+var dummyPasswordHashes = struct {
+	sync.Mutex
+	values map[PasswordConfig]string
+}{
+	values: make(map[PasswordConfig]string),
+}
 
 type PasswordConfig struct {
 	MemoryKiB   uint32
@@ -59,6 +73,37 @@ func HashPassword(password string, config PasswordConfig) (string, error) {
 	}
 
 	hash := argon2.IDKey([]byte(password), salt, config.Iterations, config.MemoryKiB, config.Parallelism, config.KeyLength)
+	return encodeArgon2idHash(config, salt, hash), nil
+}
+
+func dummyPasswordHash(config PasswordConfig) string {
+	config = config.withDefaults()
+
+	dummyPasswordHashes.Lock()
+	defer dummyPasswordHashes.Unlock()
+	if encodedHash, found := dummyPasswordHashes.values[config]; found {
+		return encodedHash
+	}
+
+	salt := make([]byte, config.SaltLength)
+	seed := sha256.Sum256([]byte(publicDummySaltSeed))
+	for index := range salt {
+		salt[index] = seed[index%len(seed)]
+	}
+	hash := argon2.IDKey(
+		[]byte(publicDummyPassword),
+		salt,
+		config.Iterations,
+		config.MemoryKiB,
+		config.Parallelism,
+		config.KeyLength,
+	)
+	encodedHash := encodeArgon2idHash(config, salt, hash)
+	dummyPasswordHashes.values[config] = encodedHash
+	return encodedHash
+}
+
+func encodeArgon2idHash(config PasswordConfig, salt []byte, hash []byte) string {
 	encodedSalt := base64.RawStdEncoding.EncodeToString(salt)
 	encodedHash := base64.RawStdEncoding.EncodeToString(hash)
 
@@ -69,7 +114,7 @@ func HashPassword(password string, config PasswordConfig) (string, error) {
 		config.Parallelism,
 		encodedSalt,
 		encodedHash,
-	), nil
+	)
 }
 
 func VerifyPassword(password string, encodedHash string) (bool, error) {

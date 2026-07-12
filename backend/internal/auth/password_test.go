@@ -39,6 +39,44 @@ func TestVerifyPasswordRejectsWrongPassword(t *testing.T) {
 	}
 }
 
+func TestDummyPasswordHashIsDeterministicAndUsesConfiguredCost(t *testing.T) {
+	config := PasswordConfig{
+		MemoryKiB:   2048,
+		Iterations:  2,
+		Parallelism: 2,
+		SaltLength:  12,
+		KeyLength:   24,
+	}
+
+	first := dummyPasswordHash(config)
+	second := dummyPasswordHash(config)
+	if first != second {
+		t.Fatal("expected deterministic dummy password hash")
+	}
+
+	parsedConfig, salt, hash, err := decodeArgon2idHash(first)
+	if err != nil {
+		t.Fatalf("decode dummy password hash: %v", err)
+	}
+	if parsedConfig != config {
+		t.Fatalf("expected configured Argon2 cost %+v, got %+v", config, parsedConfig)
+	}
+	if len(salt) != int(config.SaltLength) {
+		t.Fatalf("expected salt length %d, got %d", config.SaltLength, len(salt))
+	}
+	if len(hash) != int(config.KeyLength) {
+		t.Fatalf("expected key length %d, got %d", config.KeyLength, len(hash))
+	}
+
+	matches, err := VerifyPassword(publicDummyPassword, first)
+	if err != nil {
+		t.Fatalf("verify public dummy password: %v", err)
+	}
+	if !matches {
+		t.Fatal("expected public dummy password to match deterministic dummy hash")
+	}
+}
+
 func BenchmarkHashPasswordDefault(b *testing.B) {
 	config := DefaultPasswordConfig()
 	for i := 0; i < b.N; i++ {

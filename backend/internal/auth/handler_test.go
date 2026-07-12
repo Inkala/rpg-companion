@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -83,6 +84,12 @@ func TestAuthArgonGateCapacityReturnsSameGenericResponseForRegisterAndSignIn(t *
 			path:    "/auth/sessions",
 			body:    `{"usernameOrEmail":"mara","password":"Valid-password1!"}`,
 		},
+		{
+			name:    "sign-in with missing identifier",
+			handler: handlerCopy.SignIn,
+			path:    "/auth/sessions",
+			body:    `{"usernameOrEmail":"","password":"Valid-password1!"}`,
+		},
 	}
 
 	var firstMessage string
@@ -107,6 +114,168 @@ func TestAuthArgonGateCapacityReturnsSameGenericResponseForRegisterAndSignIn(t *
 				firstMessage = message
 			} else if message != firstMessage {
 				t.Fatalf("expected identical registration and sign-in messages, got %q and %q", firstMessage, message)
+			}
+		})
+	}
+}
+
+func TestRegisterDuplicateIdentityResponsesAreIdentical(t *testing.T) {
+	tests := []struct {
+		name        string
+		createError error
+	}{
+		{name: "duplicate username", createError: ErrDuplicateUsername},
+		{name: "duplicate email", createError: ErrDuplicateEmail},
+	}
+
+	var bodies []string
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repository := &fakeHandlerRepository{createUserError: tt.createError}
+			handler := newArgonGateTestHandler(repository)
+			handler.hashPassword = func(string, PasswordConfig) (string, error) {
+				return "encoded-password-hash", nil
+			}
+			recorder := httptest.NewRecorder()
+			request := authHandlerJSONRequest(
+				"/auth/register",
+				`{"username":"mara","email":"mara@example.com","password":"Valid-password1!"}`,
+			)
+
+			handler.Register(recorder, request)
+
+			if recorder.Code != http.StatusConflict {
+				t.Fatalf("expected status %d, got %d with body %s", http.StatusConflict, recorder.Code, recorder.Body.String())
+			}
+			bodies = append(bodies, recorder.Body.String())
+			const expected = "Account could not be created with those details."
+			if got := decodeHandlerError(t, recorder); got != expected {
+				t.Fatalf("expected generic collision response %q, got %q", expected, got)
+			}
+		})
+	}
+
+	if len(bodies) != 2 || bodies[0] != bodies[1] {
+		t.Fatalf("expected duplicate username and email responses to be identical, got %q", bodies)
+	}
+}
+
+func TestSignInUnknownOrInvalidIdentityPerformsOneDummyVerification(t *testing.T) {
+	tests := []struct {
+		name       string
+		identifier string
+	}{
+		{name: "missing identifier", identifier: ""},
+		{name: "malformed identifier", identifier: "not valid!"},
+		{name: "unknown username", identifier: "unknown-user"},
+		{name: "unknown email", identifier: "unknown@example.com"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := newArgonGateTestHandler(&fakeHandlerRepository{})
+			verificationCount := 0
+			handler.verifyPassword = func(_ string, encodedHash string) (bool, error) {
+				verificationCount++
+				if encodedHash != handler.dummyPasswordHash {
+					t.Fatalf("expected dummy password hash, got %q", encodedHash)
+				}
+				return false, nil
+			}
+			recorder := httptest.NewRecorder()
+			request := authHandlerJSONRequest(
+				"/auth/sessions",
+				fmt.Sprintf(`{"usernameOrEmail":%q,"password":"wrong password"}`, tt.identifier),
+			)
+
+			handler.SignIn(recorder, request)
+
+			if recorder.Code != http.StatusUnauthorized {
+				t.Fatalf("expected status %d, got %d with body %s", http.StatusUnauthorized, recorder.Code, recorder.Body.String())
+			}
+			if got := decodeHandlerError(t, recorder); got != "Username, email, or password is incorrect." {
+				t.Fatalf("expected generic invalid-credentials response, got %q", got)
+			}
+			if verificationCount != 1 {
+				t.Fatalf("expected exactly one dummy verification, got %d", verificationCount)
+			}
+			assertArgonGateFullyAvailable(t, handler.argonGate)
+		})
+	}
+}
+
+func TestSignInDummyVerificationHoldsSharedArgonGate(t *testing.T) {
+	handler := newArgonGateTestHandler(&fakeHandlerRepository{})
+	handler.verifyPassword = func(_ string, encodedHash string) (bool, error) {
+		if encodedHash != handler.dummyPasswordHash {
+			t.Fatalf("expected dummy password hash, got %q", encodedHash)
+		}
+		remainingPermit, acquired := handler.argonGate.TryAcquire()
+		if !acquired {
+			t.Fatal("expected one remaining gate permit during dummy verification")
+		}
+		defer remainingPermit.Release()
+		if extraPermit, acquired := handler.argonGate.TryAcquire(); acquired || extraPermit != nil {
+			t.Fatal("expected dummy verification to hold one shared gate permit")
+		}
+		return false, nil
+	}
+	recorder := httptest.NewRecorder()
+	request := authHandlerJSONRequest(
+		"/auth/sessions",
+		`{"usernameOrEmail":"unknown-user","password":"wrong password"}`,
+	)
+
+	handler.SignIn(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusUnauthorized, recorder.Code, recorder.Body.String())
+	}
+	assertArgonGateFullyAvailable(t, handler.argonGate)
+}
+
+func TestSignInKnownIdentityPerformsOneRealVerificationAndNoDummyVerification(t *testing.T) {
+	user := testHandlerUser()
+	tests := []struct {
+		name       string
+		identifier string
+	}{
+		{name: "username", identifier: user.Username},
+		{name: "email", identifier: user.EmailCanonical},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := newArgonGateTestHandler(&fakeHandlerRepository{user: user})
+			realVerificationCount := 0
+			dummyVerificationCount := 0
+			handler.verifyPassword = func(_ string, encodedHash string) (bool, error) {
+				switch encodedHash {
+				case user.PasswordHash:
+					realVerificationCount++
+				case handler.dummyPasswordHash:
+					dummyVerificationCount++
+				default:
+					t.Fatalf("unexpected password hash %q", encodedHash)
+				}
+				return false, nil
+			}
+			recorder := httptest.NewRecorder()
+			request := authHandlerJSONRequest(
+				"/auth/sessions",
+				fmt.Sprintf(`{"usernameOrEmail":%q,"password":"wrong password"}`, tt.identifier),
+			)
+
+			handler.SignIn(recorder, request)
+
+			if recorder.Code != http.StatusUnauthorized {
+				t.Fatalf("expected status %d, got %d with body %s", http.StatusUnauthorized, recorder.Code, recorder.Body.String())
+			}
+			if realVerificationCount != 1 {
+				t.Fatalf("expected exactly one real verification, got %d", realVerificationCount)
+			}
+			if dummyVerificationCount != 0 {
+				t.Fatalf("expected no dummy verification, got %d", dummyVerificationCount)
 			}
 		})
 	}
@@ -180,10 +349,14 @@ func TestSignInArgonGateReleasesAfterSuccessAndFailure(t *testing.T) {
 }
 
 type fakeHandlerRepository struct {
-	user User
+	user            User
+	createUserError error
 }
 
 func (repository *fakeHandlerRepository) CreateUser(_ context.Context, user User) (User, error) {
+	if repository.createUserError != nil {
+		return User{}, repository.createUserError
+	}
 	repository.user = user
 	return user, nil
 }
