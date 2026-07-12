@@ -6,8 +6,19 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
+)
+
+const (
+	maxCharacterNameRunes    = 80
+	maxCharacterCoreRunes    = 64
+	maxAbilityScore          = 30
+	maxHitPoints             = 9999
+	maxArmorClass            = 100
+	maxSpeedFt               = 1000
+	maxReferencePayloadBytes = 65536
 )
 
 func characterFromRequest(request createCharacterRequest, now time.Time) (Character, error) {
@@ -21,15 +32,26 @@ func characterFromRequest(request createCharacterRequest, now time.Time) (Charac
 
 	if name == "" {
 		validationErrors = append(validationErrors, "name is required")
+	} else if utf8.RuneCountInString(name) > maxCharacterNameRunes {
+		validationErrors = append(validationErrors, "name must be at most 80 characters")
 	}
 	if className == "" {
 		validationErrors = append(validationErrors, "className is required")
+	} else if utf8.RuneCountInString(className) > maxCharacterCoreRunes {
+		validationErrors = append(validationErrors, "className must be at most 64 characters")
 	}
 	if ancestry == "" {
 		validationErrors = append(validationErrors, "ancestry is required")
+	} else if utf8.RuneCountInString(ancestry) > maxCharacterCoreRunes {
+		validationErrors = append(validationErrors, "ancestry must be at most 64 characters")
 	}
 	if background == "" {
 		validationErrors = append(validationErrors, "background is required")
+	} else if utf8.RuneCountInString(background) > maxCharacterCoreRunes {
+		validationErrors = append(validationErrors, "background must be at most 64 characters")
+	}
+	if subclassName != nil && utf8.RuneCountInString(*subclassName) > maxCharacterCoreRunes {
+		validationErrors = append(validationErrors, "subclassName must be at most 64 characters")
 	}
 	if request.Level < 1 || request.Level > 20 {
 		validationErrors = append(validationErrors, "level must be between 1 and 20")
@@ -48,6 +70,8 @@ func characterFromRequest(request createCharacterRequest, now time.Time) (Charac
 		armorClass = *request.ArmorClass
 		if armorClass < 0 {
 			validationErrors = append(validationErrors, "armorClass must be non-negative")
+		} else if armorClass > maxArmorClass {
+			validationErrors = append(validationErrors, "armorClass must be at most 100")
 		}
 	}
 
@@ -58,6 +82,8 @@ func characterFromRequest(request createCharacterRequest, now time.Time) (Charac
 		speedFt = *request.SpeedFt
 		if speedFt < 0 {
 			validationErrors = append(validationErrors, "speedFt must be non-negative")
+		} else if speedFt > maxSpeedFt {
+			validationErrors = append(validationErrors, "speedFt must be at most 1000")
 		}
 	}
 
@@ -66,6 +92,8 @@ func characterFromRequest(request createCharacterRequest, now time.Time) (Charac
 		validationErrors = append(validationErrors, "referencePayload is required")
 	} else if !isJSONObject(*request.ReferencePayload) {
 		validationErrors = append(validationErrors, "referencePayload must be a JSON object")
+	} else if len(*request.ReferencePayload) > maxReferencePayloadBytes {
+		validationErrors = append(validationErrors, "referencePayload must be at most 65536 bytes")
 	} else {
 		referencePayload = append(json.RawMessage(nil), (*request.ReferencePayload)...)
 	}
@@ -118,6 +146,9 @@ func validateAbilityScores(request requiredAbilityScores) (AbilityScores, []stri
 			return
 		}
 		assign(*value)
+		if *value < 1 || *value > maxAbilityScore {
+			validationErrors = append(validationErrors, name+" must be between 1 and 30")
+		}
 	}
 
 	validateScore("abilityScores.strength", request.Strength, func(value int) { scores.Strength = value })
@@ -140,6 +171,8 @@ func validateHitPoints(request requiredHitPoints) (HitPoints, []string) {
 		hitPoints.Current = *request.Current
 		if hitPoints.Current < 0 {
 			validationErrors = append(validationErrors, "hitPoints.current must be non-negative")
+		} else if hitPoints.Current > maxHitPoints {
+			validationErrors = append(validationErrors, "hitPoints.current must be at most 9999")
 		}
 	}
 
@@ -149,6 +182,8 @@ func validateHitPoints(request requiredHitPoints) (HitPoints, []string) {
 		hitPoints.Max = *request.Max
 		if hitPoints.Max < 0 {
 			validationErrors = append(validationErrors, "hitPoints.max must be non-negative")
+		} else if hitPoints.Max > maxHitPoints {
+			validationErrors = append(validationErrors, "hitPoints.max must be at most 9999")
 		}
 	}
 

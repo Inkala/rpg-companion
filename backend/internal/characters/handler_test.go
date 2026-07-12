@@ -312,6 +312,41 @@ func TestCharacterCreateRejectsOversizedRequestBody(t *testing.T) {
 	}
 }
 
+func TestCharacterCreateRejectsOversizedReferencePayloadBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	payload := referencePayloadWithSize(t, 65537)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	var response struct {
+		Error   string   `json:"error"`
+		Details []string `json:"details"`
+	}
+	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+		t.Fatalf("decode validation response: %v", err)
+	}
+	if response.Error != "character validation failed" {
+		t.Fatalf("expected safe validation error, got %q", response.Error)
+	}
+	if !contains(response.Details, "referencePayload must be at most 65536 bytes") {
+		t.Fatalf("expected payload-size detail, got %v", response.Details)
+	}
+}
+
 func withAuthenticatedUser(request *http.Request, userID uuid.UUID) *http.Request {
 	user := auth.AuthenticatedUser{ID: userID, UsernameCanonical: "mara", Username: "Mara"}
 	return request.WithContext(auth.WithAuthenticatedUser(request.Context(), user))
