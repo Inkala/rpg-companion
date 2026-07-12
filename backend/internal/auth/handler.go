@@ -327,8 +327,18 @@ func (handler Handler) findUserForSignIn(r *http.Request, usernameOrEmail string
 
 func (handler Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(handler.sessionConfig.CookieName)
-	if err == nil && handler.repository != nil {
-		_ = handler.repository.RevokeSession(r.Context(), TokenHash(cookie.Value), handler.now())
+	if err != nil {
+		http.SetCookie(w, ClearSessionCookie(handler.sessionConfig))
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if handler.repository == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "could not sign out; please try again"})
+		return
+	}
+	if err := handler.repository.RevokeSession(r.Context(), TokenHash(cookie.Value), handler.now()); err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "could not sign out; please try again"})
+		return
 	}
 
 	http.SetCookie(w, ClearSessionCookie(handler.sessionConfig))
