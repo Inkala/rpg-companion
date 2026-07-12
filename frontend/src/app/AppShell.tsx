@@ -1,4 +1,4 @@
-import { LogOut, Sword } from 'lucide-react';
+import { LogOut, Menu, Sword, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccountHeaderActions } from '../accounts/AccountHeaderActions';
 import huninLogo from '../assets/brand/hunin-logo.svg';
@@ -14,6 +14,7 @@ interface AppShellProps {
   sessionError: string | null;
   onHome: () => void;
   onOpenAccount: (mode: AccountMode) => void;
+  onOpenProfile: () => void;
   onSignOut: () => void;
   showAccountActions?: boolean;
 }
@@ -26,6 +27,7 @@ export const AppShell = ({
   sessionError,
   onHome,
   onOpenAccount,
+  onOpenProfile,
   onSignOut,
   showAccountActions = true,
 }: AppShellProps) => {
@@ -70,6 +72,11 @@ export const AppShell = ({
     onSignOut();
   };
 
+  const openProfileFromMenu = () => {
+    setIsMobileMenuOpen(false);
+    onOpenProfile();
+  };
+
   return (
     <div className="global-shell">
       <header className="app-header">
@@ -99,6 +106,7 @@ export const AppShell = ({
                 isSessionLoading={isSessionLoading}
                 sessionError={sessionError}
                 onOpenAccount={onOpenAccount}
+                onOpenProfile={onOpenProfile}
                 onSignOut={onSignOut}
               />
             </div>
@@ -109,11 +117,16 @@ export const AppShell = ({
           <button
             type="button"
             className="app-mobile-menu__trigger"
+            aria-label={currentUser ? `${currentUser.username} mobile account menu` : 'Menu'}
             aria-expanded={isMobileMenuOpen}
             aria-haspopup="menu"
             onClick={() => setIsMobileMenuOpen((current) => !current)}
           >
-            Menu
+            {currentUser ? (
+              <UserRound aria-hidden="true" size={24} strokeWidth={2.2} />
+            ) : (
+              <Menu aria-hidden="true" size={24} strokeWidth={2.2} />
+            )}
           </button>
 
           {isMobileMenuOpen ? (
@@ -123,8 +136,8 @@ export const AppShell = ({
                   accountsAvailable={accountsAvailable}
                   currentUser={currentUser}
                   sessionError={sessionError}
-                  onClose={() => setIsMobileMenuOpen(false)}
                   onOpenAccount={openAccount}
+                  onOpenProfile={openProfileFromMenu}
                   onSignOut={signOutFromMenu}
                 />
               ) : null}
@@ -142,8 +155,8 @@ interface MobileAccountActionsProps {
   accountsAvailable: boolean;
   currentUser: AuthUser | null;
   sessionError: string | null;
-  onClose: () => void;
   onOpenAccount: (mode: AccountMode) => void;
+  onOpenProfile: () => void;
   onSignOut: () => void;
 }
 
@@ -151,8 +164,8 @@ const MobileAccountActions = ({
   accountsAvailable,
   currentUser,
   sessionError,
-  onClose,
   onOpenAccount,
+  onOpenProfile,
   onSignOut,
 }: MobileAccountActionsProps) => {
   if (!accountsAvailable) {
@@ -175,7 +188,7 @@ const MobileAccountActions = ({
           type="button"
           className="app-mobile-menu__item"
           role="menuitem"
-          onClick={onClose}
+          onClick={onOpenProfile}
         >
           <Sword aria-hidden="true" size={18} strokeWidth={2.2} />
           <span>My profile</span>

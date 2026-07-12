@@ -100,6 +100,10 @@ export const App = () => {
     navigateToRoute({ name: 'account', mode });
   };
 
+  const showProfile = () => {
+    navigateToRoute({ name: 'profile' });
+  };
+
   const showAccountMode = (mode: AccountMode) => {
     window.history.pushState(null, '', pathForAccountMode(mode));
     setRoute({ name: 'account', mode });
@@ -134,6 +138,7 @@ export const App = () => {
       sessionError={sessionError}
       onHome={showHome}
       onOpenAccount={showAccount}
+      onOpenProfile={showProfile}
       onSignOut={handleSignOut}
       showAccountActions={route.name !== 'account' && route.name !== 'profile'}
     >

@@ -19,12 +19,13 @@ const renderShell = (
     sessionError: null,
     onHome: vi.fn(),
     onOpenAccount: vi.fn(),
+    onOpenProfile: vi.fn(),
     onSignOut: vi.fn(),
     ...options,
   };
 
-  render(<AppShell {...props} />);
-  return props;
+  const result = render(<AppShell {...props} />);
+  return { ...props, ...result };
 };
 
 describe('AppShell', () => {
@@ -87,16 +88,54 @@ describe('AppShell', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
+  it('uses the menu icon while signed out and the account icon while signed in', () => {
+    const { rerender } = renderShell({ accountsAvailable: true });
+
+    const signedOutMenu = screen.getByRole('button', { name: 'Menu' });
+    expect(signedOutMenu.querySelector('.lucide-menu')).toBeInTheDocument();
+
+    rerender(
+      <AppShell
+        accountsAvailable
+        currentUser={maraUser}
+        isSessionLoading={false}
+        sessionError={null}
+        onHome={vi.fn()}
+        onOpenAccount={vi.fn()}
+        onOpenProfile={vi.fn()}
+        onSignOut={vi.fn()}
+      >
+        <main>Shell content</main>
+      </AppShell>,
+    );
+
+    const signedInMenu = screen.getByRole('button', { name: 'Mara mobile account menu' });
+    expect(signedInMenu.querySelector('.lucide-user-round')).toBeInTheDocument();
+  });
+
   it('signs out from the mobile account menu', () => {
     const { onSignOut } = renderShell({
       accountsAvailable: true,
       currentUser: maraUser,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mara mobile account menu' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
 
     expect(onSignOut).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('opens the profile and closes the mobile account menu', () => {
+    const { onOpenProfile } = renderShell({
+      accountsAvailable: true,
+      currentUser: maraUser,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mara mobile account menu' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'My profile' }));
+
+    expect(onOpenProfile).toHaveBeenCalledOnce();
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });
