@@ -3,13 +3,15 @@ package auth
 import (
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/Inkala/rpg-companion/backend/internal/httpjson"
 	"github.com/google/uuid"
 )
+
+const authRequestBodyLimit int64 = 8192
 
 type Handler struct {
 	repository     *Repository
@@ -225,16 +227,21 @@ func (handler Handler) createSessionCookie(w http.ResponseWriter, r *http.Reques
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, destination any) bool {
-	defer r.Body.Close()
-
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(destination); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "request body must be valid JSON"})
+	err := httpjson.Decode(w, r, destination, authRequestBodyLimit)
+	if errors.Is(err, httpjson.ErrUnsupportedMediaType) {
+		writeJSON(w, http.StatusUnsupportedMediaType, map[string]string{"error": "Content-Type must be application/json"})
 		return false
 	}
-	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+	if errors.Is(err, httpjson.ErrRequestBodyTooLarge) {
+		writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "request body is too large"})
+		return false
+	}
+	if errors.Is(err, httpjson.ErrMultipleJSONValues) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "request body must contain one JSON object"})
+		return false
+	}
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "request body must be valid JSON"})
 		return false
 	}
 	return true

@@ -34,6 +34,7 @@ func TestCharacterHTTPPersistence(t *testing.T) {
 
 	createRecorder := httptest.NewRecorder()
 	createRequest := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(validCharacterJSON()))
+	createRequest.Header.Set("Content-Type", "application/json")
 	createRequest = withAuthenticatedUser(createRequest, ownerID)
 	mux.ServeHTTP(createRecorder, createRequest)
 
@@ -278,6 +279,9 @@ func TestCharacterHTTPValidation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(tt.method, tt.path, bytes.NewReader(tt.body))
+			if tt.method == http.MethodPost && len(tt.body) > 0 {
+				request.Header.Set("Content-Type", "application/json")
+			}
 			if tt.auth {
 				request = withAuthenticatedUser(request, ownerID)
 			}
@@ -287,6 +291,24 @@ func TestCharacterHTTPValidation(t *testing.T) {
 				t.Fatalf("expected status %d, got %d with body %s", tt.want, recorder.Code, recorder.Body.String())
 			}
 		})
+	}
+}
+
+func TestCharacterCreateRejectsOversizedRequestBody(t *testing.T) {
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/characters",
+		strings.NewReader(`{"name":"`+strings.Repeat("a", 131072)+`"}`),
+	)
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusRequestEntityTooLarge, recorder.Code, recorder.Body.String())
 	}
 }
 
