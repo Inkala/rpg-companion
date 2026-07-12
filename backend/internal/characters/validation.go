@@ -94,6 +94,8 @@ func characterFromRequest(request createCharacterRequest, now time.Time) (Charac
 		validationErrors = append(validationErrors, "referencePayload must be a JSON object")
 	} else if len(*request.ReferencePayload) > maxReferencePayloadBytes {
 		validationErrors = append(validationErrors, "referencePayload must be at most 65536 bytes")
+	} else if envelopeErrors := validateCharacterSheetV1Envelope(*request.ReferencePayload); len(envelopeErrors) > 0 {
+		validationErrors = append(validationErrors, envelopeErrors...)
 	} else {
 		referencePayload = append(json.RawMessage(nil), (*request.ReferencePayload)...)
 	}

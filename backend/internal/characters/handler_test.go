@@ -347,6 +347,36 @@ func TestCharacterCreateRejectsOversizedReferencePayloadBeforePersistence(t *tes
 	}
 }
 
+func TestCharacterCreateRejectsInvalidCharacterSheetEnvelopeSafelyBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	envelope["unexpectedTopLevel"] = "must-not-be-reflected"
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "unexpectedTopLevel") || strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected payload details: %s", recorder.Body.String())
+	}
+}
+
 func withAuthenticatedUser(request *http.Request, userID uuid.UUID) *http.Request {
 	user := auth.AuthenticatedUser{ID: userID, UsernameCanonical: "mara", Username: "Mara"}
 	return request.WithContext(auth.WithAuthenticatedUser(request.Context(), user))
@@ -525,9 +555,19 @@ func validCharacterJSON() []byte {
 		"armorClass": 14,
 		"speedFt": 30,
 		"referencePayload": {
+			"schemaVersion": "CharacterSheetV1",
+			"ruleset": {"system":"dnd5e","version":"2014","sourceStatus":"audited-sample"},
+			"identity": {"name":"Mara Vale"},
+			"summary": {},
+			"abilities": {},
+			"combat": {},
+			"proficiencies": {},
 			"actions": [{"name":"Longbow"}],
 			"features": [{"name":"Colossus Slayer"}],
-			"spells": [{"name":"Hunter's Mark"}]
+			"spellcasting": {"spells":[{"name":"Hunter's Mark"}]},
+			"equipment": {},
+			"personality": {},
+			"audit": {}
 		}
 	}`)
 }

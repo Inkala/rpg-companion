@@ -73,7 +73,7 @@ func TestAuthSessionFlow(t *testing.T) {
 	if duplicateRecorder.Code != http.StatusConflict {
 		t.Fatalf("expected duplicate status %d, got %d with body %s", http.StatusConflict, duplicateRecorder.Code, duplicateRecorder.Body.String())
 	}
-	assertErrorResponse(t, duplicateRecorder, "That username is already taken.")
+	assertErrorResponse(t, duplicateRecorder, "Account could not be created with those details.")
 
 	duplicateEmailRecorder := httptest.NewRecorder()
 	duplicateEmailRequest := jsonRequest(http.MethodPost, "/auth/register", `{
@@ -85,7 +85,7 @@ func TestAuthSessionFlow(t *testing.T) {
 	if duplicateEmailRecorder.Code != http.StatusConflict {
 		t.Fatalf("expected duplicate email status %d, got %d with body %s", http.StatusConflict, duplicateEmailRecorder.Code, duplicateEmailRecorder.Body.String())
 	}
-	assertErrorResponse(t, duplicateEmailRecorder, "That email is already in use.")
+	assertErrorResponse(t, duplicateEmailRecorder, "Account could not be created with those details.")
 
 	invalidUsernameRecorder := httptest.NewRecorder()
 	invalidUsernameRequest := jsonRequest(http.MethodPost, "/auth/register", `{
@@ -718,9 +718,19 @@ func validCharacterJSON() string {
 		"armorClass": 14,
 		"speedFt": 30,
 		"referencePayload": {
+			"schemaVersion": "CharacterSheetV1",
+			"ruleset": {"system":"dnd5e","version":"2014","sourceStatus":"audited-sample"},
+			"identity": {"name":"Mara Vale"},
+			"summary": {},
+			"abilities": {},
+			"combat": {},
+			"proficiencies": {},
 			"actions": [{"name":"Longbow"}],
 			"features": [{"name":"Colossus Slayer"}],
-			"spells": [{"name":"Hunter's Mark"}]
+			"spellcasting": {"spells":[{"name":"Hunter's Mark"}]},
+			"equipment": {},
+			"personality": {},
+			"audit": {}
 		}
 	}`
 }

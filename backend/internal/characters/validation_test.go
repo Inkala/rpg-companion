@@ -400,8 +400,8 @@ func numericNonNegativeMessage(name string) string {
 
 func referencePayloadWithSize(t *testing.T, size int) json.RawMessage {
 	t.Helper()
-	const prefix = `{"data":"`
-	const suffix = `"}`
+	const prefix = `{"schemaVersion":"CharacterSheetV1","ruleset":{"system":"dnd5e","version":"2014","sourceStatus":"draft"},"identity":{},"summary":{},"abilities":{},"combat":{},"proficiencies":{},"actions":[],"features":[],"spellcasting":null,"equipment":{},"personality":{},"audit":{"padding":"`
+	const suffix = `"}}`
 	contentLength := size - len(prefix) - len(suffix)
 	if contentLength < 0 {
 		t.Fatalf("payload size %d is smaller than object framing", size)
@@ -410,11 +410,14 @@ func referencePayloadWithSize(t *testing.T, size int) json.RawMessage {
 	if len(payload) != size {
 		t.Fatalf("expected generated payload size %d, got %d", size, len(payload))
 	}
+	if !json.Valid(payload) {
+		t.Fatal("expected generated payload to be valid JSON")
+	}
 	return payload
 }
 
 func validCreateCharacterRequest() createCharacterRequest {
-	payload := json.RawMessage(`{"actions":[],"features":[],"spells":[]}`)
+	payload := minimalCharacterSheetPayload()
 	return createCharacterRequest{
 		Name:         "Mara Velard",
 		ClassName:    "Ranger",
@@ -438,6 +441,24 @@ func validCreateCharacterRequest() createCharacterRequest {
 		SpeedFt:          intPtr(30),
 		ReferencePayload: &payload,
 	}
+}
+
+func minimalCharacterSheetPayload() json.RawMessage {
+	return json.RawMessage(`{
+		"schemaVersion":"CharacterSheetV1",
+		"ruleset":{"system":"dnd5e","version":"2014","sourceStatus":"draft"},
+		"identity":{},
+		"summary":{},
+		"abilities":{},
+		"combat":{},
+		"proficiencies":{},
+		"actions":[],
+		"features":[],
+		"spellcasting":null,
+		"equipment":{},
+		"personality":{},
+		"audit":{}
+	}`)
 }
 
 func intPtr(value int) *int {
