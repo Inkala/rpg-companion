@@ -12,6 +12,7 @@ import (
 
 var ErrPartyNotFound = errors.New("party not found")
 var ErrPartyForbidden = errors.New("party operation is forbidden")
+var ErrInviteUnavailable = errors.New("invite is unavailable")
 
 type Repository struct {
 	pool           *pgxpool.Pool
@@ -306,4 +307,44 @@ INSERT INTO party_invites (
 	}
 
 	return invite, nil
+}
+
+func (repository *Repository) InspectInvite(ctx context.Context, rawToken string) (InviteInspection, error) {
+	tokenHash, err := InviteTokenHash(rawToken)
+	if err != nil {
+		return InviteInspection{}, ErrInviteUnavailable
+	}
+
+	const query = `
+SELECT
+  p.id::text,
+  p.name,
+  invite.expires_at
+FROM party_invites invite
+JOIN parties p ON p.id = invite.party_id
+WHERE invite.token_hash = $1
+  AND invite.revoked_at IS NULL
+  AND invite.expires_at > $2`
+
+	var partyID string
+	var inspection InviteInspection
+	err = repository.pool.QueryRow(ctx, query, tokenHash, repository.now().UTC()).Scan(
+		&partyID,
+		&inspection.PartyName,
+		&inspection.ExpiresAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return InviteInspection{}, ErrInviteUnavailable
+	}
+	if err != nil {
+		return InviteInspection{}, err
+	}
+
+	parsedPartyID, err := uuid.Parse(partyID)
+	if err != nil {
+		return InviteInspection{}, err
+	}
+	inspection.PartyID = parsedPartyID
+
+	return inspection, nil
 }

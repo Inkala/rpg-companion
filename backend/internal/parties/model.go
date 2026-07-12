@@ -53,3 +53,9 @@ type PartyInvite struct {
 	CreatedAt time.Time
 	ExpiresAt time.Time
 }
+
+type InviteInspection struct {
+	PartyID   uuid.UUID
+	PartyName string
+	ExpiresAt time.Time
+}

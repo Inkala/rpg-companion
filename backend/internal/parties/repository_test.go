@@ -464,6 +464,152 @@ SELECT token_hash FROM party_invites WHERE party_id = $1::uuid AND revoked_at IS
 	}
 }
 
+func TestInviteInspectionModelExposesOnlyPublicPartyFields(t *testing.T) {
+	requireStructFields(t, InviteInspection{}, []string{"PartyID", "PartyName", "ExpiresAt"})
+}
+
+func TestRepositoryInspectInviteReturnsCurrentInviteWithoutSensitiveState(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	partyID := seedInviteRepositoryParty(t, pool)
+	now := time.Date(2026, 7, 14, 9, 0, 0, 0, time.UTC)
+	createdAt := now.Add(-24 * time.Hour)
+	rawToken := validInviteToken(0x71)
+	insertInviteForRepositoryTest(t, pool, partyID, testGMUserID, rawToken, createdAt)
+	repository := NewRepository(pool)
+	repository.now = func() time.Time { return now }
+
+	inspection, err := repository.InspectInvite(context.Background(), rawToken)
+	if err != nil {
+		t.Fatalf("inspect current invite: %v", err)
+	}
+	if inspection.PartyID != partyID || inspection.PartyName != "Invite Party" {
+		t.Fatal("invite inspection returned unexpected Party identity")
+	}
+	if !inspection.ExpiresAt.Equal(createdAt.Add(7 * 24 * time.Hour)) {
+		t.Fatal("invite inspection returned unexpected expiration")
+	}
+}
+
+func TestRepositoryInspectInviteMakesUnavailableStatesIndistinguishable(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	partyID := seedInviteRepositoryParty(t, pool)
+	now := time.Date(2026, 7, 14, 10, 0, 0, 0, time.UTC)
+	repository := NewRepository(pool)
+	repository.now = func() time.Time { return now }
+
+	tests := []struct {
+		name    string
+		token   string
+		prepare func(t *testing.T)
+	}{
+		{
+			name:  "malformed token",
+			token: "private-malformed-invite-token",
+		},
+		{
+			name:  "unknown token",
+			token: validInviteToken(0x72),
+		},
+		{
+			name:  "expired token",
+			token: validInviteToken(0x73),
+			prepare: func(t *testing.T) {
+				insertInviteForRepositoryTest(t, pool, partyID, testGMUserID, validInviteToken(0x73), now.Add(-8*24*time.Hour))
+			},
+		},
+		{
+			name:  "token expiring exactly now",
+			token: validInviteToken(0x74),
+			prepare: func(t *testing.T) {
+				insertInviteForRepositoryTest(t, pool, partyID, testGMUserID, validInviteToken(0x74), now.Add(-7*24*time.Hour))
+			},
+		},
+		{
+			name:  "revoked token",
+			token: validInviteToken(0x75),
+			prepare: func(t *testing.T) {
+				token := validInviteToken(0x75)
+				createdAt := now.Add(-time.Hour)
+				insertInviteForRepositoryTest(t, pool, partyID, testGMUserID, token, createdAt)
+				tokenHash := sha256.Sum256([]byte(token))
+				if _, err := pool.Exec(context.Background(), `
+UPDATE party_invites SET revoked_at = $1 WHERE token_hash = $2`, now.Add(-30*time.Minute), tokenHash[:]); err != nil {
+					t.Fatalf("revoke invite fixture: %v", err)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := pool.Exec(context.Background(), `DELETE FROM party_invites`); err != nil {
+				t.Fatalf("reset invite fixtures: %v", err)
+			}
+			if tt.prepare != nil {
+				tt.prepare(t)
+			}
+
+			_, err := repository.InspectInvite(context.Background(), tt.token)
+			if !errors.Is(err, ErrInviteUnavailable) {
+				t.Fatalf("expected ErrInviteUnavailable, got %v", err)
+			}
+			if strings.Contains(err.Error(), tt.token) {
+				t.Fatal("invite inspection error exposed the raw token")
+			}
+		})
+	}
+}
+
+func TestRepositoryInspectInviteHidesTokenReplacedThroughRegeneration(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	partyID := seedInviteRepositoryParty(t, pool)
+	currentTime := time.Date(2026, 7, 14, 11, 0, 0, 0, time.UTC)
+	previousToken := validInviteToken(0x76)
+	replacementToken := validInviteToken(0x77)
+	repository := NewRepository(pool)
+	repository.now = func() time.Time { return currentTime }
+	repository.newInviteToken = sequentialInviteTokens(t, previousToken, replacementToken)
+
+	if _, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID)); err != nil {
+		t.Fatalf("create previous invite: %v", err)
+	}
+	currentTime = currentTime.Add(time.Hour)
+	if _, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID)); err != nil {
+		t.Fatalf("create replacement invite: %v", err)
+	}
+
+	_, err := repository.InspectInvite(context.Background(), previousToken)
+	if !errors.Is(err, ErrInviteUnavailable) {
+		t.Fatalf("expected replaced token to return ErrInviteUnavailable, got %v", err)
+	}
+	if strings.Contains(err.Error(), previousToken) {
+		t.Fatal("replaced-token error exposed the raw token")
+	}
+
+	inspection, err := repository.InspectInvite(context.Background(), replacementToken)
+	if err != nil {
+		t.Fatalf("inspect replacement invite: %v", err)
+	}
+	if inspection.PartyID != partyID || inspection.PartyName != "Invite Party" {
+		t.Fatal("replacement inspection returned unexpected Party identity")
+	}
+}
+
+func TestRepositoryInspectInvitePreservesDatabaseErrors(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	repository := NewRepository(pool)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := repository.InspectInvite(ctx, validInviteToken(0x78))
+	if err == nil {
+		t.Fatal("expected canceled inspection query to fail")
+	}
+	if errors.Is(err, ErrInviteUnavailable) {
+		t.Fatal("database error must remain distinct from ErrInviteUnavailable")
+	}
+}
+
 func setupPartyRepositoryTest(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	databaseURL := os.Getenv("TEST_DATABASE_URL")
