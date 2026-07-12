@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -166,6 +167,100 @@ func TestRepositoryListPartiesForUserIsOwnerScopedAndDeterministic(t *testing.T)
 	}
 }
 
+func TestPartyDetailModelsExposeOnlyBasicRosterFields(t *testing.T) {
+	requireStructFields(t, PartyDetail{}, []string{"ID", "Name", "Role", "CreatedAt", "UpdatedAt", "Members"})
+	requireStructFields(t, PartyMember{}, []string{"Username", "Role", "JoinedAt", "Character"})
+	requireStructFields(t, PartyMemberCharacter{}, []string{"ID", "Name"})
+}
+
+func TestRepositoryGetPartyForMemberReturnsBasicRosterForGMAndPlayer(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	seedPartyMigrationUsers(t, pool)
+	seedPartyMigrationCharacters(t, pool)
+
+	partyID := uuid.MustParse("33000000-0000-0000-0000-000000000001")
+	createdAt := time.Date(2026, 7, 13, 11, 0, 0, 0, time.UTC)
+	updatedAt := createdAt.Add(30 * time.Minute)
+	_, err := pool.Exec(context.Background(), `
+INSERT INTO parties (id, name, created_by_user_id, created_at, updated_at)
+VALUES ($1::uuid, 'Roster Party', $2::uuid, $3, $4)`, partyID.String(), testGMUserID, createdAt, updatedAt)
+	if err != nil {
+		t.Fatalf("insert roster Party: %v", err)
+	}
+
+	sharedJoinedAt := createdAt.Add(10 * time.Minute)
+	gmJoinedAt := createdAt.Add(20 * time.Minute)
+	insertRosterMembership(t, pool, "43000000-0000-0000-0000-000000000009", partyID.String(), testGMUserID, RoleGM, nil, gmJoinedAt)
+	playerCharacterID := testCharacterID
+	insertRosterMembership(t, pool, "43000000-0000-0000-0000-000000000002", partyID.String(), testPlayerUserID, RolePlayer, &playerCharacterID, sharedJoinedAt)
+	otherCharacterID := testThirdCharacterID
+	insertRosterMembership(t, pool, "43000000-0000-0000-0000-000000000003", partyID.String(), testOtherUserID, RolePlayer, &otherCharacterID, sharedJoinedAt)
+
+	repository := NewRepository(pool)
+
+	gmDetail, err := repository.GetPartyForMember(context.Background(), partyID, uuid.MustParse(testGMUserID))
+	if err != nil {
+		t.Fatalf("get Party for GM: %v", err)
+	}
+	assertPartyDetail(t, gmDetail, partyID, RoleGM, createdAt, updatedAt, sharedJoinedAt, gmJoinedAt)
+
+	playerDetail, err := repository.GetPartyForMember(context.Background(), partyID, uuid.MustParse(testPlayerUserID))
+	if err != nil {
+		t.Fatalf("get Party for player: %v", err)
+	}
+	assertPartyDetail(t, playerDetail, partyID, RolePlayer, createdAt, updatedAt, sharedJoinedAt, gmJoinedAt)
+}
+
+func TestRepositoryGetPartyForMemberHidesUnknownAndNonMemberParties(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	seedPartyMigrationUsers(t, pool)
+
+	partyID := "33000000-0000-0000-0000-000000000010"
+	insertTestParty(t, pool, partyID, "Private Party", testGMUserID)
+	insertTestMembership(t, pool, "43000000-0000-0000-0000-000000000010", partyID, testGMUserID, RoleGM, nil)
+
+	repository := NewRepository(pool)
+	tests := []struct {
+		name      string
+		partyID   uuid.UUID
+		requester uuid.UUID
+	}{
+		{
+			name:      "unknown Party",
+			partyID:   uuid.MustParse("33000000-0000-0000-0000-000000000099"),
+			requester: uuid.MustParse(testGMUserID),
+		},
+		{
+			name:      "non-member",
+			partyID:   uuid.MustParse(partyID),
+			requester: uuid.MustParse(testOtherGMUserID),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := repository.GetPartyForMember(context.Background(), tt.partyID, tt.requester); !errors.Is(err, ErrPartyNotFound) {
+				t.Fatalf("expected ErrPartyNotFound, got %v", err)
+			}
+		})
+	}
+}
+
+func TestRepositoryGetPartyForMemberPreservesDatabaseErrors(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	repository := NewRepository(pool)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := repository.GetPartyForMember(ctx, uuid.New(), uuid.New())
+	if err == nil {
+		t.Fatal("expected canceled query to fail")
+	}
+	if errors.Is(err, ErrPartyNotFound) {
+		t.Fatal("database error must remain distinct from ErrPartyNotFound")
+	}
+}
+
 func setupPartyRepositoryTest(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	databaseURL := os.Getenv("TEST_DATABASE_URL")
@@ -210,5 +305,83 @@ func requirePartyCount(t *testing.T, pool *pgxpool.Pool, want int) {
 	}
 	if count != want {
 		t.Fatalf("expected %d parties, got %d", want, count)
+	}
+}
+
+func insertRosterMembership(
+	t *testing.T,
+	pool *pgxpool.Pool,
+	id string,
+	partyID string,
+	userID string,
+	role string,
+	characterID *string,
+	joinedAt time.Time,
+) {
+	t.Helper()
+	_, err := pool.Exec(context.Background(), `
+INSERT INTO party_memberships (id, party_id, user_id, role, character_id, joined_at)
+VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::uuid, $6)`, id, partyID, userID, role, characterID, joinedAt)
+	if err != nil {
+		t.Fatalf("insert roster membership: %v", err)
+	}
+}
+
+func assertPartyDetail(
+	t *testing.T,
+	detail PartyDetail,
+	partyID uuid.UUID,
+	requesterRole string,
+	createdAt time.Time,
+	updatedAt time.Time,
+	playerJoinedAt time.Time,
+	gmJoinedAt time.Time,
+) {
+	t.Helper()
+	if detail.ID != partyID || detail.Name != "Roster Party" || detail.Role != requesterRole {
+		t.Fatalf("unexpected Party detail header: %+v", detail)
+	}
+	if !detail.CreatedAt.Equal(createdAt) || !detail.UpdatedAt.Equal(updatedAt) {
+		t.Fatal("unexpected Party detail timestamps")
+	}
+	if len(detail.Members) != 3 {
+		t.Fatalf("expected three roster members, got %d", len(detail.Members))
+	}
+
+	gm := detail.Members[0]
+	if gm.Username != "gm-one" || gm.Role != RoleGM || !gm.JoinedAt.Equal(gmJoinedAt) {
+		t.Fatalf("unexpected GM roster member: %+v", gm)
+	}
+	if gm.Character != nil {
+		t.Fatal("expected GM character to be null")
+	}
+
+	firstPlayer := detail.Members[1]
+	if firstPlayer.Username != "player-one" || firstPlayer.Role != RolePlayer || !firstPlayer.JoinedAt.Equal(playerJoinedAt) {
+		t.Fatalf("unexpected first player roster member: %+v", firstPlayer)
+	}
+	if firstPlayer.Character == nil || firstPlayer.Character.ID != uuid.MustParse(testCharacterID) || firstPlayer.Character.Name != "Linked Hero" {
+		t.Fatalf("unexpected first player character summary: %+v", firstPlayer.Character)
+	}
+
+	secondPlayer := detail.Members[2]
+	if secondPlayer.Username != "player-two" || secondPlayer.Role != RolePlayer || !secondPlayer.JoinedAt.Equal(playerJoinedAt) {
+		t.Fatalf("unexpected second player roster member: %+v", secondPlayer)
+	}
+	if secondPlayer.Character == nil || secondPlayer.Character.ID != uuid.MustParse(testThirdCharacterID) || secondPlayer.Character.Name != "Third Hero" {
+		t.Fatalf("unexpected second player character summary: %+v", secondPlayer.Character)
+	}
+}
+
+func requireStructFields(t *testing.T, value any, want []string) {
+	t.Helper()
+	typeOfValue := reflect.TypeOf(value)
+	if typeOfValue.NumField() != len(want) {
+		t.Fatalf("expected %d fields on %s, got %d", len(want), typeOfValue.Name(), typeOfValue.NumField())
+	}
+	for index, fieldName := range want {
+		if typeOfValue.Field(index).Name != fieldName {
+			t.Fatalf("expected field %d on %s to be %s, got %s", index, typeOfValue.Name(), fieldName, typeOfValue.Field(index).Name)
+		}
 	}
 }

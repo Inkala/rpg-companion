@@ -2,11 +2,14 @@ package parties
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var ErrPartyNotFound = errors.New("party not found")
 
 type Repository struct {
 	pool  *pgxpool.Pool
@@ -130,4 +133,94 @@ ORDER BY p.created_at DESC, p.id DESC`
 	}
 
 	return summaries, nil
+}
+
+func (repository *Repository) GetPartyForMember(ctx context.Context, partyID uuid.UUID, requesterID uuid.UUID) (PartyDetail, error) {
+	const query = `
+SELECT
+  p.id::text,
+  p.name,
+  requester.role,
+  p.created_at,
+  p.updated_at,
+  u.username,
+  roster.role,
+  roster.joined_at,
+  c.id::text,
+  c.name
+FROM parties p
+JOIN party_memberships requester
+  ON requester.party_id = p.id
+ AND requester.user_id = $2::uuid
+JOIN party_memberships roster ON roster.party_id = p.id
+JOIN users u ON u.id = roster.user_id
+LEFT JOIN characters c ON c.id = roster.character_id
+WHERE p.id = $1::uuid
+ORDER BY
+  CASE WHEN roster.role = 'gm' THEN 0 ELSE 1 END,
+  roster.joined_at,
+  roster.id`
+
+	rows, err := repository.pool.Query(ctx, query, partyID.String(), requesterID.String())
+	if err != nil {
+		return PartyDetail{}, err
+	}
+	defer rows.Close()
+
+	detail := PartyDetail{Members: make([]PartyMember, 0)}
+	found := false
+	for rows.Next() {
+		var loadedPartyID string
+		var member PartyMember
+		var characterID *string
+		var characterName *string
+
+		if err := rows.Scan(
+			&loadedPartyID,
+			&detail.Name,
+			&detail.Role,
+			&detail.CreatedAt,
+			&detail.UpdatedAt,
+			&member.Username,
+			&member.Role,
+			&member.JoinedAt,
+			&characterID,
+			&characterName,
+		); err != nil {
+			return PartyDetail{}, err
+		}
+
+		if !found {
+			parsedPartyID, err := uuid.Parse(loadedPartyID)
+			if err != nil {
+				return PartyDetail{}, err
+			}
+			detail.ID = parsedPartyID
+			found = true
+		}
+
+		if characterID != nil {
+			parsedCharacterID, err := uuid.Parse(*characterID)
+			if err != nil {
+				return PartyDetail{}, err
+			}
+			if characterName == nil {
+				return PartyDetail{}, errors.New("party roster character name is missing")
+			}
+			member.Character = &PartyMemberCharacter{
+				ID:   parsedCharacterID,
+				Name: *characterName,
+			}
+		}
+
+		detail.Members = append(detail.Members, member)
+	}
+	if err := rows.Err(); err != nil {
+		return PartyDetail{}, err
+	}
+	if !found {
+		return PartyDetail{}, ErrPartyNotFound
+	}
+
+	return detail, nil
 }

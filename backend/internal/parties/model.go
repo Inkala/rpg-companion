@@ -26,3 +26,24 @@ type PartySummary struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+type PartyDetail struct {
+	ID        uuid.UUID
+	Name      string
+	Role      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Members   []PartyMember
+}
+
+type PartyMember struct {
+	Username  string
+	Role      string
+	JoinedAt  time.Time
+	Character *PartyMemberCharacter
+}
+
+type PartyMemberCharacter struct {
+	ID   uuid.UUID
+	Name string
+}
