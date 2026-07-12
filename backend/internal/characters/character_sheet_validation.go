@@ -50,7 +50,10 @@ var characterSheetRulesetFields = map[string]struct{}{
 	"sourceStatus": {},
 }
 
-func validateCharacterSheetV1Envelope(raw json.RawMessage) []string {
+func validateCharacterSheetV1Envelope(
+	raw json.RawMessage,
+	expected characterSheetExpectedValues,
+) []string {
 	if !containsOnlyExactJSONFields(raw, characterSheetEnvelopeFields) {
 		return []string{"referencePayload must contain only the CharacterSheetV1 envelope fields"}
 	}
@@ -78,13 +81,14 @@ func validateCharacterSheetV1Envelope(raw json.RawMessage) []string {
 		validationErrors = append(validationErrors, validateCharacterSheetRuleset(envelope.Ruleset)...)
 	}
 
+	identityValid := requireJSONShape(&validationErrors, "identity", envelope.Identity, '{', "a JSON object")
+	abilitiesValid := requireJSONShape(&validationErrors, "abilities", envelope.Abilities, '{', "a JSON object")
+
 	objectFields := []struct {
 		name string
 		raw  json.RawMessage
 	}{
-		{name: "identity", raw: envelope.Identity},
 		{name: "summary", raw: envelope.Summary},
-		{name: "abilities", raw: envelope.Abilities},
 		{name: "combat", raw: envelope.Combat},
 		{name: "proficiencies", raw: envelope.Proficiencies},
 		{name: "equipment", raw: envelope.Equipment},
@@ -113,6 +117,12 @@ func validateCharacterSheetV1Envelope(raw json.RawMessage) []string {
 		if !bytes.Equal(trimmed, []byte("null")) && (len(trimmed) == 0 || trimmed[0] != '{') {
 			validationErrors = append(validationErrors, "referencePayload.spellcasting must be a JSON object or null")
 		}
+	}
+	if identityValid {
+		validationErrors = append(validationErrors, validateCharacterSheetIdentity(envelope.Identity, expected)...)
+	}
+	if abilitiesValid {
+		validationErrors = append(validationErrors, validateCharacterSheetAbilities(envelope.Abilities, expected.AbilityScores)...)
 	}
 
 	return validationErrors

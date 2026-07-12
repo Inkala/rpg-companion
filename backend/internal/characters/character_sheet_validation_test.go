@@ -180,9 +180,9 @@ func TestCharacterSheetEnvelopeRejectsCaseVariantFieldNames(t *testing.T) {
 	}
 }
 
-func TestCharacterSheetEnvelopeAllowsOpaqueNestedFieldsInThisSlice(t *testing.T) {
+func TestCharacterSheetEnvelopeAllowsOtherOpaqueNestedFields(t *testing.T) {
 	envelope := testCharacterSheetEnvelope()
-	envelope["identity"].(map[string]any)["futureNestedField"] = map[string]any{"anything": true}
+	envelope["summary"].(map[string]any)["futureNestedField"] = map[string]any{"anything": true}
 	assertValidCharacterSheetPayload(t, envelope)
 }
 
@@ -194,16 +194,21 @@ func TestRepresentativeCharacterSheetFixturesRemainCompatible(t *testing.T) {
 	fixtures := []struct {
 		name     string
 		envelope map[string]any
+		request  createCharacterRequest
 	}{
-		{name: "Mara audited sample", envelope: maraAuditedSampleEnvelope()},
-		{name: "generated Fighter", envelope: generatedFighterEnvelope()},
-		{name: "minimum manual character", envelope: minimumManualEnvelope()},
-		{name: "full manual character", envelope: fullManualEnvelope()},
+		{name: "Mara audited sample", envelope: maraAuditedSampleEnvelope(), request: validCreateCharacterRequest()},
+		{name: "generated Fighter", envelope: generatedFighterEnvelope(), request: generatedFighterRequest()},
+		{name: "minimum manual character", envelope: minimumManualEnvelope(), request: minimumManualRequest()},
+		{name: "full manual character", envelope: fullManualEnvelope(), request: fullManualRequest()},
 	}
 
 	for _, fixture := range fixtures {
 		t.Run(fixture.name, func(t *testing.T) {
-			assertValidCharacterSheetPayload(t, fixture.envelope)
+			payload := marshalCharacterSheetPayload(t, fixture.envelope)
+			fixture.request.ReferencePayload = &payload
+			if _, err := characterFromRequest(fixture.request, time.Now()); err != nil {
+				t.Fatalf("expected representative fixture to remain compatible, got %v", err)
+			}
 		})
 	}
 }
@@ -216,9 +221,25 @@ func testCharacterSheetEnvelope() map[string]any {
 			"version":      "2014",
 			"sourceStatus": "draft",
 		},
-		"identity":      map[string]any{},
-		"summary":       map[string]any{},
-		"abilities":     map[string]any{},
+		"identity": map[string]any{
+			"name":       "Mara Velard",
+			"ancestry":   "Human",
+			"background": "Outlander",
+			"classes": []any{
+				map[string]any{"name": "Ranger", "level": 3, "subclass": "Hunter"},
+			},
+		},
+		"summary": map[string]any{},
+		"abilities": map[string]any{
+			"scores": map[string]any{
+				"strength":     10,
+				"dexterity":    16,
+				"constitution": 14,
+				"intelligence": 10,
+				"wisdom":       14,
+				"charisma":     8,
+			},
+		},
 		"combat":        map[string]any{},
 		"proficiencies": map[string]any{},
 		"actions":       []any{},
@@ -233,7 +254,6 @@ func testCharacterSheetEnvelope() map[string]any {
 func maraAuditedSampleEnvelope() map[string]any {
 	envelope := testCharacterSheetEnvelope()
 	envelope["ruleset"].(map[string]any)["sourceStatus"] = "audited-sample"
-	envelope["identity"] = map[string]any{"name": "Mara Velard", "classes": []any{map[string]any{"name": "Ranger", "level": 3}}}
 	envelope["actions"] = []any{map[string]any{"id": "longbow", "name": "Longbow"}}
 	envelope["features"] = []any{map[string]any{"id": "colossus-slayer", "name": "Colossus Slayer"}}
 	envelope["spellcasting"] = map[string]any{"ability": "wisdom", "spells": []any{}}
@@ -242,7 +262,13 @@ func maraAuditedSampleEnvelope() map[string]any {
 
 func generatedFighterEnvelope() map[string]any {
 	envelope := testCharacterSheetEnvelope()
-	envelope["identity"] = map[string]any{"name": "Branna Shieldhand", "classes": []any{map[string]any{"name": "Fighter", "level": 1}}}
+	envelope["identity"] = map[string]any{
+		"name":       "Branna Shieldhand",
+		"ancestry":   "Human",
+		"background": "Soldier",
+		"classes":    []any{map[string]any{"name": "Fighter", "level": 1}},
+	}
+	envelope["abilities"] = map[string]any{"scores": abilityScoreMap(16, 11, 15, 9, 13, 14)}
 	envelope["actions"] = []any{map[string]any{"id": "longsword", "name": "Longsword"}}
 	envelope["features"] = []any{map[string]any{"id": "second-wind", "name": "Second Wind"}}
 	return envelope
@@ -251,18 +277,92 @@ func generatedFighterEnvelope() map[string]any {
 func minimumManualEnvelope() map[string]any {
 	envelope := testCharacterSheetEnvelope()
 	envelope["ruleset"].(map[string]any)["sourceStatus"] = "needs-audit"
-	envelope["identity"] = map[string]any{"name": "Alea", "classes": []any{map[string]any{"name": "Cleric", "level": 1}}}
+	envelope["identity"] = map[string]any{
+		"name":       "Alea",
+		"ancestry":   "Human",
+		"background": "Acolyte",
+		"classes":    []any{map[string]any{"name": "Cleric", "level": 1}},
+	}
+	envelope["abilities"] = map[string]any{"scores": abilityScoreMap(10, 10, 10, 10, 10, 10)}
 	return envelope
 }
 
 func fullManualEnvelope() map[string]any {
 	envelope := minimumManualEnvelope()
-	envelope["identity"].(map[string]any)["concept"] = "Traveling healer"
+	envelope["identity"] = map[string]any{
+		"name":       "Alea Dawn",
+		"ancestry":   "Human",
+		"background": "Acolyte",
+		"alignment":  "Neutral Good",
+		"concept":    "Traveling healer",
+		"classes":    []any{map[string]any{"name": "Cleric", "level": 3, "subclass": "Life Domain"}},
+	}
+	envelope["abilities"] = map[string]any{"scores": abilityScoreMap(10, 12, 14, 10, 16, 8)}
 	envelope["summary"] = map[string]any{"displayLine": "Human Cleric - Level 3", "featuredAbilities": []any{"Mace", "Channel Divinity"}}
 	envelope["actions"] = []any{map[string]any{"id": "mace", "name": "Mace"}}
 	envelope["features"] = []any{map[string]any{"id": "channel-divinity", "name": "Channel Divinity"}}
 	envelope["personality"] = map[string]any{"notes": []any{"Transferred from an existing sheet."}}
 	return envelope
+}
+
+func generatedFighterRequest() createCharacterRequest {
+	request := validCreateCharacterRequest()
+	request.Name = "Branna Shieldhand"
+	request.ClassName = "Fighter"
+	request.SubclassName = nil
+	request.Level = 1
+	request.Ancestry = "Human"
+	request.Background = "Soldier"
+	request.AbilityScores = requiredAbilityScoresFromValues(16, 11, 15, 9, 13, 14)
+	return request
+}
+
+func minimumManualRequest() createCharacterRequest {
+	request := validCreateCharacterRequest()
+	request.Name = "Alea"
+	request.ClassName = "Cleric"
+	request.SubclassName = nil
+	request.Level = 1
+	request.Ancestry = "Human"
+	request.Background = "Acolyte"
+	request.AbilityScores = requiredAbilityScoresFromValues(10, 10, 10, 10, 10, 10)
+	return request
+}
+
+func fullManualRequest() createCharacterRequest {
+	request := validCreateCharacterRequest()
+	request.Name = "Alea Dawn"
+	request.ClassName = "Cleric"
+	request.SubclassName = stringPtr("Life Domain")
+	request.Level = 3
+	request.Ancestry = "Human"
+	request.Background = "Acolyte"
+	request.AbilityScores = requiredAbilityScoresFromValues(10, 12, 14, 10, 16, 8)
+	return request
+}
+
+func abilityScoreMap(strength, dexterity, constitution, intelligence, wisdom, charisma int) map[string]any {
+	return map[string]any{
+		"strength":     strength,
+		"dexterity":    dexterity,
+		"constitution": constitution,
+		"intelligence": intelligence,
+		"wisdom":       wisdom,
+		"charisma":     charisma,
+	}
+}
+
+func requiredAbilityScoresFromValues(
+	strength, dexterity, constitution, intelligence, wisdom, charisma int,
+) requiredAbilityScores {
+	return requiredAbilityScores{
+		Strength:     intPtr(strength),
+		Dexterity:    intPtr(dexterity),
+		Constitution: intPtr(constitution),
+		Intelligence: intPtr(intelligence),
+		Wisdom:       intPtr(wisdom),
+		Charisma:     intPtr(charisma),
+	}
 }
 
 func marshalCharacterSheetPayload(t *testing.T, envelope map[string]any) json.RawMessage {
