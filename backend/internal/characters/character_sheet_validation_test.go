@@ -182,7 +182,7 @@ func TestCharacterSheetEnvelopeRejectsCaseVariantFieldNames(t *testing.T) {
 
 func TestCharacterSheetEnvelopeAllowsOtherOpaqueNestedFields(t *testing.T) {
 	envelope := testCharacterSheetEnvelope()
-	envelope["combat"].(map[string]any)["futureNestedField"] = map[string]any{"anything": true}
+	envelope["proficiencies"].(map[string]any)["futureNestedField"] = map[string]any{"anything": true}
 	assertValidCharacterSheetPayload(t, envelope)
 }
 
@@ -245,7 +245,7 @@ func testCharacterSheetEnvelope() map[string]any {
 				"charisma":     8,
 			},
 		},
-		"combat":        map[string]any{},
+		"combat":        validTestCombat(),
 		"proficiencies": map[string]any{},
 		"actions":       []any{},
 		"features":      []any{},
@@ -259,6 +259,23 @@ func testCharacterSheetEnvelope() map[string]any {
 func maraAuditedSampleEnvelope() map[string]any {
 	envelope := testCharacterSheetEnvelope()
 	envelope["ruleset"].(map[string]any)["sourceStatus"] = "audited-sample"
+	envelope["combat"] = map[string]any{
+		"hitPoints": map[string]any{"current": 26, "max": 26, "temporary": 0},
+		"armorClass": map[string]any{
+			"value":             14,
+			"needsConfirmation": true,
+			"note":              "Visible value is stable. Confirm armor source, likely leather armor plus Dexterity.",
+		},
+		"initiative":       3,
+		"speed":            []any{map[string]any{"type": "walk", "feet": 30}},
+		"proficiencyBonus": 2,
+		"passivePerception": map[string]any{
+			"value":             14,
+			"needsConfirmation": true,
+			"note":              "Visible value is stable. Confirm Perception proficiency and full skill list.",
+		},
+		"concentration": nil,
+	}
 	envelope["summary"] = map[string]any{
 		"displayLine":       "Human Ranger · Level 3",
 		"supportingLine":    "Hunter · Outlander",
@@ -392,6 +409,22 @@ func abilityScoreMap(strength, dexterity, constitution, intelligence, wisdom, ch
 		"intelligence": intelligence,
 		"wisdom":       wisdom,
 		"charisma":     charisma,
+	}
+}
+
+func validTestCombat() map[string]any {
+	return map[string]any{
+		"hitPoints": map[string]any{
+			"current":   26,
+			"max":       26,
+			"temporary": 0,
+		},
+		"armorClass":        map[string]any{"value": 14},
+		"initiative":        3,
+		"speed":             []any{map[string]any{"type": "walk", "feet": 30}},
+		"proficiencyBonus":  2,
+		"passivePerception": map[string]any{},
+		"concentration":     nil,
 	}
 }
 

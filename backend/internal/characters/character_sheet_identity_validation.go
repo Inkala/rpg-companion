@@ -16,6 +16,9 @@ type characterSheetExpectedValues struct {
 	SubclassName  *string
 	Level         int
 	AbilityScores AbilityScores
+	HitPoints     HitPoints
+	ArmorClass    int
+	SpeedFt       int
 }
 
 type characterSheetIdentity struct {
@@ -292,6 +295,10 @@ func requiredCharacterSheetInteger(
 ) (int, bool) {
 	if len(raw) == 0 {
 		*validationErrors = append(*validationErrors, "referencePayload."+field+" is required")
+		return 0, false
+	}
+	if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		*validationErrors = append(*validationErrors, "referencePayload."+field+" must be an integer")
 		return 0, false
 	}
 	var value int

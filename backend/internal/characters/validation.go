@@ -102,6 +102,9 @@ func characterFromRequest(request createCharacterRequest, now time.Time) (Charac
 		SubclassName:  subclassName,
 		Level:         request.Level,
 		AbilityScores: abilityScores,
+		HitPoints:     hitPoints,
+		ArmorClass:    armorClass,
+		SpeedFt:       speedFt,
 	}); len(envelopeErrors) > 0 {
 		validationErrors = append(validationErrors, envelopeErrors...)
 	} else {

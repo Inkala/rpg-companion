@@ -407,7 +407,7 @@ func numericNonNegativeMessage(name string) string {
 
 func referencePayloadWithSize(t *testing.T, size int) json.RawMessage {
 	t.Helper()
-	const prefix = `{"schemaVersion":"CharacterSheetV1","ruleset":{"system":"dnd5e","version":"2014","sourceStatus":"draft"},"identity":{"name":"Mara Velard","ancestry":"Human","background":"Outlander","classes":[{"name":"Ranger","level":3,"subclass":"Hunter"}]},"summary":{"displayLine":"Human Ranger - Level 3","landingConcept":"A steady wilderness scout.","featuredAbilities":[],"referenceSections":[]},"abilities":{"scores":{"strength":10,"dexterity":16,"constitution":14,"intelligence":10,"wisdom":14,"charisma":8}},"combat":{},"proficiencies":{},"actions":[],"features":[],"spellcasting":null,"equipment":{},"personality":{},"audit":{"padding":"`
+	const prefix = `{"schemaVersion":"CharacterSheetV1","ruleset":{"system":"dnd5e","version":"2014","sourceStatus":"draft"},"identity":{"name":"Mara Velard","ancestry":"Human","background":"Outlander","classes":[{"name":"Ranger","level":3,"subclass":"Hunter"}]},"summary":{"displayLine":"Human Ranger - Level 3","landingConcept":"A steady wilderness scout.","featuredAbilities":[],"referenceSections":[]},"abilities":{"scores":{"strength":10,"dexterity":16,"constitution":14,"intelligence":10,"wisdom":14,"charisma":8}},"combat":{"hitPoints":{"current":26,"max":26,"temporary":0},"armorClass":{"value":14},"initiative":3,"speed":[{"type":"walk","feet":30}],"proficiencyBonus":2,"passivePerception":{},"concentration":null},"proficiencies":{},"actions":[],"features":[],"spellcasting":null,"equipment":{},"personality":{},"audit":{"padding":"`
 	const suffix = `"}}`
 	contentLength := size - len(prefix) - len(suffix)
 	if contentLength < 0 {
@@ -457,7 +457,7 @@ func minimalCharacterSheetPayload() json.RawMessage {
 		"identity":{"name":"Mara Velard","ancestry":"Human","background":"Outlander","classes":[{"name":"Ranger","level":3,"subclass":"Hunter"}]},
 		"summary":{"displayLine":"Human Ranger - Level 3","landingConcept":"A steady wilderness scout.","featuredAbilities":[],"referenceSections":[]},
 		"abilities":{"scores":{"strength":10,"dexterity":16,"constitution":14,"intelligence":10,"wisdom":14,"charisma":8}},
-		"combat":{},
+		"combat":{"hitPoints":{"current":26,"max":26,"temporary":0},"armorClass":{"value":14},"initiative":3,"speed":[{"type":"walk","feet":30}],"proficiencyBonus":2,"passivePerception":{},"concentration":null},
 		"proficiencies":{},
 		"actions":[],
 		"features":[],
@@ -491,6 +491,14 @@ func syncCharacterSheetPayloadWithRequest(t *testing.T, request *createCharacter
 	scores["intelligence"] = *request.AbilityScores.Intelligence
 	scores["wisdom"] = *request.AbilityScores.Wisdom
 	scores["charisma"] = *request.AbilityScores.Charisma
+	combat := testCombat(envelope)
+	combat["hitPoints"] = map[string]any{
+		"current":   *request.HitPoints.Current,
+		"max":       *request.HitPoints.Max,
+		"temporary": 0,
+	}
+	combat["armorClass"] = map[string]any{"value": *request.ArmorClass}
+	combat["speed"] = []any{testWalkSpeed(*request.SpeedFt)}
 	payload := marshalCharacterSheetPayload(t, envelope)
 	request.ReferencePayload = &payload
 }

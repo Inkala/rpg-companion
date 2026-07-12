@@ -438,6 +438,37 @@ func TestCharacterCreateRejectsInvalidCharacterSheetSummaryBeforePersistence(t *
 	}
 }
 
+func TestCharacterCreateRejectsInvalidCharacterSheetCombatBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	testCombat(envelope)["concentration"] = "must-not-be-reflected"
+	delete(testCombat(envelope), "hitPoints")
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected combat data: %s", recorder.Body.String())
+	}
+}
+
 func withAuthenticatedUser(request *http.Request, userID uuid.UUID) *http.Request {
 	user := auth.AuthenticatedUser{ID: userID, UsernameCanonical: "mara", Username: "Mara"}
 	return request.WithContext(auth.WithAuthenticatedUser(request.Context(), user))
@@ -621,7 +652,7 @@ func validCharacterJSON() []byte {
 			"identity": {"name":"Mara Vale","ancestry":"Human","background":"Outlander","classes":[{"name":"Ranger","level":3,"subclass":"Hunter"}]},
 			"summary": {"displayLine":"Human Ranger - Level 3","landingConcept":"A steady wilderness scout.","featuredAbilities":[],"referenceSections":[]},
 			"abilities": {"scores":{"strength":10,"dexterity":16,"constitution":14,"intelligence":10,"wisdom":14,"charisma":8}},
-			"combat": {},
+			"combat": {"hitPoints":{"current":26,"max":26,"temporary":0},"armorClass":{"value":14},"initiative":3,"speed":[{"type":"walk","feet":30}],"proficiencyBonus":2,"passivePerception":{},"concentration":null},
 			"proficiencies": {},
 			"actions": [{"name":"Longbow"}],
 			"features": [{"name":"Colossus Slayer"}],

@@ -84,12 +84,12 @@ func validateCharacterSheetV1Envelope(
 	identityValid := requireJSONShape(&validationErrors, "identity", envelope.Identity, '{', "a JSON object")
 	summaryValid := requireJSONShape(&validationErrors, "summary", envelope.Summary, '{', "a JSON object")
 	abilitiesValid := requireJSONShape(&validationErrors, "abilities", envelope.Abilities, '{', "a JSON object")
+	combatValid := requireJSONShape(&validationErrors, "combat", envelope.Combat, '{', "a JSON object")
 
 	objectFields := []struct {
 		name string
 		raw  json.RawMessage
 	}{
-		{name: "combat", raw: envelope.Combat},
 		{name: "proficiencies", raw: envelope.Proficiencies},
 		{name: "equipment", raw: envelope.Equipment},
 		{name: "personality", raw: envelope.Personality},
@@ -126,6 +126,9 @@ func validateCharacterSheetV1Envelope(
 	}
 	if abilitiesValid {
 		validationErrors = append(validationErrors, validateCharacterSheetAbilities(envelope.Abilities, expected.AbilityScores)...)
+	}
+	if combatValid {
+		validationErrors = append(validationErrors, validateCharacterSheetCombat(envelope.Combat, expected)...)
 	}
 
 	return validationErrors
