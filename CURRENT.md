@@ -2,14 +2,54 @@
 
 Submission deadline: 20 July 2026
 
-Active planning task: T-017 Party MVP vertical slice
+Active planning task: T-018 whole-application security baseline
 
-State: requirements, design, task sequence, and seven product/security defaults approved on
-2026-07-12.
-T-017 proposes create party, copied invite link, join with one owned character, party list/roster,
-GM read-only Character Reference access, and backend authorization as one dependency-ordered epic.
+State: the dedicated whole-repository Security review is complete. It found no current Critical/High
+data-access vulnerability or secret exposure, but confirmed medium-risk weaknesses in the current
+application. Marcela directed that whole-app security hardening and verification finish before new
+feature work continues. T-018 requirements, design, and plan are approved. Exact implementation
+values and file ownership remain pending the Security worker's read-only investigation report.
+
+T-017 Party is paused. Its original product defaults remain approved, while its Party-specific
+security amendment remains pending until T-018 is complete.
 
 T-016 orchestration and submission alignment was committed and pushed in `7f5e787`; CI passed.
+T-017 planning was committed and pushed in `3a327e2`; CI passed.
+
+## T-018 Security worktree
+
+- Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-security-hardening`
+- Branch: `codex/t018-security-hardening`
+- Base: the approved T-018 orchestration commit on `main`.
+- Classification: Red, one sequential Security worker.
+- Status: create after the planning checkpoint is committed and CI passes; investigation only until
+  `tasks/T-018/TASKS.md` becomes approved.
+- Expected ownership: exact paths pending investigation; likely backend auth, characters,
+  server/config/startup and tests, Compose, dependency/CI configuration, and task-local evidence.
+- Prohibited: Party implementation and orchestrator-owned shared records.
+
+## Paused T-017 investigation worktrees
+
+### T-017A backend
+
+- Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-party-backend`
+- Branch: `codex/t017a-party-backend`
+- Base: `3a327e2`
+- Classification: paused. The worker may finish and return an existing read-only report, but must not
+  edit or continue implementation planning until T-018 is complete.
+- Expected ownership after approval: Party migration, `backend/internal/parties/`, narrow
+  server/character integration, Party-specific abuse controls, and focused tests.
+- Prohibited: frontend and orchestrator-owned shared records.
+
+### T-017B isolated frontend
+
+- Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-party-frontend`
+- Branch: `codex/t017b-party-frontend`
+- Base: `3a327e2`
+- Classification: paused. The worker may finish and return an existing read-only report, but must not
+  edit or continue implementation planning until T-018 is complete.
+- Expected ownership after approval: `frontend/src/parties/` only.
+- Prohibited: central App/router/Home files, backend, and orchestrator-owned shared records.
 
 ## Source of truth
 
@@ -63,13 +103,13 @@ The original T-015 worktree is clean:
 - No new coding task starts in the dirty main checkout.
 - Parallel coding uses separate worktrees with disjoint ownership.
 - Worker sessions do not edit shared coordination records.
-- Marcela explicitly reprioritized the Party MVP for work through 17 July. Guest draft migration,
-  account hardening, resource tracking, and AI remain deferred.
+- Marcela explicitly prioritized whole-app security hardening before Party or any other new feature.
+  Guest draft migration, unrelated account features, resource tracking, and AI remain deferred.
 
 ## Single next action
 
-Review and commit the approved T-017 planning checkpoint, then prepare T-017A backend and T-017B
-isolated frontend child tasks from the same clean base. Backend coding must incorporate any P0
-findings from the Security review.
+Commit and push the approved T-018 planning checkpoint, create the dedicated Security worktree, and
+have the existing Security session return exact implementation values, files, tests, production
+checks, and proposed deferrals before code changes.
 
 Last updated: 2026-07-12

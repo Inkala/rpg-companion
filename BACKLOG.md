@@ -17,8 +17,9 @@ Task IDs reflect actual task folders and do not map reliably to the older GitHub
   `0a724fb`; CI passed.
 - [x] T-016: orchestration, documentation, submission, and GitHub synchronization reset integrated
   in `7f5e787`; CI passed.
-- [ ] T-017: approved Party MVP contract. Next split it into backend, isolated frontend,
-  integration, and validation worktrees.
+- [ ] T-018: approved whole-application security baseline. Active before any new feature work;
+  implementation values pending the worker investigation.
+- [ ] T-017: Party MVP paused until T-018 is integrated and verified.
 
 ## P0: TFM submission package
 

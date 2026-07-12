@@ -322,3 +322,18 @@ Decisions: Party work may split into T-017A backend and T-017B isolated frontend
 checkpoint is integrated. Backend coding must first incorporate any P0 Security review findings.
 Next action: Commit the approved planning checkpoint, then prepare the two child tasks from one clean
 base.
+
+## 2026-07-12: Reconciled the Security review and created a whole-app security gate
+
+- Confirmed the review found no current Critical/High data-access vulnerability and no observed
+  production secret in the current tree or reachable Git history.
+- Created T-018 to own app-wide request limits, server timeouts, authentication hardening, character
+  validation, secret/configuration evidence, dependency authority, CI disposition, and deployed
+  security verification.
+- Kept Party-specific token transport, constraints, transactions, authorization, join throttling,
+  and race tests in T-017.
+- Recorded the clean T-017A and T-017B investigation worktrees at base `3a327e2`.
+- Paused T-017 and all new product implementation until T-018 is approved, integrated, passes CI,
+  and completes deployed verification.
+- Marcela approved the whole-application T-018 scope. Exact implementation values remain gated on
+  the Security worker's investigation report.

@@ -1,20 +1,23 @@
 # T-017: Party MVP vertical slice
 
-Status: approved
+Status: pending security amendment approval
+
+Dependency: paused until T-018 whole-application security baseline is integrated and verified.
 
 ## Parallel-work assessment
 
 - Classification: Red for the complete epic. Yellow/Green child worktrees can begin after contract
   approval and a clean base.
-- Can start in a separate worktree now: Planning only.
-- Required base branch or commit: `7f5e787` is the clean T-016 orchestration base. Child worktrees
-  must start after the approved T-017 planning commit is integrated on top of it.
+- Can start in a separate worktree now: No. Existing read-only investigations may finish their
+  reports, but no Party implementation or further planning expansion starts before T-018.
+- Required base branch or commit: both child worktrees exist at clean, CI-verified commit `3a327e2`.
 - Files/folders this planning step owns: `tasks/T-017/` and orchestrator bookkeeping only.
 - Shared files it must not modify during planning: frontend/backend product code, migrations, CI,
   deployment configuration, and the T-015/T-016 diffs.
-- Dependencies or tasks that must merge first: T-016 is integrated in `7f5e787` and CI passed.
-  Approved T-017 planning docs must be integrated before child worktrees start.
-- Planned integration point: clean `main` after those two commits pass CI.
+- Dependencies or tasks that must merge first: T-018 whole-application security hardening,
+  validation, CI, and deployed verification.
+- Planned integration point: clean `main` after the security amendment and child-task contracts are
+  approved and committed.
 - Intended merge order: T-017A backend, T-017B isolated frontend feature, T-017C central frontend
   integration, T-017D validation/deployment.
 
@@ -49,6 +52,9 @@ features.
 ## Risks
 
 - Authorization leakage.
+- Invite-token leakage through URL paths, history, referrers, logs, or persistent browser state.
+- Authentication and join resource abuse without request limits, server timeouts, or throttling.
+- Malformed cross-user Character Reference payloads.
 - Cross-worktree API contract drift.
 - Migration overlap.
 - Central frontend routing conflicts.
@@ -63,5 +69,5 @@ features.
 
 ## Next Action
 
-Review and approve or revise the proposed invite, roster, character-link, and GM rules. Do not begin
-implementation until `TASKS.md` becomes approved and a clean base exists.
+Pause the Party workers, complete T-018, then rebase or recreate the Party worktrees from its
+verified commit. Do not begin T-017 implementation until `TASKS.md` returns to approved.

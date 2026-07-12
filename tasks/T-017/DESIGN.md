@@ -1,6 +1,9 @@
 # T-017 Design: Party MVP vertical slice
 
-Status: approved
+Status: pending security amendment approval
+
+Dependency: T-018 whole-application security baseline must be integrated and verified before T-017
+implementation resumes.
 
 ## Approach
 
@@ -17,6 +20,7 @@ features. Keep party authorization server-side and avoid adding external deliver
 - `created_by_user_id UUID NOT NULL REFERENCES users(id)`
 - `created_at TIMESTAMPTZ NOT NULL`
 - `updated_at TIMESTAMPTZ NOT NULL`
+- application and database length validation for the approved party-name limit
 
 ### `party_memberships`
 
@@ -29,6 +33,9 @@ features. Keep party authorization server-side and avoid adding external deliver
 - unique `(party_id, user_id)`
 - partial unique `character_id` where not null, preserving the documented one-party-per-character
   rule
+- partial unique `party_id` where `role = 'gm'`, enforcing one GM membership per party
+- check constraint: GM membership requires `character_id IS NULL`
+- check constraint: Player membership requires `character_id IS NOT NULL`
 
 The repository transaction must verify that a linked character is owned by the membership user.
 That cross-table rule cannot be expressed safely as a simple PostgreSQL CHECK constraint.
@@ -42,9 +49,13 @@ That cross-table rule cannot be expressed safely as a simple PostgreSQL CHECK co
 - `created_at TIMESTAMPTZ NOT NULL`
 - `expires_at TIMESTAMPTZ NOT NULL`
 - `revoked_at TIMESTAMPTZ NULL`
+- check `expires_at > created_at`
+- check `revoked_at IS NULL OR revoked_at >= created_at`
+- partial unique `party_id` where `revoked_at IS NULL`
 
-Only one non-revoked active invite per party is recommended. Creating a new invite revokes the old
-one in the same transaction.
+Only one non-revoked invite may exist per party. Creating a new invite revokes the old one in the
+same transaction. Party creation, invite regeneration, and join are transactional. Regeneration and
+join lock the invite or party row so concurrent requests have a deterministic order.
 
 ## API Contract
 
@@ -54,12 +65,19 @@ Proposed protected endpoints:
 - `GET /parties`: list authenticated user's parties and roles.
 - `GET /parties/{partyId}`: return role-aware party detail and roster for a member.
 - `POST /parties/{partyId}/invites`: generate/regenerate an invite, GM only.
-- `POST /party-invites/{token}/join`: join atomically with `{ "characterId": "..." }`.
+- `POST /party-invites/join`: join atomically with
+  `{ "token": "...", "characterId": "..." }`.
 - `GET /parties/{partyId}/characters/{characterId}`: return a linked full character to the managing
   GM only.
 
-The raw invite token appears only in the create-invite response and shareable URL. Lookups hash the
-presented token before querying PostgreSQL.
+Generate the invite with 32 bytes from `crypto/rand` and encode it as unpadded base64url. Return the
+raw token once when the GM creates or regenerates the invite. Store only its SHA-256 hash. Never log
+request bodies or raw tokens.
+
+The frontend share URL is `/parties/join#<token>`. A URL fragment is not sent in HTTP requests. The
+join page reads the fragment, immediately removes it with `history.replaceState`, and sends the token
+only in the POST JSON body. Invite responses use `Cache-Control: no-store`, and the invite page uses
+`Referrer-Policy: no-referrer`.
 
 Do not broaden owner-scoped `GET /characters/{id}`. The dedicated party character endpoint preserves
 the existing owner route's privacy behavior and makes GM authorization explicit.
@@ -67,13 +85,16 @@ the existing owner route's privacy behavior and makes GM authorization explicit.
 ## Frontend Routes
 
 - `/parties/new`
-- `/parties/join/:token`
+- `/parties/join`, with the token accepted only from the URL fragment or typed temporary auth-return
+  state
 - `/parties/:partyId`
 - `/parties/:partyId/characters/:characterId`
 
-The join route remains visible while signed out. Selecting sign in/register records the invite
-route as the post-authentication destination. After authentication, the user returns to the invite
-flow and selects an owned character.
+The join route remains visible while signed out but exposes no invite validity, party name, GM,
+member count, or roster. Selecting sign in/register records a typed internal party-invite
+destination, not an arbitrary return URL. After authentication, the user returns to the invite flow
+and selects an owned character. Temporary invite state is cleared after success, cancellation, or
+expiry.
 
 ## Frontend Feature Shape
 
@@ -93,14 +114,31 @@ The first frontend worktree should build these as isolated components/API helper
 
 ## Error Semantics
 
-- `400`: malformed identifier/body, validation error, invalid/expired invite presented to join.
+- `400`: malformed body or invalid, malformed, expired, revoked, or replaced invite. All invite
+  failures use one generic safe message.
 - `401`: no valid session.
-- `403`: authenticated but lacking party role/membership/GM permission, foreign character, or
-  character already linked elsewhere when disclosure is safe and expected.
-- `404`: unknown party/character where existence should not be exposed by the route.
-- `409`: duplicate membership or state conflict such as an already-linked character.
+- `403`: a visible party member attempts a role-forbidden function, such as a player regenerating an
+  invite.
+- `404`: unknown or non-visible party, foreign character, unlinked character, or cross-party GM
+  access.
+- `409`: authenticated visible-state conflict, including a different join by an existing member or
+  an owned character already linked elsewhere.
+- `429`: login, registration, or party join exceeds its approved limit.
+
+Repeating the exact successful join returns the existing membership with `200`. It does not create a
+duplicate.
 
 Exact response mapping must be frozen in the backend contract tests before frontend integration.
+
+## Dependency On The Whole-App Security Baseline
+
+T-018 owns bounded JSON decoding, server timeouts, authentication throttling, production
+configuration, no-store behavior for current private endpoints, safe startup logging, current
+character payload validation, dependency authority, and deployed security verification.
+
+After T-018 integrates, T-017A reuses those controls and owns only Party-specific additions: Party
+name validation, join throttling, invite no-store/token redaction, Party data constraints,
+transactions, locking, authorization, and race tests.
 
 ## Worktree Split
 
@@ -136,12 +174,13 @@ Exact response mapping must be frozen in the backend contract tests before front
 ## Merge Order
 
 1. Completed: mobile-menu and T-016 documentation work are integrated through `7f5e787`; CI passed.
-2. Approve and commit the T-017 contract/planning docs.
-3. Start T-017A and T-017B from the same clean base.
-4. Merge T-017A first because its tested contract is authoritative.
-5. Rebase/align T-017B to the merged contract if necessary, then merge it.
-6. Implement T-017C in one integration worktree.
-7. Complete T-017D validation and deployment.
+2. Completed: the original T-017 contract/planning docs were committed in `3a327e2`; CI passed.
+3. Complete and integrate T-018 whole-application security hardening and verification.
+4. Rebase or recreate the T-017A and T-017B worktrees from the verified security baseline.
+5. Merge T-017A first because its tested contract is authoritative.
+6. Rebase/align T-017B to the merged contract if necessary, then merge it.
+7. Implement T-017C in one integration worktree.
+8. Complete T-017D validation and deployment.
 
 ## Risks
 
@@ -154,6 +193,10 @@ Exact response mapping must be frozen in the backend contract tests before front
   the documented one membership character per party and the stricter current one-party-per-character
   rule.
 - GM Character Reference access must not accidentally grant edit access.
+- Invite tokens must not appear in backend paths, hosting logs, history after page initialization,
+  referrers, persistent browser storage, or telemetry.
+- The existing shallow CharacterSheetV1 validator is not sufficient for cross-user GM display. The
+  Party route must reject malformed or unsupported payloads before returning them.
 - Profile pictures are not implemented, so roster visuals use the existing generic avatar.
 
 ## Validation Plan

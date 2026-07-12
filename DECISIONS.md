@@ -185,3 +185,60 @@ Consequences:
 Worker prompts must require a structured investigation or implementation report. Workers must not
 edit shared coordination files, stage, commit, push, rebase, merge, or alter infrastructure unless
 explicitly authorized. `docs/orchestration.md` defines the operating contract.
+
+## 2026-07-12: Party invite and authorization security boundary
+
+Context:
+Hunin's Party MVP needs a copied reusable invite link, per-party GM authorization, player character
+linking, and GM read-only access to another user's Character Reference. A dedicated OWASP review
+found the existing auth and owner model sound but identified token leakage, concurrency, abuse, and
+cross-user payload risks in the first Party draft.
+
+Decision:
+Generate Party invites from 32 cryptographically random bytes, encode them as unpadded base64url,
+return the raw value once, and store only its SHA-256 hash. Put the token in the frontend URL fragment,
+remove it immediately with `history.replaceState`, and send it only in the JSON body of the join
+request. Never broaden the owner character endpoint. Use a dedicated GM Party-character endpoint
+with deny-by-default membership and relationship checks. Enforce one GM, GM/player character
+nullability, one active invite, and one party per linked character in PostgreSQL. Make create,
+regenerate, and join transactional with deterministic locking and idempotent identical joins.
+
+Reason:
+URL paths routinely reach hosting, proxy, browser-history, referrer, and telemetry surfaces. The
+fragment keeps the invite out of HTTP URLs, while hashing limits damage from a database read. Database
+constraints, transactions, and dedicated authorization queries protect the relationship under
+concurrency and prevent weakening existing owner access.
+
+Consequences:
+The signed-out invite page reveals no Party information. Invite responses use no-store and the invite
+page uses no-referrer. T-017A owns Party join throttling, token redaction, safe status mappings, and
+Party-specific authorization. T-018 must first establish the shared request, server, authentication,
+cache, current character-validation, configuration, dependency, and deployed-security baseline.
+JWT, email/SMS delivery, arbitrary return URLs, multiple GMs, and Party administration remain out of
+scope.
+
+## 2026-07-12: Whole-application security gate before new features
+
+Context:
+The dedicated OWASP review assessed the complete current repository. It found a strong auth/session
+and owner-access foundation, no observed production secret, and no current Critical/High data-access
+vulnerability. It also confirmed medium-risk weaknesses in authentication abuse protection, request
+and character-payload bounds, HTTP timeouts, and account enumeration, plus configuration,
+dependency, cache, and deployment-verification gaps.
+
+Decision:
+Pause T-017 and other feature implementation. Complete T-018 as a whole-application security gate
+covering the existing authentication, session, character, HTTP, configuration, frontend,
+dependency/CI, secret-management, and deployed boundaries. Every review finding must be fixed,
+verified protected, explicitly accepted, or deferred with a reason before Party resumes.
+
+Reason:
+App-wide controls should not be hidden inside one future feature task. Implementing them first gives
+all later endpoints the same baseline, reduces rework, and produces clearer Security by Design and
+OWASP evidence for the Master's submission.
+
+Consequences:
+The existing Party worktrees remain paused and must be rebased or recreated after T-018 integrates.
+One dedicated Security worktree will implement sequential approved slices because the task crosses
+shared server, auth, validation, configuration, and CI boundaries. Enterprise controls and unrelated
+account features remain eligible for explicit educational-review deferral.
