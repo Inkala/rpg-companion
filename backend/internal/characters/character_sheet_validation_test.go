@@ -182,7 +182,7 @@ func TestCharacterSheetEnvelopeRejectsCaseVariantFieldNames(t *testing.T) {
 
 func TestCharacterSheetEnvelopeAllowsOtherOpaqueNestedFields(t *testing.T) {
 	envelope := testCharacterSheetEnvelope()
-	envelope["proficiencies"].(map[string]any)["futureNestedField"] = map[string]any{"anything": true}
+	envelope["equipment"].(map[string]any)["futureNestedField"] = map[string]any{"anything": true}
 	assertValidCharacterSheetPayload(t, envelope)
 }
 
@@ -246,7 +246,7 @@ func testCharacterSheetEnvelope() map[string]any {
 			},
 		},
 		"combat":        validTestCombat(),
-		"proficiencies": map[string]any{},
+		"proficiencies": validTestProficiencies(),
 		"actions":       []any{},
 		"features":      []any{},
 		"spellcasting":  nil,
@@ -275,6 +275,42 @@ func maraAuditedSampleEnvelope() map[string]any {
 			"note":              "Visible value is stable. Confirm Perception proficiency and full skill list.",
 		},
 		"concentration": nil,
+	}
+	envelope["proficiencies"] = map[string]any{
+		"savingThrows": map[string]any{
+			"values":            []any{},
+			"needsConfirmation": true,
+			"note":              "Saving throw proficiencies are not confirmed from the current sample.",
+		},
+		"skills": []any{
+			map[string]any{
+				"name":              "Perception",
+				"proficient":        true,
+				"modifier":          4,
+				"needsConfirmation": true,
+				"note":              "Passive Perception 14 implies this, but the full skill list still needs review.",
+			},
+		},
+		"weapons": map[string]any{
+			"values":            []any{"Longbow", "Shortsword"},
+			"needsConfirmation": true,
+			"note":              "Only visible sample weapons are modeled for now.",
+		},
+		"armor": map[string]any{
+			"values":            []any{"Leather armor"},
+			"needsConfirmation": true,
+			"note":              "Included to explain AC 14, but the generated sheet/source must confirm it.",
+		},
+		"tools": map[string]any{
+			"values":            []any{},
+			"needsConfirmation": true,
+			"note":              "Tool proficiencies are not confirmed.",
+		},
+		"languages": map[string]any{
+			"values":            []any{},
+			"needsConfirmation": true,
+			"note":              "Languages are not confirmed.",
+		},
 	}
 	envelope["summary"] = map[string]any{
 		"displayLine":       "Human Ranger · Level 3",
@@ -425,6 +461,17 @@ func validTestCombat() map[string]any {
 		"proficiencyBonus":  2,
 		"passivePerception": map[string]any{},
 		"concentration":     nil,
+	}
+}
+
+func validTestProficiencies() map[string]any {
+	return map[string]any{
+		"savingThrows": map[string]any{"values": []any{}},
+		"skills":       []any{},
+		"weapons":      map[string]any{"values": []any{}},
+		"armor":        map[string]any{"values": []any{}},
+		"tools":        map[string]any{"values": []any{}},
+		"languages":    map[string]any{"values": []any{}},
 	}
 }
 
