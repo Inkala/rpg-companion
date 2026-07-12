@@ -2,10 +2,14 @@
 
 Submission deadline: 20 July 2026
 
-Most recent coordination task: T-016 Orchestration reset and TFM submission alignment
+Active planning task: T-017 Party MVP vertical slice
 
-State: docs-only implementation complete and validated. This coordination checkpoint changed no
-product code.
+State: requirements, design, task sequence, and seven product/security defaults approved on
+2026-07-12.
+T-017 proposes create party, copied invite link, join with one owned character, party list/roster,
+GM read-only Character Reference access, and backend authorization as one dependency-ordered epic.
+
+T-016 orchestration and submission alignment was committed and pushed in `7f5e787`; CI passed.
 
 ## Source of truth
 
@@ -59,12 +63,13 @@ The original T-015 worktree is clean:
 - No new coding task starts in the dirty main checkout.
 - Parallel coding uses separate worktrees with disjoint ownership.
 - Worker sessions do not edit shared coordination records.
-- Party features, guest draft migration, account hardening, resource tracking, and AI remain deferred
-  unless the submission checklist is secure or Marcela explicitly reprioritizes them.
+- Marcela explicitly reprioritized the Party MVP for work through 17 July. Guest draft migration,
+  account hardening, resource tracking, and AI remain deferred.
 
 ## Single next action
 
-Select the next product priority and create its requirements before starting another coding
-worktree.
+Review and commit the approved T-017 planning checkpoint, then prepare T-017A backend and T-017B
+isolated frontend child tasks from the same clean base. Backend coding must incorporate any P0
+findings from the Security review.
 
 Last updated: 2026-07-12

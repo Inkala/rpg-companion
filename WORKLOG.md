@@ -297,3 +297,28 @@ The orchestrator owns shared coordination records and GitHub planning state; wor
 isolated worktrees and return structured reports.
 Next action: Review the validated T-015 mobile profile diff and explicitly decide whether to commit
 it before committing the separate T-016 docs reset.
+
+## 2026-07-12
+
+Task: T-017 Party MVP vertical-slice planning
+What changed: Drafted requirements, design, task sequence, security rules, API/data/frontend shape,
+and a four-phase worktree/merge plan for party creation, copied invite link, atomic join with an
+owned character, party list/roster, and GM read-only Character Reference access.
+Validation: Reviewed the original product roadmap, party permission model, course security rubric,
+current migrations, backend auth/character boundaries, and frontend route/Home/API structure.
+Implementation remains unapproved and product code was not changed.
+Decisions: Recommend a reusable opaque copied link with no email/SMS service, seven-day expiry,
+one simultaneous party per character, member-visible basic roster, and GM-only access to other
+character sheets. These defaults require Marcela's approval.
+Next action: Review and approve or revise the T-017 invite, roster, character-link, and GM rules.
+
+## 2026-07-12
+
+Task: T-017 Party MVP contract approval
+What changed: Marcela approved the Party MVP requirements, design, task sequence, and all seven
+proposed invite, roster, character-link, and GM-scope defaults.
+Validation: Planning-only update. `TASKS.md` is approved; product code remains unchanged.
+Decisions: Party work may split into T-017A backend and T-017B isolated frontend after the planning
+checkpoint is integrated. Backend coding must first incorporate any P0 Security review findings.
+Next action: Commit the approved planning checkpoint, then prepare the two child tasks from one clean
+base.

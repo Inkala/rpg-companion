@@ -15,7 +15,10 @@ Task IDs reflect actual task folders and do not map reliably to the older GitHub
 
 - [x] T-015 follow-up: mobile profile navigation and account-menu icon improvements integrated in
   `0a724fb`; CI passed.
-- [ ] T-016: complete the orchestration, documentation, submission, and GitHub synchronization reset.
+- [x] T-016: orchestration, documentation, submission, and GitHub synchronization reset integrated
+  in `7f5e787`; CI passed.
+- [ ] T-017: approved Party MVP contract. Next split it into backend, isolated frontend,
+  integration, and validation worktrees.
 
 ## P0: TFM submission package
 
