@@ -2,9 +2,12 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,7 +15,15 @@ import (
 	"github.com/google/uuid"
 )
 
-const authRequestBodyLimit int64 = 8192
+const (
+	authRequestBodyLimit       int64 = 8192
+	globalLoginLimit                 = 30
+	globalLoginWindow                = time.Minute
+	identifierFailureLimit           = 10
+	identifierFailureWindow          = 10 * time.Minute
+	globalLoginLimiterKey            = "login-global"
+	identifierFailureKeyPrefix       = "login-identifier-failure:"
+)
 
 type handlerRepository interface {
 	CreateUser(context.Context, User) (User, error)
@@ -28,6 +39,7 @@ type Handler struct {
 	passwordConfig    PasswordConfig
 	sessionConfig     SessionConfig
 	argonGate         *ArgonGate
+	loginLimiter      *SlidingWindowLimiter
 	dummyPasswordHash string
 	hashPassword      func(string, PasswordConfig) (string, error)
 	verifyPassword    func(string, string) (bool, error)
@@ -37,6 +49,7 @@ type Handler struct {
 func NewHandler(repository *Repository, passwordConfig PasswordConfig, sessionConfig SessionConfig) Handler {
 	sessionConfig = sessionConfig.withDefaults()
 	passwordConfig = passwordConfig.withDefaults()
+	clock := func() time.Time { return time.Now().UTC() }
 	var handlerStore handlerRepository
 	if repository != nil {
 		handlerStore = repository
@@ -47,10 +60,11 @@ func NewHandler(repository *Repository, passwordConfig PasswordConfig, sessionCo
 		passwordConfig:    passwordConfig,
 		sessionConfig:     sessionConfig,
 		argonGate:         NewArgonGate(2),
+		loginLimiter:      NewSlidingWindowLimiter(clock),
 		dummyPasswordHash: dummyPasswordHash(passwordConfig),
 		hashPassword:      HashPassword,
 		verifyPassword:    VerifyPassword,
-		now:               func() time.Time { return time.Now().UTC() },
+		now:               clock,
 	}
 }
 
@@ -145,6 +159,21 @@ func (handler Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &request) {
 		return
 	}
+	globalResult := handler.loginLimiter.Allow(globalLoginLimiterKey, globalLoginLimit, globalLoginWindow)
+	if !globalResult.Allowed {
+		writeLoginThrottleExceeded(w, globalResult.RetryAfter, globalLoginWindow)
+		return
+	}
+	identifierFailureKey := loginIdentifierFailureKey(request.UsernameOrEmail)
+	identifierResult := handler.loginLimiter.Check(
+		identifierFailureKey,
+		identifierFailureLimit,
+		identifierFailureWindow,
+	)
+	if !identifierResult.Allowed {
+		writeLoginThrottleExceeded(w, identifierResult.RetryAfter, identifierFailureWindow)
+		return
+	}
 
 	release, acquired := handler.argonGate.TryAcquire()
 	if !acquired {
@@ -155,7 +184,10 @@ func (handler Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 
 	user, err := handler.findUserForSignIn(r, request.UsernameOrEmail)
 	if errors.Is(err, ErrNotFound) {
-		_, _ = handler.verifyPassword(request.Password, handler.dummyPasswordHash)
+		_, verificationErr := handler.verifyPassword(request.Password, handler.dummyPasswordHash)
+		if verificationErr == nil && !handler.recordInvalidLoginFailure(w, identifierFailureKey) {
+			return
+		}
 		writeInvalidCredentials(w)
 		return
 	}
@@ -170,6 +202,9 @@ func (handler Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !passwordMatches {
+		if !handler.recordInvalidLoginFailure(w, identifierFailureKey) {
+			return
+		}
 		writeInvalidCredentials(w)
 		return
 	}
@@ -177,8 +212,40 @@ func (handler Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 	if !handler.createSessionCookie(w, r, user) {
 		return
 	}
+	handler.loginLimiter.Reset(identifierFailureKey)
 
 	writeJSON(w, http.StatusOK, sessionResponse{User: PublicUserFromUser(user)})
+}
+
+func (handler Handler) recordInvalidLoginFailure(w http.ResponseWriter, identifierFailureKey string) bool {
+	result := handler.loginLimiter.Allow(
+		identifierFailureKey,
+		identifierFailureLimit,
+		identifierFailureWindow,
+	)
+	if !result.Allowed {
+		writeLoginThrottleExceeded(w, result.RetryAfter, identifierFailureWindow)
+		return false
+	}
+	return true
+}
+
+func loginIdentifierFailureKey(identifier string) string {
+	canonical := canonicalLoginIdentifier(identifier)
+	digest := sha256.Sum256([]byte(canonical))
+	return identifierFailureKeyPrefix + hex.EncodeToString(digest[:])
+}
+
+func canonicalLoginIdentifier(identifier string) string {
+	trimmed := strings.TrimSpace(identifier)
+	if isEmailIdentifier(trimmed) {
+		if canonical, valid := normalizeEmail(trimmed); valid {
+			return "email:" + canonical
+		}
+	} else if canonical, _, valid := normalizeUsername(trimmed); valid {
+		return "username:" + canonical
+	}
+	return "invalid:" + strings.ToLower(trimmed)
 }
 
 func (handler Handler) CurrentSession(w http.ResponseWriter, r *http.Request) {
@@ -280,8 +347,24 @@ func writeInvalidCredentials(w http.ResponseWriter) {
 }
 
 func writeArgonCapacityExceeded(w http.ResponseWriter) {
-	w.Header().Set("Retry-After", "1")
+	writeLoginThrottleExceeded(w, time.Second, time.Second)
+}
+
+func writeLoginThrottleExceeded(w http.ResponseWriter, retryAfter time.Duration, window time.Duration) {
+	w.Header().Set("Retry-After", strconv.FormatInt(retryAfterSeconds(retryAfter, window), 10))
 	writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "Too many requests. Please try again later."})
+}
+
+func retryAfterSeconds(retryAfter time.Duration, window time.Duration) int64 {
+	maximum := int64((window + time.Second - 1) / time.Second)
+	seconds := int64((retryAfter + time.Second - 1) / time.Second)
+	if seconds < 1 {
+		return 1
+	}
+	if seconds > maximum {
+		return maximum
+	}
+	return seconds
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, body any) {

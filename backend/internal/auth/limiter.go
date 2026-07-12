@@ -40,21 +40,13 @@ func NewSlidingWindowLimiter(now func() time.Time) *SlidingWindowLimiter {
 }
 
 func (limiter *SlidingWindowLimiter) Allow(key string, limit int, window time.Duration) LimitResult {
-	if limit < 1 {
-		panic("rate limiter limit must be positive")
-	}
-	if window <= 0 {
-		panic("rate limiter window must be positive")
-	}
+	validateLimiterRule(limit, window)
 
 	now := limiter.now()
 	limiter.mu.Lock()
 	defer limiter.mu.Unlock()
 
-	limiter.operations++
-	if limiter.operations%limiterCleanupInterval == 0 {
-		limiter.cleanupExpired(now)
-	}
+	limiter.maintain(now)
 
 	bucket, exists := limiter.buckets[key]
 	if !exists {
@@ -73,15 +65,71 @@ func (limiter *SlidingWindowLimiter) Allow(key string, limit int, window time.Du
 	bucket.window = window
 
 	if len(bucket.events) >= limit {
-		retryAfter := bucket.events[0].Add(window).Sub(now)
-		if retryAfter < 0 {
-			retryAfter = 0
+		return LimitResult{
+			Allowed:    false,
+			RetryAfter: retryDuration(bucket.events[0], now, window),
 		}
-		return LimitResult{Allowed: false, RetryAfter: retryAfter}
 	}
 
 	bucket.events = append(bucket.events, now)
 	return LimitResult{Allowed: true}
+}
+
+func (limiter *SlidingWindowLimiter) Check(key string, limit int, window time.Duration) LimitResult {
+	validateLimiterRule(limit, window)
+
+	now := limiter.now()
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+
+	limiter.maintain(now)
+	bucket, exists := limiter.buckets[key]
+	if !exists {
+		return LimitResult{Allowed: true}
+	}
+
+	bucket.events = activeEvents(bucket.events, now.Add(-window))
+	if len(bucket.events) == 0 {
+		delete(limiter.buckets, key)
+		return LimitResult{Allowed: true}
+	}
+	if len(bucket.events) > limit {
+		retained := make([]time.Time, limit)
+		copy(retained, bucket.events[len(bucket.events)-limit:])
+		bucket.events = retained
+	}
+	bucket.lastSeen = now
+	bucket.window = window
+	if len(bucket.events) >= limit {
+		return LimitResult{
+			Allowed:    false,
+			RetryAfter: retryDuration(bucket.events[0], now, window),
+		}
+	}
+
+	return LimitResult{Allowed: true}
+}
+
+func (limiter *SlidingWindowLimiter) Reset(key string) {
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+	delete(limiter.buckets, key)
+}
+
+func validateLimiterRule(limit int, window time.Duration) {
+	if limit < 1 {
+		panic("rate limiter limit must be positive")
+	}
+	if window <= 0 {
+		panic("rate limiter window must be positive")
+	}
+}
+
+func (limiter *SlidingWindowLimiter) maintain(now time.Time) {
+	limiter.operations++
+	if limiter.operations%limiterCleanupInterval == 0 {
+		limiter.cleanupExpired(now)
+	}
 }
 
 func (limiter *SlidingWindowLimiter) makeRoomForKey(now time.Time) {
@@ -128,4 +176,12 @@ func activeEvents(events []time.Time, cutoff time.Time) []time.Time {
 		firstActive++
 	}
 	return events[firstActive:]
+}
+
+func retryDuration(firstEvent time.Time, now time.Time, window time.Duration) time.Duration {
+	retryAfter := firstEvent.Add(window).Sub(now)
+	if retryAfter < 0 {
+		return 0
+	}
+	return retryAfter
 }

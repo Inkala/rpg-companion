@@ -200,6 +200,66 @@ func TestSlidingWindowLimiterIsConcurrencySafe(t *testing.T) {
 	}
 }
 
+func TestSlidingWindowLimiterCheckDoesNotCreateOrRecordAbsentKey(t *testing.T) {
+	clock := newLimiterTestClock()
+	limiter := NewSlidingWindowLimiter(clock.Now)
+
+	result := limiter.Check("missing-key", 10, time.Minute)
+	if !result.Allowed {
+		t.Fatalf("expected absent key to be allowed, got retry after %s", result.RetryAfter)
+	}
+
+	limiter.mu.Lock()
+	bucketCount := len(limiter.buckets)
+	limiter.mu.Unlock()
+	if bucketCount != 0 {
+		t.Fatalf("expected absent-key check to leave zero buckets, got %d", bucketCount)
+	}
+}
+
+func TestSlidingWindowLimiterCheckReportsExistingLimitWithoutRecording(t *testing.T) {
+	clock := newLimiterTestClock()
+	limiter := NewSlidingWindowLimiter(clock.Now)
+
+	for attempt := 0; attempt < 2; attempt++ {
+		if !limiter.Allow("login-key", 2, time.Minute).Allowed {
+			t.Fatalf("expected failure %d to be recorded", attempt+1)
+		}
+	}
+	clock.Advance(500 * time.Millisecond)
+
+	result := limiter.Check("login-key", 2, time.Minute)
+	if result.Allowed {
+		t.Fatal("expected key at its limit to be rejected")
+	}
+	if result.RetryAfter != 59*time.Second+500*time.Millisecond {
+		t.Fatalf("expected 59.5s retry duration, got %s", result.RetryAfter)
+	}
+
+	limiter.mu.Lock()
+	eventCount := len(limiter.buckets["login-key"].events)
+	limiter.mu.Unlock()
+	if eventCount != 2 {
+		t.Fatalf("expected check not to record an event, got %d events", eventCount)
+	}
+}
+
+func TestSlidingWindowLimiterResetRemovesOnlySelectedKey(t *testing.T) {
+	clock := newLimiterTestClock()
+	limiter := NewSlidingWindowLimiter(clock.Now)
+	limiter.Allow("reset-key", 1, time.Hour)
+	limiter.Allow("retained-key", 1, time.Hour)
+
+	limiter.Reset("reset-key")
+
+	if result := limiter.Check("reset-key", 1, time.Hour); !result.Allowed {
+		t.Fatalf("expected reset key to recover, got retry after %s", result.RetryAfter)
+	}
+	if result := limiter.Check("retained-key", 1, time.Hour); result.Allowed {
+		t.Fatal("expected unrelated key to retain its event")
+	}
+}
+
 type limiterTestClock struct {
 	mu  sync.RWMutex
 	now time.Time
