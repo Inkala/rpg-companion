@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -13,21 +14,39 @@ import (
 
 const authRequestBodyLimit int64 = 8192
 
+type handlerRepository interface {
+	CreateUser(context.Context, User) (User, error)
+	FindUserByUsername(context.Context, string) (User, error)
+	FindUserByEmail(context.Context, string) (User, error)
+	CreateSession(context.Context, Session) (Session, error)
+	RevokeSession(context.Context, []byte, time.Time) error
+}
+
 type Handler struct {
-	repository     *Repository
+	repository     handlerRepository
 	authenticator  Authenticator
 	passwordConfig PasswordConfig
 	sessionConfig  SessionConfig
+	argonGate      *ArgonGate
+	hashPassword   func(string, PasswordConfig) (string, error)
+	verifyPassword func(string, string) (bool, error)
 	now            func() time.Time
 }
 
 func NewHandler(repository *Repository, passwordConfig PasswordConfig, sessionConfig SessionConfig) Handler {
 	sessionConfig = sessionConfig.withDefaults()
+	var handlerStore handlerRepository
+	if repository != nil {
+		handlerStore = repository
+	}
 	return Handler{
-		repository:     repository,
+		repository:     handlerStore,
 		authenticator:  NewAuthenticator(repository, sessionConfig),
 		passwordConfig: passwordConfig.withDefaults(),
 		sessionConfig:  sessionConfig,
+		argonGate:      NewArgonGate(2),
+		hashPassword:   HashPassword,
+		verifyPassword: VerifyPassword,
 		now:            func() time.Time { return time.Now().UTC() },
 	}
 }
@@ -71,7 +90,14 @@ func (handler Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	passwordHash, err := HashPassword(request.Password, handler.passwordConfig)
+	release, acquired := handler.argonGate.TryAcquire()
+	if !acquired {
+		writeArgonCapacityExceeded(w)
+		return
+	}
+	defer release.Release()
+
+	passwordHash, err := handler.hashPassword(request.Password, handler.passwordConfig)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not create account"})
 		return
@@ -126,6 +152,13 @@ func (handler Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	release, acquired := handler.argonGate.TryAcquire()
+	if !acquired {
+		writeArgonCapacityExceeded(w)
+		return
+	}
+	defer release.Release()
+
 	user, err := handler.findUserForSignIn(r, request.UsernameOrEmail)
 	if errors.Is(err, ErrNotFound) {
 		writeInvalidCredentials(w)
@@ -136,7 +169,7 @@ func (handler Handler) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	passwordMatches, err := VerifyPassword(request.Password, user.PasswordHash)
+	passwordMatches, err := handler.verifyPassword(request.Password, user.PasswordHash)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not verify credentials"})
 		return
@@ -249,6 +282,11 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, destination any) bool {
 
 func writeInvalidCredentials(w http.ResponseWriter) {
 	writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "Username, email, or password is incorrect."})
+}
+
+func writeArgonCapacityExceeded(w http.ResponseWriter) {
+	w.Header().Set("Retry-After", "1")
+	writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "Too many requests. Please try again later."})
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, body any) {
