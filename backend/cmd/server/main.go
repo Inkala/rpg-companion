@@ -14,10 +14,9 @@ import (
 )
 
 func main() {
-	cfg := config.FromEnv()
-
-	if cfg.DatabaseURL == "" {
-		log.Fatal("DATABASE_URL is required")
+	cfg, err := config.FromEnv()
+	if err != nil {
+		log.Fatal("configuration invalid")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
