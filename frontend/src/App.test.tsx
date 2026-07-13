@@ -99,6 +99,10 @@ const signedInFetchMock = (
       return Promise.resolve(jsonResponse({ characters }));
     }
 
+    if (url.endsWith('/parties')) {
+      return Promise.resolve(jsonResponse({ parties: [] }));
+    }
+
     if (url.includes('/characters/')) {
       return Promise.resolve(jsonResponse(characterDetail));
     }
@@ -374,10 +378,12 @@ describe('App', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
     fireEvent(window, new PopStateEvent('popstate'));
 
-    clickPrivateRouteSignIn();
-    completeSignInForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
-    expect(await screen.findByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('main')).queryByRole('button', { name: 'Sign in' }),
+    ).not.toBeInTheDocument();
     expect(requestedPaths(fetchMock)).not.toContain('/party-invites/inspect');
   });
 
@@ -1151,6 +1157,54 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Start a character draft.' })).toBeInTheDocument();
   });
 
+  it('opens the signed-out create Party route from Home', () => {
+    vi.stubGlobal('fetch', partyFetchMock());
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Create party/ }));
+
+    expect(window.location.pathname).toBe('/parties/new');
+    expect(
+      screen.getByRole('heading', { name: 'Sign in to create a party' }),
+    ).toBeInTheDocument();
+  });
+
+  it('opens a safe generic Join Party route without carrying invite data', async () => {
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    render(<App initialRoute={{ name: 'home' }} initialInviteToken={inviteToken} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Join party/ }));
+
+    expect(window.location.pathname).toBe('/parties/join');
+    expect(window.location.search).toBe('');
+    expect(window.location.hash).toBe('');
+    expect(JSON.stringify(window.history.state).includes(inviteToken)).toBe(false);
+    expect(
+      screen.getByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(requestedPaths(fetchMock)).toContain('/auth/session'));
+    expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(0);
+  });
+
+  it('opens the exact Party route from a signed-in Home Party card', async () => {
+    const fetchMock = partyFetchMock({
+      restoredUser: true,
+      parties: [{ id: 'party-1', name: 'The Lantern Guard', role: 'player' }],
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<App />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Open The Lantern Guard' }),
+    );
+
+    expect(window.location.pathname).toBe('/parties/party-1');
+    expect(
+      await screen.findByRole('heading', { name: 'The Lantern Guard' }),
+    ).toBeInTheDocument();
+  });
+
   it('updates the URL from home account actions', () => {
     stubSignedOutBackend();
 
@@ -1187,11 +1241,24 @@ describe('App', () => {
 
   it('registers and returns to the signed-in home', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ error: 'authentication required' }, 401))
-      .mockResolvedValueOnce(jsonResponse({ user: maraUser }))
-      .mockResolvedValueOnce(jsonResponse({ characters: [] }));
+    const fetchMock = vi.fn((url: string) => {
+      const path = new URL(url).pathname;
+      if (path === '/auth/session') {
+        return Promise.resolve(
+          jsonResponse({ error: 'authentication required' }, 401),
+        );
+      }
+      if (path === '/auth/register') {
+        return Promise.resolve(jsonResponse({ user: maraUser }));
+      }
+      if (path === '/characters') {
+        return Promise.resolve(jsonResponse({ characters: [] }));
+      }
+      if (path === '/parties') {
+        return Promise.resolve(jsonResponse({ parties: [] }));
+      }
+      return Promise.resolve(jsonResponse({ error: 'not found' }, 404));
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     render(<App />);
@@ -1382,6 +1449,7 @@ const partyFetchMock = ({
   charactersAfterCreate,
   partyCharacter = fighterCharacter,
   partyCharacterResponse,
+  parties = [],
 }: {
   restoredUser?: boolean;
   inspectionResponse?: Response;
@@ -1390,6 +1458,7 @@ const partyFetchMock = ({
   charactersAfterCreate?: unknown[];
   partyCharacter?: unknown;
   partyCharacterResponse?: Response;
+  parties?: unknown[];
 } = {}) => {
   vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
   let characterWasCreated = false;
@@ -1441,6 +1510,10 @@ const partyFetchMock = ({
 
     if (path === '/parties' && init?.method === 'POST') {
       return Promise.resolve(jsonResponse(createdParty, 201));
+    }
+
+    if (path === '/parties' && init?.method === 'GET') {
+      return Promise.resolve(jsonResponse({ parties }));
     }
 
     if (path === '/parties/party-1/invites' && init?.method === 'POST') {

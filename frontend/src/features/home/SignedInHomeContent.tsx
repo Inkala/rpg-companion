@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { listCharacterSummaries } from '../../characters/api';
 import type { CharacterSummaryDTO } from '../../characters/apiTypes';
-import { PlannedActionButton } from './PlannedActionButton';
 import { SampleCharacterCard } from '../../characters/SampleCharacterCard';
+import { PartyList } from '../../parties/PartyList';
+import type { PartySummaryDTO } from '../../parties/apiTypes';
 
 type CharacterSummaryState =
   | { status: 'loading' }
@@ -13,10 +14,20 @@ type CharacterSummaryState =
 export const SignedInHomeContent = (
   {
     onCreateCharacter,
+    loadParties,
+    onCreateParty,
     onExploreCharacter,
+    onJoinParty,
+    onOpenParty,
+    onSignIn,
   }: {
     onCreateCharacter: () => void;
+    loadParties: () => Promise<PartySummaryDTO[]>;
+    onCreateParty: () => void;
     onExploreCharacter: () => void;
+    onJoinParty: () => void;
+    onOpenParty: (partyId: string) => void;
+    onSignIn: () => void;
   },
 ) => {
   const [characterState, setCharacterState] = useState<CharacterSummaryState>({ status: 'loading' });
@@ -62,21 +73,15 @@ export const SignedInHomeContent = (
           </button>
         </section>
 
-        <section className="home-panel home-panel--parties" aria-labelledby="my-parties-title">
-          <p className="eyebrow home-panel__eyebrow">My parties</p>
-          <header className="home-panel__intro">
-            <div>
-              <h2 id="my-parties-title" className="home-panel__title">
-                No parties yet
-              </h2>
-              <p className="home-panel__copy">
-                Party tools are planned for a later slice and will require an
-                account.
-              </p>
-            </div>
-            <PlannedActionButton label="Create party" />
-            <PlannedActionButton label="Join party" />
-          </header>
+        <section className="home-panel home-panel--parties">
+          <PartyList
+            isSignedIn
+            loadParties={loadParties}
+            onCreateParty={onCreateParty}
+            onJoinParty={onJoinParty}
+            onOpenParty={onOpenParty}
+            onSignIn={onSignIn}
+          />
         </section>
       </section>
 

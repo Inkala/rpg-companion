@@ -16,19 +16,47 @@ const maraCharacterSummary = {
   updatedAt: '2026-07-05T10:00:00Z',
 };
 
-const renderHomePage = (isSignedIn = false) => {
+const parties = [
+  { id: 'party-1', name: 'The Lantern Guard', role: 'gm' as const },
+  { id: 'party-2', name: 'The Silver Company', role: 'player' as const },
+];
+
+const renderHomePage = (
+  isSignedIn = false,
+  overrides: Partial<React.ComponentProps<typeof HomePage>> = {},
+) => {
   const onCreateCharacter = vi.fn();
   const onExploreCharacter = vi.fn();
+  const onCreateParty = vi.fn();
+  const onJoinParty = vi.fn();
+  const onOpenParty = vi.fn();
+  const onSignIn = vi.fn();
+  const loadParties = vi.fn().mockResolvedValue([]);
+  const props: React.ComponentProps<typeof HomePage> = {
+    isSignedIn,
+    onCreateCharacter,
+    onExploreCharacter,
+    onCreateParty,
+    onJoinParty,
+    onOpenParty,
+    onSignIn,
+    loadParties,
+    ...overrides,
+  };
 
-  const result = render(
-    <HomePage
-      isSignedIn={isSignedIn}
-      onCreateCharacter={onCreateCharacter}
-      onExploreCharacter={onExploreCharacter}
-    />,
-  );
+  const result = render(<HomePage {...props} />);
 
-  return { ...result, onCreateCharacter, onExploreCharacter };
+  return {
+    ...result,
+    props,
+    onCreateCharacter,
+    onExploreCharacter,
+    onCreateParty,
+    onJoinParty,
+    onOpenParty,
+    onSignIn,
+    loadParties,
+  };
 };
 
 beforeEach(() => {
@@ -38,7 +66,12 @@ beforeEach(() => {
 
 describe('HomePage', () => {
   it('renders the guest landing content', () => {
-    const { onCreateCharacter, onExploreCharacter } = renderHomePage();
+    const {
+      onCreateCharacter,
+      onExploreCharacter,
+      onCreateParty,
+      onJoinParty,
+    } = renderHomePage();
 
     expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Mara Velard' })).toBeInTheDocument();
@@ -47,18 +80,22 @@ describe('HomePage', () => {
     ).not.toHaveAttribute('aria-disabled');
     expect(
       screen.getByRole('button', { name: /Create party/ }),
-    ).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByRole('button', { name: /Join party/ })).toHaveAttribute(
+    ).not.toHaveAttribute('aria-disabled');
+    expect(screen.getByRole('button', { name: /Join party/ })).not.toHaveAttribute(
       'aria-disabled',
-      'true',
     );
     expect(screen.queryByRole('button', { name: /Add an existing character/ })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Expand' }));
     fireEvent.click(screen.getByRole('button', { name: 'Create character' }));
+    fireEvent.click(screen.getByRole('button', { name: /Create party/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Join party/ }));
 
     expect(onExploreCharacter).toHaveBeenCalledOnce();
     expect(onCreateCharacter).toHaveBeenCalledOnce();
+    expect(onCreateParty).toHaveBeenCalledOnce();
+    expect(onJoinParty).toHaveBeenCalledOnce();
+    expect(screen.queryByText(/Party tools.*planned|wait for account-backed party work/i)).not.toBeInTheDocument();
   });
 
   it('orders the signed-out Mara sample before home actions', () => {
@@ -90,6 +127,82 @@ describe('HomePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create character' }));
 
     expect(onCreateCharacter).toHaveBeenCalledOnce();
+  });
+
+  it('loads signed-in Parties through one stable supplied loader', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ characters: [] })));
+    const loadParties = vi.fn().mockResolvedValue([]);
+    const { rerender, props } = renderHomePage(true, { loadParties });
+
+    expect(
+      await screen.findByRole('heading', { name: 'No parties yet' }),
+    ).toBeInTheDocument();
+    expect(loadParties).toHaveBeenCalledOnce();
+
+    rerender(<HomePage {...props} loadParties={loadParties} />);
+    await waitFor(() => expect(loadParties).toHaveBeenCalledOnce());
+  });
+
+  it('exposes functional create and join actions for an empty signed-in Party list', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ characters: [] })));
+    const onCreateParty = vi.fn();
+    const onJoinParty = vi.fn();
+    renderHomePage(true, {
+      loadParties: vi.fn().mockResolvedValue([]),
+      onCreateParty,
+      onJoinParty,
+    });
+
+    await screen.findByRole('heading', { name: 'No parties yet' });
+    fireEvent.click(screen.getByRole('button', { name: 'Create party' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
+
+    expect(onCreateParty).toHaveBeenCalledOnce();
+    expect(onJoinParty).toHaveBeenCalledOnce();
+  });
+
+  it('renders loaded GM and Player Party cards and opens their exact IDs', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ characters: [] })));
+    const onOpenParty = vi.fn();
+    renderHomePage(true, {
+      loadParties: vi.fn().mockResolvedValue(parties),
+      onOpenParty,
+    });
+
+    const partyList = await screen.findByRole('list', { name: 'Your parties' });
+    expect(within(partyList).getByText('GM')).toBeInTheDocument();
+    expect(within(partyList).getByText('Player')).toBeInTheDocument();
+    fireEvent.click(
+      within(partyList).getByRole('button', { name: 'Open The Lantern Guard' }),
+    );
+    fireEvent.click(
+      within(partyList).getByRole('button', { name: 'Open The Silver Company' }),
+    );
+
+    expect(onOpenParty).toHaveBeenNthCalledWith(1, 'party-1');
+    expect(onOpenParty).toHaveBeenNthCalledWith(2, 'party-2');
+  });
+
+  it('shows a safe Party error and retries through the same loader', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ characters: [] })));
+    const loadParties = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('private Party detail'))
+      .mockResolvedValueOnce(parties);
+    renderHomePage(true, { loadParties });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not load your parties. Please try again.',
+    );
+    expect(screen.queryByText('private Party detail')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByRole('list', { name: 'Your parties' })).toBeInTheDocument();
+    expect(loadParties).toHaveBeenCalledTimes(2);
   });
 
   it('renders saved character summary cards', async () => {
@@ -125,9 +238,12 @@ describe('HomePage', () => {
     renderHomePage(true);
 
     const myCharacters = await screen.findByText('My characters');
-    const myParties = screen.getByText('My parties');
+    const myParties = await screen.findByRole('heading', { name: 'My parties' });
     const maraHeading = screen.getByRole('heading', { name: 'Mara Velard' });
 
+    expect(myCharacters.compareDocumentPosition(myParties)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
     expect(myCharacters.compareDocumentPosition(maraHeading)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );

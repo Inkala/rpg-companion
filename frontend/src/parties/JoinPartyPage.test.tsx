@@ -82,15 +82,27 @@ describe('JoinPartyPage', () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
-  it('shows a safe unavailable state for a missing token without loading', () => {
+  it('shows a safe unavailable state for a signed-out missing token without requests', () => {
     const inspectInvite = vi.fn();
     const loadCharacters = vi.fn();
+    const joinParty = vi.fn();
 
-    renderPage({ token: null, inspectInvite, loadCharacters });
+    renderPage({
+      token: null,
+      isSignedIn: false,
+      inspectInvite,
+      loadCharacters,
+      joinParty,
+    });
 
+    expect(
+      screen.getByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('This party invite is unavailable.');
+    expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
     expect(inspectInvite).not.toHaveBeenCalled();
     expect(loadCharacters).not.toHaveBeenCalled();
+    expect(joinParty).not.toHaveBeenCalled();
   });
 
   it('loads inspection and owned characters with an accessible loading state', () => {

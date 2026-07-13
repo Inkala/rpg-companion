@@ -176,6 +176,19 @@ export const App = ({
     navigateToRoute({ name: 'new-character' });
   };
 
+  const showNewParty = () => {
+    navigateToRoute({ name: 'new-party' });
+  };
+
+  const showJoinParty = () => {
+    clearInviteState();
+    navigateToRoute({ name: 'join-party' });
+  };
+
+  const showParty = (partyId: string) => {
+    navigateToRoute({ name: 'party', partyId });
+  };
+
   const returnToInvite = () => {
     if (inviteTokenRef.current === null) {
       showHome();
@@ -360,8 +373,13 @@ export const App = ({
       {route.name === 'home' ? (
         <HomePage
           isSignedIn={currentUser !== null}
+          loadParties={partyApi.listParties}
           onCreateCharacter={showNewCharacter}
+          onCreateParty={showNewParty}
           onExploreCharacter={showSampleCharacter}
+          onJoinParty={showJoinParty}
+          onOpenParty={showParty}
+          onSignIn={() => openAccount('sign-in')}
         />
       ) : route.name === 'account' ? (
         <AccountPage

@@ -262,10 +262,10 @@ export const JoinPartyPage = ({
         </button>
       </header>
 
-      {!isSignedIn ? (
-        <SignedOutJoinState onSignIn={onSignIn} />
-      ) : token === null ? (
+      {token === null ? (
         <UnavailableInviteState />
+      ) : !isSignedIn ? (
+        <SignedOutJoinState onSignIn={onSignIn} />
       ) : visibleLoadState.status === 'loading' ? (
         <LoadingInviteState />
       ) : visibleLoadState.status === 'unavailable' ? (
