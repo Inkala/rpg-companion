@@ -356,3 +356,17 @@ base.
 - Kept server/configuration, auth limiter, deep character validation, repository/CI, production, and
   deployment work gated on later reports and prompts.
 - Kept file deletion and CI/external actions behind separate explicit approval.
+
+## 2026-07-13: Integrated and verified T-018 Security baseline
+
+- Merged PR #22 with the whole-application Security baseline and PR #23 with the isolated frontend
+  timing-test stabilization.
+- Confirmed final `main` CI passed frontend, backend, govulncheck, build, and full-history secret
+  scanning at `cab97da`.
+- Confirmed successful Railway backend and Cloudflare frontend deployments.
+- Verified deployed HTTPS, exact CORS and preflight rejection, private `no-store`, API security
+  headers, production HSTS, and Secure HttpOnly SameSite cookie attributes without creating test
+  production data.
+- Closed T-018 and resumed T-017 with a required rebase of both Party worktrees onto `cab97da`.
+- Preserved the approved post-MVP GM member-removal decision as a separate unstaged orchestration
+  change.

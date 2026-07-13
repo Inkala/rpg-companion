@@ -71,12 +71,12 @@ unless they directly protect the review experience.
 ## P1: Final release integrity
 
 - [x] Review, commit, and push the validated T-015 mobile profile navigation follow-up (`0a724fb`).
-- [ ] Complete and verify T-018 whole-application security baseline before resuming feature work.
+- [x] Complete and verify T-018 whole-application security baseline before resuming feature work.
 - [ ] Re-run frontend lint, typecheck, tests, and build on final main.
 - [ ] Re-run backend tests, vet, and build on final main.
 - [ ] Confirm GitHub Actions passes on final main.
 - [ ] Run final public smoke tests at desktop and mobile widths.
-- [ ] Confirm no secrets or private credentials are committed.
+- [x] Confirm no secrets or private credentials are committed.
 - [ ] Tag or record the final submission commit.
 
 ## P2: High-value course evidence

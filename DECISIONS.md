@@ -268,3 +268,49 @@ Each slice stops for orchestrator review. Only Slice 1 is currently authorized. 
 CI/external security actions, production configuration changes, and deployed mutation remain
 separate approval gates. T-017 stays paused until T-018 integrates and passes CI and deployed
 verification.
+
+## 2026-07-12: GM member removal is the first post-MVP Party follow-up
+
+Context:
+The T-017 Party MVP intentionally excludes Party administration. Marcela wants GM removal of a
+Player to remain planned because the current relational model makes it a small, useful extension.
+Characters exist independently of parties; `party_memberships` links a user and character to a
+party.
+
+Decision:
+Keep GM member removal outside the core T-017 delivery gate, but make it the first post-MVP Party
+follow-up. Removing a Player deletes only that Player membership. It does not delete or modify the
+character, and the character becomes available to join another party. The future endpoint should
+use an opaque membership identifier, authorize from the authenticated party GM, prohibit removing
+the GM membership, and return `404` for unknown or cross-party membership targets.
+
+Reason:
+This preserves the independent character model and keeps the initial Party flow focused while
+retaining a straightforward administration improvement for implementation if deadline capacity
+remains.
+
+Consequences:
+The follow-up requires backend authorization tests, a roster membership identifier, a confirmation
+interaction, and frontend tests. It must not delay T-017 integration, submission evidence, or the
+20 July deadline work.
+
+## 2026-07-13: Verified Security baseline is mandatory for remaining feature branches
+
+Context:
+T-018 introduced fail-closed configuration, bounded request and authentication work, strict
+CharacterSheetV1 validation, safe response headers, dependency checks, and history-aware secret
+scanning. PR #22 integrated the baseline, and PR #23 stabilized the only post-merge CI timing race.
+
+Decision:
+Treat `main` at `cab97da` as the required base for remaining product work. Existing T-017A and
+T-017B branches must rebase onto it and validate before adding handlers, routes, or central frontend
+integration. Keep pnpm audit, pinned govulncheck, and digest-pinned Gitleaks as required CI gates.
+
+Reason:
+Party authorization and invite handling must build on the verified Security controls. Rebasing first
+prevents duplicated decoder, limiter, configuration, validation, and cache-policy implementations.
+
+Consequences:
+Party work may resume in parallel only for the declared backend and isolated frontend worktrees.
+The backend rebase may require a narrow character-repository conflict resolution. Action SHA
+pinning and stricter provider-managed frontend headers remain post-submission follow-ups.

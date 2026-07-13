@@ -46,6 +46,8 @@ Recommended parallel tasks after the current dirty-main integration is resolved:
 - [ ] Guest draft localStorage persistence and account conversion.
 - [ ] Party creation, invite link/code, joining, and character linking.
 - [ ] GM roster and server-side party authorization.
+- [ ] Post-MVP Party follow-up: let a GM remove a Player membership without deleting or modifying
+  the linked character. The removed character becomes available to join another party.
 - [ ] Profile editing, email verification, and password reset.
 - [ ] Account, character, and production test-data deletion.
 - [ ] Attack reminder badges and calculation breakdowns.
