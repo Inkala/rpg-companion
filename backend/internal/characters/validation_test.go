@@ -2,6 +2,7 @@ package characters
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -67,6 +68,79 @@ func TestCharacterFromRequestRejectsNonObjectReferencePayload(t *testing.T) {
 	}
 	if !contains(validationErr.Messages, "referencePayload must be a JSON object") {
 		t.Fatalf("expected referencePayload validation message, got %v", validationErr.Messages)
+	}
+}
+
+func TestValidateStoredCharacterForPartyGMRequiresStrictConsistentPayload(t *testing.T) {
+	valid := validStoredPartyGMCharacter(t)
+	if err := validateStoredCharacterForPartyGM(valid); err != nil {
+		t.Fatalf("expected valid stored Party character to pass validation: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(Character) Character
+	}{
+		{
+			name: "missing payload",
+			mutate: func(character Character) Character {
+				character.ReferencePayload = nil
+				return character
+			},
+		},
+		{
+			name: "non-object payload",
+			mutate: func(character Character) Character {
+				character.ReferencePayload = json.RawMessage(`[]`)
+				return character
+			},
+		},
+		{
+			name: "malformed object",
+			mutate: func(character Character) Character {
+				character.ReferencePayload = json.RawMessage(`{"secret":"private-malformed-payload"`)
+				return character
+			},
+		},
+		{
+			name: "unsupported schema",
+			mutate: func(character Character) Character {
+				character.ReferencePayload = json.RawMessage(strings.Replace(
+					string(character.ReferencePayload),
+					"CharacterSheetV1",
+					"CharacterSheetV2",
+					1,
+				))
+				return character
+			},
+		},
+		{
+			name: "oversized payload",
+			mutate: func(character Character) Character {
+				character.ReferencePayload = json.RawMessage(`{"padding":"` + strings.Repeat("x", maxReferencePayloadBytes) + `"}`)
+				return character
+			},
+		},
+		{
+			name: "core-inconsistent payload",
+			mutate: func(character Character) Character {
+				character.ReferencePayload = json.RawMessage(strings.Replace(
+					string(character.ReferencePayload),
+					character.Name,
+					"Different Name",
+					1,
+				))
+				return character
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := validateStoredCharacterForPartyGM(tt.mutate(valid)); !errors.Is(err, errInvalidStoredCharacter) {
+				t.Fatal("expected stored cross-user character validation to fail closed")
+			}
+		})
 	}
 }
 

@@ -15,14 +15,16 @@ import (
 const characterRequestBodyLimit int64 = 131072
 
 type Handler struct {
-	repository      *Repository
-	createCharacter func(context.Context, Character) (Character, error)
+	repository             *Repository
+	createCharacter        func(context.Context, Character) (Character, error)
+	getCharacterForPartyGM func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (Character, error)
 }
 
 func NewHandler(repository *Repository) Handler {
 	handler := Handler{repository: repository}
 	if repository != nil {
 		handler.createCharacter = repository.Create
+		handler.getCharacterForPartyGM = repository.GetByIDForPartyGM
 	}
 	return handler
 }
@@ -116,6 +118,47 @@ func (handler Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, responseFromCharacter(character))
+}
+
+func (handler Handler) GetByIDForPartyGM(w http.ResponseWriter, r *http.Request) {
+	requesterID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+
+	partyID, err := uuid.Parse(r.PathValue("partyId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "party id must be a valid UUID")
+		return
+	}
+	characterID, err := uuid.Parse(r.PathValue("characterId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "character id must be a valid UUID")
+		return
+	}
+	if handler.getCharacterForPartyGM == nil {
+		writeError(w, http.StatusServiceUnavailable, "character persistence is not configured")
+		return
+	}
+
+	character, err := handler.getCharacterForPartyGM(r.Context(), characterID, partyID, requesterID)
+	if errors.Is(err, ErrNotFound) {
+		writeError(w, http.StatusNotFound, "character not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load character")
+		return
+	}
+	if err := validateStoredCharacterForPartyGM(character); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load character")
+		return
+	}
+
+	response := responseFromCharacter(character)
+	response.OwnerSubjectID = nil
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (handler Handler) List(w http.ResponseWriter, r *http.Request) {
