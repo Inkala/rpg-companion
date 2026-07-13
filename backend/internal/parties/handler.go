@@ -16,6 +16,8 @@ const partyRequestBodyLimit int64 = 4096
 const (
 	partyErrorAuthenticationRequired = "authentication_required"
 	partyErrorValidation             = "validation_error"
+	partyErrorInviteUnavailable      = "invite_unavailable"
+	partyErrorForbidden              = "forbidden"
 	partyErrorNotFound               = "not_found"
 	partyErrorServer                 = "server_error"
 )
@@ -24,6 +26,8 @@ type handlerRepository interface {
 	CreateParty(context.Context, uuid.UUID, string) (Party, error)
 	ListPartiesForUser(context.Context, uuid.UUID) ([]PartySummary, error)
 	GetPartyForMember(context.Context, uuid.UUID, uuid.UUID) (PartyDetail, error)
+	CreateOrRegenerateInvite(context.Context, uuid.UUID, uuid.UUID) (PartyInvite, error)
+	InspectInvite(context.Context, string) (InviteInspection, error)
 }
 
 type Handler struct {
@@ -36,6 +40,10 @@ func NewHandler(repository handlerRepository) Handler {
 
 type createPartyRequest struct {
 	Name string `json:"name"`
+}
+
+type inspectInviteRequest struct {
+	Token string `json:"token"`
 }
 
 type partyErrorResponse struct {
@@ -128,6 +136,68 @@ func (handler Handler) GetForMember(w http.ResponseWriter, r *http.Request) {
 	writePartyJSON(w, http.StatusOK, responseFromPartyDetail(detail))
 }
 
+func (handler Handler) CreateOrRegenerateInvite(w http.ResponseWriter, r *http.Request) {
+	requesterID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writePartyError(w, http.StatusUnauthorized, partyErrorAuthenticationRequired)
+		return
+	}
+
+	partyID, err := uuid.Parse(r.PathValue("partyId"))
+	if err != nil {
+		writePartyError(w, http.StatusBadRequest, partyErrorValidation)
+		return
+	}
+	if handler.repository == nil {
+		writePartyError(w, http.StatusInternalServerError, partyErrorServer)
+		return
+	}
+
+	invite, err := handler.repository.CreateOrRegenerateInvite(r.Context(), partyID, requesterID)
+	if errors.Is(err, ErrPartyForbidden) {
+		writePartyError(w, http.StatusForbidden, partyErrorForbidden)
+		return
+	}
+	if errors.Is(err, ErrPartyNotFound) {
+		writePartyError(w, http.StatusNotFound, partyErrorNotFound)
+		return
+	}
+	if err != nil {
+		writePartyError(w, http.StatusInternalServerError, partyErrorServer)
+		return
+	}
+
+	writePartyJSON(w, http.StatusCreated, responseFromPartyInvite(invite))
+}
+
+func (handler Handler) InspectInvite(w http.ResponseWriter, r *http.Request) {
+	if _, ok := auth.UserIDFromContext(r.Context()); !ok {
+		writePartyError(w, http.StatusUnauthorized, partyErrorAuthenticationRequired)
+		return
+	}
+
+	var request inspectInviteRequest
+	if !decodePartyRequest(w, r, &request) {
+		return
+	}
+	if handler.repository == nil {
+		writePartyError(w, http.StatusInternalServerError, partyErrorServer)
+		return
+	}
+
+	inspection, err := handler.repository.InspectInvite(r.Context(), request.Token)
+	if errors.Is(err, ErrInviteUnavailable) {
+		writePartyError(w, http.StatusBadRequest, partyErrorInviteUnavailable)
+		return
+	}
+	if err != nil {
+		writePartyError(w, http.StatusInternalServerError, partyErrorServer)
+		return
+	}
+
+	writePartyJSON(w, http.StatusOK, responseFromInviteInspection(inspection))
+}
+
 func decodePartyRequest(w http.ResponseWriter, r *http.Request, destination any) bool {
 	err := httpjson.Decode(w, r, destination, partyRequestBodyLimit)
 	switch {
@@ -158,6 +228,10 @@ func partyErrorMessage(code string) string {
 		return "authentication required"
 	case partyErrorValidation:
 		return "party request is invalid"
+	case partyErrorInviteUnavailable:
+		return "invite unavailable"
+	case partyErrorForbidden:
+		return "forbidden"
 	case partyErrorNotFound:
 		return "party not found"
 	default:
