@@ -1,23 +1,23 @@
 # T-017: Party MVP vertical slice
 
-Status: pending security amendment approval
+Status: approved and in progress
 
-Dependency: paused until T-018 whole-application security baseline is integrated and verified.
+Dependency: satisfied. T-018 is integrated and verified, and both Party worktrees are rebased onto
+the orchestration checkpoint at `a82bb34`.
 
 ## Parallel-work assessment
 
 - Classification: Red for the complete epic. Yellow/Green child worktrees can begin after contract
   approval and a clean base.
-- Can start in a separate worktree now: No. Existing read-only investigations may finish their
-  reports, but no Party implementation or further planning expansion starts before T-018.
-- Required base branch or commit: both child worktrees exist at clean, CI-verified commit `3a327e2`.
+- Can start in a separate worktree now: Yes, within the declared T-017A backend and T-017B isolated
+  frontend ownership. Shared integration remains Red and sequential.
+- Required base branch or commit: both child branches contain verified `main` checkpoint `a82bb34`.
 - Files/folders this planning step owns: `tasks/T-017/` and orchestrator bookkeeping only.
 - Shared files it must not modify during planning: frontend/backend product code, migrations, CI,
   deployment configuration, and the T-015/T-016 diffs.
-- Dependencies or tasks that must merge first: T-018 whole-application security hardening,
-  validation, CI, and deployed verification.
-- Planned integration point: clean `main` after the security amendment and child-task contracts are
-  approved and committed.
+- Dependencies or tasks that must merge first: satisfied by T-018, PR #22, PR #23, final CI, and
+  deployed verification.
+- Planned integration point: T-017A first, then T-017B, then central T-017C integration.
 - Intended merge order: T-017A backend, T-017B isolated frontend feature, T-017C central frontend
   integration, T-017D validation/deployment.
 
@@ -41,7 +41,7 @@ features.
 
 ## Likely Files Or Artifacts
 
-- `tasks/T-017A/` through `tasks/T-017D/` after plan approval
+- this `tasks/T-017/` folder remains the approved contract and checklist for workstreams A through D
 - one new party migration pair
 - new backend `internal/parties` package
 - focused party access additions around characters/server
@@ -69,5 +69,5 @@ features.
 
 ## Next Action
 
-Pause the Party workers, complete T-018, then rebase or recreate the Party worktrees from its
-verified commit. Do not begin T-017 implementation until `TASKS.md` returns to approved.
+Commit the reconciled T-017 contract checkpoint. Then resume one bounded backend handler slice and
+one isolated frontend accessibility/styling slice, each stopping for review before commit.

@@ -314,3 +314,33 @@ Consequences:
 Party work may resume in parallel only for the declared backend and isolated frontend worktrees.
 The backend rebase may require a narrow character-repository conflict resolution. Action SHA
 pinning and stricter provider-managed frontend headers remain post-submission follow-ups.
+
+## 2026-07-13: Freeze the Party HTTP and abuse-control boundary
+
+Context:
+T-017A and T-017B investigations produced matching DTOs and detailed handler/integration proposals.
+T-018 now provides strict JSON decoding, private-response cache controls, an in-process limiter, and
+deep CharacterSheetV1 validation. Both Party branches have been rebased and validated against that
+baseline.
+
+Decision:
+Use a 4,096-byte strict JSON limit for Party create, invite inspection, and join bodies. Protect
+`POST /party-invites/inspect` with the existing session middleware. Limit join to 10 syntactically
+valid attempts per authenticated user per minute using only a SHA-256-derived user key. Apply
+`Cache-Control: no-store` to all Party and invite paths. Return `201` for a new join and `200` for an
+identical replay using an internal, non-serialized created indicator. Strip the owner ID and reuse
+the strict CharacterSheetV1 validator on the GM Party-character response.
+
+Reason:
+These values comfortably exceed valid Party request sizes while bounding database and invite
+probing. Authentication before inspection prevents signed-out Party disclosure. User-keyed
+throttling treats valid and unavailable invites identically without retaining raw tokens. Reusing
+the T-018 controls avoids duplicate security implementations.
+
+Consequences:
+T-017A may implement the Party HTTP boundary and narrow server integration. T-017B remains isolated
+to its Party feature folder until the backend contract is complete. Central routes, App, Home,
+fragment bootstrap, and typed authentication return remain T-017C work. No Party branch may weaken
+the existing owner-scoped character endpoint or introduce Party administration. The parent
+`tasks/T-017/` folder remains the single approved contract for workstreams A through D so status and
+security requirements are not duplicated across drifting child folders.

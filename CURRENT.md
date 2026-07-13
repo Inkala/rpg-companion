@@ -4,12 +4,10 @@ Submission deadline: 20 July 2026
 
 Active task: T-017 Party MVP
 
-State: T-018 whole-application security hardening is complete. PR #22 merged the Security baseline,
-PR #23 stabilized the post-merge session-restoration test, and `main` is green at `cab97da`. The
-deployed Railway backend and Cloudflare frontend are available. Safe production checks confirmed
-HTTPS, exact CORS, private-response `no-store`, API security headers, HSTS, and Secure HttpOnly
-SameSite cookies. T-017 may resume only after its backend and isolated frontend branches are rebased
-onto this verified baseline.
+State: T-018 whole-application security hardening is complete. The T-017 Security amendment is
+approved. Both Party branches are rebased onto orchestration checkpoint `a82bb34`, fully validated,
+pushed, and synchronized with origin. T-017 may resume through bounded backend and isolated
+frontend increments. Shared server and central frontend integration remain sequential gates.
 
 ## Active T-017 worktrees
 
@@ -17,12 +15,12 @@ onto this verified baseline.
 
 - Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-party-backend`
 - Branch: `codex/t017a-party-backend`
-- Current HEAD: `96f9adf`
-- Classification: Red during rebase because the branch overlaps Security-owned character repository
-  code and will later integrate server routing.
-- Status: implementation through response DTO mappings is committed and pushed. Rebase onto the
-  orchestration checkpoint on `origin/main`, resolve only rebase conflicts, run PostgreSQL-backed
-  baseline checks, and stop before new Party handler work.
+- Current HEAD: `f305d9c`
+- Classification: Yellow for the next Party-package handler slice. Later server routing is Red and
+  requires a separate integration gate.
+- Status: migration, repositories, invite/join transactions, scoped GM character query, and response
+  DTO mappings are committed and pushed. The rebased PostgreSQL-backed baseline passed. Next is the
+  strict request/error contract plus create/list/detail handlers inside `internal/parties`.
 - Expected ownership after rebase: Party migration, `backend/internal/parties/`, narrow
   server/character integration, Party-specific abuse controls, and focused tests.
 - Prohibited: frontend and orchestrator-owned shared records.
@@ -31,12 +29,12 @@ onto this verified baseline.
 
 - Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-party-frontend`
 - Branch: `codex/t017b-party-frontend`
-- Current HEAD: `22b2806`
-- Classification: Yellow during rebase. The branch contains only isolated `frontend/src/parties/`
-  work, but it must validate against the hardened frontend baseline.
-- Status: isolated Party API and components are committed and pushed. Rebase onto the orchestration
-  checkpoint on `origin/main`, run the full frontend baseline, and stop before central
-  App/router/Home integration.
+- Current HEAD: `c4bb107`
+- Classification: Green while work remains inside `frontend/src/parties/`. Central routing and App
+  integration are Red and remain prohibited.
+- Status: isolated Party API, create/join/list/detail/invite/reference components, and fragment helper
+  are committed and pushed. The rebased frontend baseline passed 339 tests. A narrowly scoped Party
+  accessibility/styling increment may proceed without central integration.
 - Expected ownership after rebase: `frontend/src/parties/` only.
 - Prohibited: central App/router/Home files, backend, and orchestrator-owned shared records.
 
@@ -63,6 +61,8 @@ onto this verified baseline.
 - The approved post-MVP GM member-removal follow-up is recorded in `BACKLOG.md` and `DECISIONS.md`.
 - T-018 completion evidence and the T-017 Security-baseline rebase gate are recorded in the shared
   coordination documents.
+- The frozen Party request, inspection, join-throttle, no-store, replay-status, and cross-user
+  Character Reference rules are approved in the T-017 task documents.
 - No product work starts directly in the main checkout.
 
 ## Source of truth
@@ -95,8 +95,8 @@ onto this verified baseline.
 
 ## Single next action
 
-Commit and push this orchestration checkpoint. Then rebase T-017A and T-017B in parallel onto that
-`origin/main`, perform no new feature edits, validate each rebased baseline, and return both reports
-before Party handlers or central frontend integration resumes.
+Review and commit this T-017 contract checkpoint. Then run the next backend handler slice and the
+isolated frontend accessibility/styling slice in parallel, with both workers stopping before commit
+and before any shared server or central frontend integration.
 
 Last updated: 2026-07-13

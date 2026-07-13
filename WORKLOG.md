@@ -370,3 +370,19 @@ base.
 - Closed T-018 and resumed T-017 with a required rebase of both Party worktrees onto `cab97da`.
 - Preserved the approved post-MVP GM member-removal decision as a separate unstaged orchestration
   change.
+
+## 2026-07-13: Rebased Party branches and approved the Security amendment
+
+- Committed and pushed orchestration checkpoint `a82bb34` after closing T-018 and resuming T-017.
+- Rebased T-017A from `96f9adf` to `f305d9c`. Resolved one additive character-repository test
+  conflict by preserving both Security error-classification coverage and the Party GM authorization
+  matrix. Full disposable-PostgreSQL tests, race tests, vet, and build passed.
+- Rebased T-017B from `22b2806` to `c4bb107` without conflicts. The isolated Party folder remained
+  unchanged, and 339 frontend tests, lint, typecheck, and build passed.
+- Pushed both rewritten branches with guarded leases and confirmed each local and remote hash
+  matches.
+- Approved and froze the Party-specific 4,096-byte request limit, authenticated invite inspection,
+  10-per-user-per-minute join throttle, Party-path `no-store`, new-versus-replay join statuses, and
+  strict GM Character Reference response boundary.
+- Next action: review and commit the reconciled task records, then resume one bounded T-017A handler
+  slice and one isolated T-017B accessibility/styling slice.

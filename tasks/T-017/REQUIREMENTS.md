@@ -1,9 +1,9 @@
 # T-017 Requirements: Party creation, invitation, joining, roster, and GM access
 
-Status: pending security amendment approval
+Status: approved and in progress
 
-Dependency: T-018 whole-application security baseline must be integrated and verified before T-017
-implementation resumes.
+Dependency: satisfied. T-018 is integrated and verified, and both Party branches are rebased onto
+the verified baseline.
 
 ## Problem
 
@@ -132,6 +132,21 @@ and allowing the GM to view them. AI assistance is explicitly later and optional
 49. Existing registration, character creation, My characters, saved Character Reference, Mara
     sample, and profile behavior remain intact.
 
+## Frozen Party Security Limits
+
+- Party JSON bodies use one 4,096-byte maximum and strict JSON decoding.
+- Invite inspection is authenticated and uses `POST /party-invites/inspect` with the token only in
+  the JSON body. Signed-out requests reveal no Party or invite-validity information.
+- Join permits 10 syntactically valid attempts per authenticated user per minute. The in-process key
+  contains only a SHA-256 digest of the authenticated user ID and never the invite token.
+- Malformed JSON and invalid character UUIDs do not consume a join attempt. Valid and unavailable
+  invites consume attempts identically, and successful joins do not reset the bucket.
+- Party and invite paths use `Cache-Control: no-store` on success and error responses.
+- The first successful join returns `201`; an identical replay returns the same membership with
+  `200`. The internal created/replayed indicator is not serialized.
+- Party GM Character Reference responses strip the character owner ID and validate the stored
+  CharacterSheetV1 payload before returning cross-user data.
+
 ## Acceptance Criteria
 
 - Two dedicated test users can complete this flow on the deployed app:
@@ -156,7 +171,6 @@ and allowing the GM to view them. AI assistance is explicitly later and optional
 
 ## Approval State
 
-Marcela approved the original seven product defaults on 2026-07-12. The security review preserved
-that product scope but requires the amended token transport, privacy, constraints, concurrency,
-Party-specific abuse controls, and test behavior above. Those amendments remain pending approval,
-and T-018 must be complete before implementation.
+Marcela approved the original seven product defaults on 2026-07-12 and approved continuing the
+reviewed Security-amended Party contract on 2026-07-13. T-018 is complete. T-017A and T-017B are
+rebased, fully validated, pushed, and ready for their next bounded increments.

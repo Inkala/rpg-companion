@@ -1,9 +1,9 @@
 # T-017 Design: Party MVP vertical slice
 
-Status: pending security amendment approval
+Status: approved and in progress
 
-Dependency: T-018 whole-application security baseline must be integrated and verified before T-017
-implementation resumes.
+Dependency: satisfied. T-018 is integrated and verified, and both Party branches contain the
+verified orchestration checkpoint `a82bb34`.
 
 ## Approach
 
@@ -65,6 +65,8 @@ Proposed protected endpoints:
 - `GET /parties`: list authenticated user's parties and roles.
 - `GET /parties/{partyId}`: return role-aware party detail and roster for a member.
 - `POST /parties/{partyId}/invites`: generate/regenerate an invite, GM only.
+- `POST /party-invites/inspect`: authenticated privacy-safe invite inspection with
+  `{ "token": "..." }`.
 - `POST /party-invites/join`: join atomically with
   `{ "token": "...", "characterId": "..." }`.
 - `GET /parties/{partyId}/characters/{characterId}`: return a linked full character to the managing
@@ -78,6 +80,30 @@ The frontend share URL is `/parties/join#<token>`. A URL fragment is not sent in
 join page reads the fragment, immediately removes it with `history.replaceState`, and sends the token
 only in the POST JSON body. Invite responses use `Cache-Control: no-store`, and the invite page uses
 `Referrer-Policy: no-referrer`.
+
+Party JSON request bodies use the shared strict decoder with a 4,096-byte limit. Join is limited to
+10 syntactically valid attempts per authenticated user per minute using a SHA-256-derived user key.
+The check occurs after authentication, decoding, and character UUID parsing but before invite
+lookup, so throttling does not reveal invite validity.
+
+The repository returns an internal `Created` indicator with a membership. The handler returns `201`
+for a newly created membership and `200` for an identical replay without changing the public DTO.
+
+Frozen response DTOs:
+
+- Party summary/create: `{ "id", "name", "role" }`.
+- Party list: `{ "parties": [{ "id", "name", "role" }] }`.
+- Party detail: `{ "id", "name", "role", "members": [{ "username", "role", "character" }] }`,
+  where character is `{ "id", "name" }` or `null`.
+- Invite creation: `{ "token", "createdAt", "expiresAt" }`.
+- Invite inspection: `{ "party": { "id", "name" }, "expiresAt" }`.
+- Join: `{ "partyId", "membershipId", "role": "player", "characterId", "joinedAt" }`.
+- Party errors: `{ "error", "code"? }`, where code is one of `validation_error`,
+  `invite_unavailable`, `authentication_required`, `forbidden`, `not_found`, `already_member`,
+  `character_already_linked`, `rate_limited`, or `server_error`.
+
+All Party timestamps serialize as canonical UTC RFC3339 values. Roster responses contain no email,
+owner ID, invite data, token hash, or full CharacterSheet payload.
 
 Do not broaden owner-scoped `GET /characters/{id}`. The dedicated party character endpoint preserves
 the existing owner route's privacy behavior and makes GM authorization explicit.
@@ -136,7 +162,7 @@ T-018 owns bounded JSON decoding, server timeouts, authentication throttling, pr
 configuration, no-store behavior for current private endpoints, safe startup logging, current
 character payload validation, dependency authority, and deployed security verification.
 
-After T-018 integrates, T-017A reuses those controls and owns only Party-specific additions: Party
+T-018 is integrated. T-017A reuses those controls and owns only Party-specific additions: Party
 name validation, join throttling, invite no-store/token redaction, Party data constraints,
 transactions, locking, authorization, and race tests.
 
@@ -175,8 +201,9 @@ transactions, locking, authorization, and race tests.
 
 1. Completed: mobile-menu and T-016 documentation work are integrated through `7f5e787`; CI passed.
 2. Completed: the original T-017 contract/planning docs were committed in `3a327e2`; CI passed.
-3. Complete and integrate T-018 whole-application security hardening and verification.
-4. Rebase or recreate the T-017A and T-017B worktrees from the verified security baseline.
+3. Completed: T-018 whole-application security hardening and verification integrated through PR
+   #22 and PR #23.
+4. Completed: T-017A and T-017B rebased onto `a82bb34`, fully validated, and pushed.
 5. Merge T-017A first because its tested contract is authoritative.
 6. Rebase/align T-017B to the merged contract if necessary, then merge it.
 7. Implement T-017C in one integration worktree.
@@ -195,8 +222,8 @@ transactions, locking, authorization, and race tests.
 - GM Character Reference access must not accidentally grant edit access.
 - Invite tokens must not appear in backend paths, hosting logs, history after page initialization,
   referrers, persistent browser storage, or telemetry.
-- The existing shallow CharacterSheetV1 validator is not sufficient for cross-user GM display. The
-  Party route must reject malformed or unsupported payloads before returning them.
+- The strict T-018 CharacterSheetV1 validator must be reused so the Party route rejects malformed or
+  unsupported payloads before returning cross-user data.
 - Profile pictures are not implemented, so roster visuals use the existing generic avatar.
 
 ## Validation Plan

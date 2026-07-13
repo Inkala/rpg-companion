@@ -27,12 +27,10 @@
 - Certain: the creating GM has no linked character in this MVP.
 - Certain: the dedicated Security review may still require P0 corrections before backend coding.
 
-## Current blocker
+## Current state
 
-Party implementation cannot start until the 2026-07-12 Security report is reconciled and the amended
-contract is approved. T-017 planning is integrated in `3a327e2`, CI passed, and both child worktrees
-exist at that commit. Their read-only investigations may finish reports, but T-018 must integrate and
-both worktrees must be rebased or recreated before Party implementation.
+The Security blocker is resolved. T-018 is integrated and verified. The amended Party contract is
+approved, and both Party branches are rebased onto `a82bb34`, validated, pushed, and clean.
 
 ## 2026-07-12 Security review reconciliation
 
@@ -50,7 +48,25 @@ both worktrees must be rebased or recreated before Party implementation.
 - User correction: complete whole-application security review/hardening before continuing new tasks.
 - Decision proposed: T-018 owns the whole-app baseline. T-017 retains Party-specific token,
   membership, transaction, join-throttling, authorization, and race-test requirements.
-- Pending: complete T-018, then approve the amended Party contract on the updated base.
+- Resolved on 2026-07-13: T-018 completed, the amended Party contract was approved, and both Party
+  branches were rebased and validated.
+
+## 2026-07-13 Security amendment approval and rebase
+
+- Certain: T-018 completed whole-application request, authentication, CharacterSheetV1,
+  configuration, dependency, secret-history, CI, and deployed-security controls.
+- Certain: Marcela approved continuing T-017 after the amended contract and rebase reports.
+- Certain: the frozen Party additions are a 4,096-byte JSON limit, authenticated invite inspection,
+  10 valid join attempts per authenticated user per minute, Party-path `no-store`, generic safe
+  invite failures, and strict cross-user CharacterSheetV1 validation.
+- Certain: T-017A rebased from `96f9adf` to `f305d9c`. One additive conflict in
+  `backend/internal/characters/repository_test.go` preserved both Security database-error tests and
+  the Party GM authorization matrix. Full disposable-PostgreSQL and backend validation passed.
+- Certain: T-017B rebased from `22b2806` to `c4bb107` without conflicts. Its Party folder remained
+  byte-for-byte unchanged, and all 339 frontend tests plus static checks and build passed.
+- Certain: both rewritten branches were pushed with guarded leases and now match origin.
+- Next: complete the Party HTTP boundary in T-017A while T-017B remains isolated from central App,
+  router, and Home ownership.
 
 ## Links
 
