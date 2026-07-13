@@ -24,7 +24,11 @@ import { HomePage } from './pages/HomePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { createPartiesApiClient } from './parties/api';
+import type { PartyDetailDTO } from './parties/apiTypes';
+import { CreatePartyPage } from './parties/CreatePartyPage';
 import { JoinPartyPage } from './parties/JoinPartyPage';
+import { PartyCharacterReferencePage } from './parties/PartyCharacterReferencePage';
+import { PartyInvitePanel } from './parties/PartyInvitePanel';
 import { PartyPage } from './parties/PartyPage';
 
 type AppProps = {
@@ -60,6 +64,18 @@ export const App = ({
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(accountsAvailable);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const renderPartyTools = useCallback(
+    (party: PartyDetailDTO) => (
+      <PartyInvitePanel
+        partyId={party.id}
+        currentUserRole={party.role}
+        createInvite={partyApi.createPartyInvite}
+        buildInviteURL={buildInviteURL}
+        copyText={copyText}
+      />
+    ),
+    [partyApi.createPartyInvite],
+  );
 
   useEffect(() => {
     const handlePopState = () => {
@@ -160,6 +176,15 @@ export const App = ({
     navigateToRoute({ name: 'new-character' });
   };
 
+  const returnToInvite = () => {
+    if (inviteTokenRef.current === null) {
+      showHome();
+      return;
+    }
+
+    navigateToRoute({ name: 'join-party' });
+  };
+
   const showHome = () => {
     clearInviteState();
     navigateToRoute({ name: 'home' });
@@ -205,6 +230,11 @@ export const App = ({
   };
 
   const openAccount = (mode: AccountMode) => {
+    if (route.name === 'new-party') {
+      beginAuthentication({ name: 'new-party' }, mode);
+      return;
+    }
+
     if (route.name === 'join-party' && inviteToken !== null) {
       beginAuthentication({ name: 'party-invite', token: inviteToken }, mode);
       return;
@@ -212,6 +242,18 @@ export const App = ({
 
     if (route.name === 'party') {
       beginAuthentication({ name: 'party', partyId: route.partyId }, mode);
+      return;
+    }
+
+    if (route.name === 'party-character') {
+      beginAuthentication(
+        {
+          name: 'party-character',
+          partyId: route.partyId,
+          characterId: route.characterId,
+        },
+        mode,
+      );
       return;
     }
 
@@ -262,6 +304,11 @@ export const App = ({
   };
 
   const handleJoinedParty = (partyId: string) => {
+    clearInviteState();
+    navigateToRoute({ name: 'party', partyId });
+  };
+
+  const handlePartyCreated = (partyId: string) => {
     clearInviteState();
     navigateToRoute({ name: 'party', partyId });
   };
@@ -340,8 +387,13 @@ export const App = ({
           isSignedIn={currentUser !== null}
           onBack={showHome}
           onCreateAccount={() => openAccount('register')}
-          onOpenCharacterReference={showSavedCharacter}
+          onOpenCharacterReference={
+            inviteToken !== null ? returnToInvite : showSavedCharacter
+          }
           onSignIn={() => openAccount('sign-in')}
+          savedCharacterActionLabel={
+            inviteToken !== null ? 'Return to party invite' : undefined
+          }
         />
       ) : route.name === 'sample-character' ? (
         <CharacterReference
@@ -355,6 +407,19 @@ export const App = ({
           onBack={showHome}
           onSignIn={() => openAccount('sign-in')}
         />
+      ) : route.name === 'new-party' ? (
+        currentUser === null ? (
+          <SignedOutCreatePartyState
+            onSignIn={() => openAccount('sign-in')}
+            onCancel={showHome}
+          />
+        ) : (
+          <CreatePartyPage
+            createParty={partyApi.createParty}
+            onPartyCreated={handlePartyCreated}
+            onCancel={showHome}
+          />
+        )
       ) : route.name === 'join-party' ? (
         <JoinPartyPage
           token={inviteToken}
@@ -384,6 +449,24 @@ export const App = ({
               characterId,
             })
           }
+          renderPartyTools={renderPartyTools}
+        />
+      ) : route.name === 'party-character' ? (
+        <PartyCharacterReferencePage
+          partyId={route.partyId}
+          characterId={route.characterId}
+          isSignedIn={currentUser !== null}
+          loadPartyCharacter={partyApi.getPartyCharacter}
+          onBack={() =>
+            navigateToRoute({ name: 'party', partyId: route.partyId })
+          }
+          onSignIn={() =>
+            beginAuthentication({
+              name: 'party-character',
+              partyId: route.partyId,
+              characterId: route.characterId,
+            })
+          }
         />
       ) : (
         <NotFoundPage onHome={showHome} />
@@ -391,6 +474,35 @@ export const App = ({
     </AppShell>
   );
 };
+
+const SignedOutCreatePartyState = ({
+  onSignIn,
+  onCancel,
+}: {
+  onSignIn: () => void;
+  onCancel: () => void;
+}) => (
+  <main className="app-shell account-page party-page party-create-page">
+    <section
+      className="account-card party-state-card"
+      aria-labelledby="signed-out-create-party-title"
+    >
+      <p className="eyebrow">Parties</p>
+      <h1 id="signed-out-create-party-title" className="account-title">
+        Sign in to create a party
+      </h1>
+      <p>Party creation is available to signed-in Hunin users.</p>
+      <div className="party-actions">
+        <button type="button" className="button button--primary" onClick={onSignIn}>
+          Sign in
+        </button>
+        <button type="button" className="button button--secondary" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </section>
+  </main>
+);
 
 const routeForAuthenticationDestination = (
   destination: AuthenticationDestination,
@@ -409,4 +521,15 @@ const routeForAuthenticationDestination = (
         characterId: destination.characterId,
       };
   }
+};
+
+const buildInviteURL = (path: string) => `${window.location.origin}${path}`;
+
+const copyText = (text: string): Promise<void> => {
+  const clipboard = globalThis.navigator?.clipboard;
+  if (!clipboard?.writeText) {
+    return Promise.reject(new Error('Clipboard is unavailable.'));
+  }
+
+  return clipboard.writeText(text);
 };
