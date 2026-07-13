@@ -86,18 +86,9 @@ func validateCharacterSheetV1Envelope(
 	abilitiesValid := requireJSONShape(&validationErrors, "abilities", envelope.Abilities, '{', "a JSON object")
 	combatValid := requireJSONShape(&validationErrors, "combat", envelope.Combat, '{', "a JSON object")
 	proficienciesValid := requireJSONShape(&validationErrors, "proficiencies", envelope.Proficiencies, '{', "a JSON object")
-
-	objectFields := []struct {
-		name string
-		raw  json.RawMessage
-	}{
-		{name: "equipment", raw: envelope.Equipment},
-		{name: "personality", raw: envelope.Personality},
-		{name: "audit", raw: envelope.Audit},
-	}
-	for _, field := range objectFields {
-		requireJSONShape(&validationErrors, field.name, field.raw, '{', "a JSON object")
-	}
+	equipmentValid := requireJSONShape(&validationErrors, "equipment", envelope.Equipment, '{', "a JSON object")
+	personalityValid := requireJSONShape(&validationErrors, "personality", envelope.Personality, '{', "a JSON object")
+	auditValid := requireJSONShape(&validationErrors, "audit", envelope.Audit, '{', "a JSON object")
 
 	if len(envelope.Spellcasting) == 0 {
 		validationErrors = append(validationErrors, "referencePayload.spellcasting is required")
@@ -129,6 +120,15 @@ func validateCharacterSheetV1Envelope(
 	}
 	if requireJSONShape(&validationErrors, "features", envelope.Features, '[', "a JSON array") {
 		validationErrors = append(validationErrors, validateCharacterSheetFeatures(envelope.Features)...)
+	}
+	if equipmentValid {
+		validationErrors = append(validationErrors, validateCharacterSheetEquipment(envelope.Equipment)...)
+	}
+	if personalityValid {
+		validationErrors = append(validationErrors, validateCharacterSheetPersonality(envelope.Personality)...)
+	}
+	if auditValid {
+		validationErrors = append(validationErrors, validateCharacterSheetAudit(envelope.Audit)...)
 	}
 
 	return validationErrors

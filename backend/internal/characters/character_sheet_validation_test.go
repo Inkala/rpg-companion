@@ -180,10 +180,10 @@ func TestCharacterSheetEnvelopeRejectsCaseVariantFieldNames(t *testing.T) {
 	}
 }
 
-func TestCharacterSheetEnvelopeAllowsOtherOpaqueNestedFields(t *testing.T) {
+func TestCharacterSheetEnvelopeRejectsUnknownSupportingNestedFields(t *testing.T) {
 	envelope := testCharacterSheetEnvelope()
 	envelope["equipment"].(map[string]any)["futureNestedField"] = map[string]any{"anything": true}
-	assertValidCharacterSheetPayload(t, envelope)
+	assertInvalidCharacterSheetForRequest(t, validCreateCharacterRequest(), envelope)
 }
 
 func TestCharacterSheetEnvelopeRejectsMalformedPayload(t *testing.T) {
@@ -250,9 +250,9 @@ func testCharacterSheetEnvelope() map[string]any {
 		"actions":       []any{},
 		"features":      []any{},
 		"spellcasting":  nil,
-		"equipment":     map[string]any{},
-		"personality":   map[string]any{},
-		"audit":         map[string]any{},
+		"equipment":     validTestEquipment(),
+		"personality":   validTestPersonality(),
+		"audit":         validTestAudit(),
 	}
 }
 
@@ -371,6 +371,25 @@ func maraAuditedSampleEnvelope() map[string]any {
 		"slots":            []any{map[string]any{"level": 1, "max": 3, "used": 0}},
 		"spells":           []any{huntersMark, fogCloud, cureWounds},
 	}
+	envelope["equipment"] = map[string]any{
+		"armor":        map[string]any{"values": []any{"Leather armor"}, "needsConfirmation": true, "note": "Used to explain current AC, pending sheet confirmation."},
+		"weapons":      []any{"Longbow", "Shortsword"},
+		"packsAndGear": map[string]any{"values": []any{}, "needsConfirmation": true, "note": "Pack and gear inventory are incomplete."},
+		"tools":        map[string]any{"values": []any{}, "needsConfirmation": true, "note": "Tools are incomplete."},
+		"languages":    map[string]any{"values": []any{}, "needsConfirmation": true, "note": "Languages are incomplete."},
+		"currency":     map[string]any{"needsConfirmation": true, "note": "Currency is not confirmed."},
+	}
+	envelope["personality"] = validTestPersonality()
+	envelope["audit"] = map[string]any{
+		"source": "Current visible Mara fixture plus rough generated sheet warning.",
+		"needsConfirmation": []any{
+			"Confirm AC 14 armor source.",
+			"Confirm spell save DC and spell attack bonus.",
+			"Confirm equipment, tools, languages, and currency.",
+		},
+		"rulesVersionWarnings": []any{"Do not import D&D 2024 Ranger wording into this 2014 sample."},
+		"deferredCorrections":  []any{"Decide whether Mara remains Ranger 3 Hunter long term."},
+	}
 	return envelope
 }
 
@@ -454,7 +473,10 @@ func fullManualEnvelope() map[string]any {
 	channelDivinity["summary"] = "Invoke a divine effect."
 	envelope["actions"] = []any{mace}
 	envelope["features"] = []any{channelDivinity}
-	envelope["personality"] = map[string]any{"notes": []any{"Transferred from an existing sheet."}}
+	envelope["personality"] = map[string]any{
+		"traits": []any{}, "ideals": []any{}, "bonds": []any{}, "flaws": []any{},
+		"notes": []any{"Transferred from an existing sheet."},
+	}
 	return envelope
 }
 
@@ -529,6 +551,30 @@ func validTestProficiencies() map[string]any {
 		"armor":        map[string]any{"values": []any{}},
 		"tools":        map[string]any{"values": []any{}},
 		"languages":    map[string]any{"values": []any{}},
+	}
+}
+
+func validTestEquipment() map[string]any {
+	return map[string]any{
+		"armor":        map[string]any{"values": []any{}},
+		"weapons":      []any{},
+		"packsAndGear": map[string]any{"values": []any{}},
+		"tools":        map[string]any{"values": []any{}},
+		"languages":    map[string]any{"values": []any{}},
+		"currency":     nil,
+	}
+}
+
+func validTestPersonality() map[string]any {
+	return map[string]any{"traits": []any{}, "ideals": []any{}, "bonds": []any{}, "flaws": []any{}, "notes": []any{}}
+}
+
+func validTestAudit() map[string]any {
+	return map[string]any{
+		"source":               "Manual character sheet",
+		"needsConfirmation":    []any{},
+		"rulesVersionWarnings": []any{},
+		"deferredCorrections":  []any{},
 	}
 }
 

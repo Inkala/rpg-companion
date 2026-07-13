@@ -568,6 +568,37 @@ func TestCharacterCreateRejectsInvalidCharacterSheetSpellcastingBeforePersistenc
 	}
 }
 
+func TestCharacterCreateRejectsInvalidCharacterSheetSupportingDataBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	testAudit(envelope)["source"] = "must-not-be-reflected"
+	delete(testEquipment(envelope), "weapons")
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected supporting data: %s", recorder.Body.String())
+	}
+}
+
 func withAuthenticatedUser(request *http.Request, userID uuid.UUID) *http.Request {
 	user := auth.AuthenticatedUser{ID: userID, UsernameCanonical: "mara", Username: "Mara"}
 	return request.WithContext(auth.WithAuthenticatedUser(request.Context(), user))
@@ -756,9 +787,9 @@ func validCharacterJSON() []byte {
 			"actions": [{"id":"longbow","name":"Longbow","kind":"attack","section":"actions","actionType":"Action","summary":"Reliable ranged attack.","meta":[]}],
 			"features": [{"id":"colossus-slayer","name":"Colossus Slayer","category":"Hunter feature","source":{"rulesVersion":"2014","status":"confirmed"},"tags":[],"summary":"Add damage after hitting a wounded enemy.","includeInReference":true}],
 			"spellcasting": null,
-			"equipment": {},
-			"personality": {},
-			"audit": {}
+			"equipment": {"armor":{"values":[]},"weapons":[],"packsAndGear":{"values":[]},"tools":{"values":[]},"languages":{"values":[]},"currency":null},
+			"personality": {"traits":[],"ideals":[],"bonds":[],"flaws":[],"notes":[]},
+			"audit": {"source":"Manual character sheet","needsConfirmation":[],"rulesVersionWarnings":[],"deferredCorrections":[]}
 		}
 	}`)
 }

@@ -728,9 +728,9 @@ func validCharacterJSON() string {
 			"actions": [{"id":"longbow","name":"Longbow","kind":"attack","section":"actions","actionType":"Action","summary":"Reliable ranged attack.","meta":[]}],
 			"features": [{"id":"colossus-slayer","name":"Colossus Slayer","category":"Hunter feature","source":{"rulesVersion":"2014","status":"confirmed"},"tags":[],"summary":"Add damage after hitting a wounded enemy.","includeInReference":true}],
 			"spellcasting": null,
-			"equipment": {},
-			"personality": {},
-			"audit": {}
+			"equipment": {"armor":{"values":[]},"weapons":[],"packsAndGear":{"values":[]},"tools":{"values":[]},"languages":{"values":[]},"currency":null},
+			"personality": {"traits":[],"ideals":[],"bonds":[],"flaws":[],"notes":[]},
+			"audit": {"source":"Manual character sheet","needsConfirmation":[],"rulesVersionWarnings":[],"deferredCorrections":[]}
 		}
 	}`
 }
