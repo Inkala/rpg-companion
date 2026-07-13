@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { buildGeneratedFighterCharacterSheet } from './character-creation/generatedFighterBuilds';
@@ -39,6 +39,35 @@ const fighterCharacter = {
     'Branna Shieldhand',
   ),
   createdAt: '2026-07-07T10:00:00Z',
+};
+
+const inviteToken = 'i'.repeat(43);
+
+const partyInspection = {
+  party: { id: 'party-1', name: 'The Lantern Guard' },
+  expiresAt: '2026-07-19T10:00:00Z',
+};
+
+const joinedParty = {
+  partyId: 'party-1',
+  membershipId: 'membership-1',
+  role: 'player',
+  characterId: fighterCharacterSummary.id,
+  joinedAt: '2026-07-13T10:00:00Z',
+};
+
+const partyDetail = {
+  id: 'party-1',
+  name: 'The Lantern Guard',
+  role: 'player',
+  members: [
+    { username: 'Mara', role: 'player', character: fighterCharacterSummary },
+  ],
+};
+
+const gmPartyDetail = {
+  ...partyDetail,
+  role: 'gm',
 };
 
 const signedInFetchMock = (
@@ -100,6 +129,372 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Create account' })).toBeInTheDocument();
     expect(screen.getByLabelText('Username')).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
+  });
+
+  it('uses prepared invite props and performs no private requests while signed out', async () => {
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/');
+
+    render(
+      <App
+        initialRoute={{ name: 'join-party' }}
+        initialInviteToken={inviteToken}
+      />,
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Sign in to use this party invite' }),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(requestedPaths(fetchMock)).toContain('/auth/session'));
+    expect(requestedPaths(fetchMock)).not.toContain('/party-invites/inspect');
+    expect(requestedPaths(fetchMock)).not.toContain('/characters');
+  });
+
+  it('starts invite inspection and Character loading after restoring a session', async () => {
+    const fetchMock = partyFetchMock({ restoredUser: true });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+
+    render(
+      <App
+        initialRoute={{ name: 'join-party' }}
+        initialInviteToken={inviteToken}
+      />,
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Sign in to use this party invite' }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
+    ).toBeInTheDocument();
+    expect(requestedPaths(fetchMock)).toContain('/party-invites/inspect');
+    expect(requestedPaths(fetchMock)).toContain('/characters');
+  });
+
+  it('moves invite authentication to login without exposing the token', () => {
+    vi.stubGlobal('fetch', partyFetchMock());
+    window.history.replaceState(null, '', '/parties/join');
+
+    render(
+      <App
+        initialRoute={{ name: 'join-party' }}
+        initialInviteToken={inviteToken}
+      />,
+    );
+
+    clickPrivateRouteSignIn();
+
+    expect(window.location.pathname).toBe('/login');
+    expect(window.location.search).toBe('');
+    expect(window.location.hash).toBe('');
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('restores the active invite on browser Back from login', async () => {
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    clickPrivateRouteSignIn();
+    window.history.back();
+    await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
+    fireEvent(window, new PopStateEvent('popstate'));
+    expect(
+      screen.getByRole('heading', { name: 'Sign in to use this party invite' }),
+    ).toBeInTheDocument();
+
+    clickPrivateRouteSignIn();
+    completeSignInForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the typed invite destination when browser Forward returns to login', async () => {
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    clickPrivateRouteSignIn();
+    window.history.back();
+    await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
+    fireEvent(window, new PopStateEvent('popstate'));
+
+    window.history.forward();
+    await waitFor(() => expect(window.location.pathname).toBe('/login'));
+    fireEvent(window, new PopStateEvent('popstate'));
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+
+    completeSignInForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
+    ).toBeInTheDocument();
+  });
+
+  it('prevents invite resurrection after Home is chosen following browser Back', async () => {
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    clickPrivateRouteSignIn();
+    window.history.back();
+    await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
+    fireEvent(window, new PopStateEvent('popstate'));
+    fireEvent.click(screen.getByRole('link', { name: 'Hunin' }));
+    expect(window.location.pathname).toBe('/');
+
+    window.history.back();
+    await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
+    fireEvent(window, new PopStateEvent('popstate'));
+    window.history.forward();
+    await waitFor(() => expect(window.location.pathname).toBe('/'));
+    fireEvent(window, new PopStateEvent('popstate'));
+    window.history.back();
+    await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
+    fireEvent(window, new PopStateEvent('popstate'));
+
+    clickPrivateRouteSignIn();
+    completeSignInForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(await screen.findByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+    expect(requestedPaths(fetchMock)).not.toContain('/party-invites/inspect');
+  });
+
+  it('preserves the invite destination when switching to registration', async () => {
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    clickPrivateRouteSignIn();
+    fireEvent.click(screen.getByRole('button', { name: 'Need an account? Create one' }));
+    expect(window.location.pathname).toBe('/sign-up');
+    completeRegistrationForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/parties/join');
+  });
+
+  it('returns sign-in to the typed invite destination and ignores arbitrary return data', async () => {
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    clickPrivateRouteSignIn();
+    window.history.replaceState(
+      { returnTo: 'https://untrusted.example' },
+      '',
+      '/login?returnTo=https://untrusted.example',
+    );
+    completeSignInForm();
+    clickPrivateRouteSignIn();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
+    ).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/parties/join');
+    expect(window.location.search).toBe('');
+    expect(window.location.origin).not.toBe('https://untrusted.example');
+  });
+
+  it('restores the signed-out invite and token when leaving account authentication', async () => {
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    clickPrivateRouteSignIn();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(window.location.pathname).toBe('/parties/join');
+    expect(
+      screen.getByRole('heading', { name: 'Sign in to use this party invite' }),
+    ).toBeInTheDocument();
+
+    clickPrivateRouteSignIn();
+    completeSignInForm();
+    clickPrivateRouteSignIn();
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
+    ).toBeInTheDocument();
+  });
+
+  it('clears invite state on cancellation and returns Home', async () => {
+    const fetchMock = partyFetchMock({ restoredUser: true });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    await screen.findByRole('heading', { name: 'Join The Lantern Guard' });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(window.location.pathname).toBe('/');
+
+    window.history.back();
+    await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
+    fireEvent(window, new PopStateEvent('popstate'));
+    expect(
+      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+  });
+
+  it('clears invite state when the Hunin Home action leaves the flow', async () => {
+    const fetchMock = partyFetchMock({ restoredUser: true });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    await screen.findByRole('heading', { name: 'Join The Lantern Guard' });
+    fireEvent.click(screen.getByRole('link', { name: 'Hunin' }));
+    expect(window.location.pathname).toBe('/');
+
+    window.history.back();
+    await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
+    fireEvent(window, new PopStateEvent('popstate'));
+    expect(
+      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+  });
+
+  it('clears invite state when Profile navigation leaves the flow', async () => {
+    const fetchMock = partyFetchMock({ restoredUser: true });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    await screen.findByRole('heading', { name: 'Join The Lantern Guard' });
+    fireEvent.click(screen.getByRole('button', { name: 'Mara account menu' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'My profile' }));
+    expect(window.location.pathname).toBe('/profile');
+
+    window.history.back();
+    await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
+    fireEvent(window, new PopStateEvent('popstate'));
+    expect(
+      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+  });
+
+  it('clears invite state after joining and supports Back and Forward for Party routes', async () => {
+    const fetchMock = partyFetchMock({ restoredUser: true });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    fireEvent.click(await screen.findByRole('radio', { name: /Branna Shieldhand/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
+    expect(await screen.findByRole('heading', { name: 'The Lantern Guard' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/parties/party-1');
+
+    window.history.back();
+    await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
+    fireEvent(window, new PopStateEvent('popstate'));
+    expect(
+      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+
+    window.history.forward();
+    await waitFor(() => expect(window.location.pathname).toBe('/parties/party-1'));
+    fireEvent(window, new PopStateEvent('popstate'));
+    expect(await screen.findByRole('heading', { name: 'The Lantern Guard' })).toBeInTheDocument();
+  });
+
+  it('clears an unavailable invite without rendering backend detail', async () => {
+    const fetchMock = partyFetchMock({
+      restoredUser: true,
+      inspectionResponse: jsonResponse(
+        { error: 'backend invitation detail', code: 'invite_unavailable' },
+        400,
+      ),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByText('backend invitation detail')).not.toBeInTheDocument();
+    expect(screen.queryByText('The Lantern Guard')).not.toBeInTheDocument();
+  });
+
+  it('loads a direct Party route only after restoring a session', async () => {
+    const fetchMock = partyFetchMock({ restoredUser: true });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/party-1');
+
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: 'Sign in to view this party' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'The Lantern Guard' })).toBeInTheDocument();
+    expect(requestedPaths(fetchMock)).toContain('/parties/party-1');
+  });
+
+  it('performs no Party request for a signed-out direct Party route', async () => {
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/party-1');
+
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: 'Sign in to view this party' })).toBeInTheDocument();
+    await waitFor(() => expect(requestedPaths(fetchMock)).toContain('/auth/session'));
+    expect(requestedPaths(fetchMock)).not.toContain('/parties/party-1');
+  });
+
+  it('performs no Party fetch when API configuration is invalid', () => {
+    const fetchMock = vi.fn();
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.hunin.example/private');
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/party-1');
+
+    render(<App />);
+
+    expect(screen.getByRole('heading', { name: 'Sign in to view this party' })).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('restores the same typed Party destination from account Back and sign-in', async () => {
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/party-1');
+    render(<App />);
+
+    clickPrivateRouteSignIn();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(window.location.pathname).toBe('/parties/party-1');
+    expect(screen.getByRole('heading', { name: 'Sign in to view this party' })).toBeInTheDocument();
+
+    clickPrivateRouteSignIn();
+    completeSignInForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    expect(await screen.findByRole('heading', { name: 'The Lantern Guard' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/parties/party-1');
+  });
+
+  it('navigates a GM Character action to the typed Party Character route', async () => {
+    const fetchMock = partyFetchMock({ restoredUser: true, party: gmPartyDetail });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/party-1');
+    render(<App />);
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Open Branna Shieldhand Character Reference' }),
+    );
+
+    expect(window.location.pathname).toBe(
+      '/parties/party-1/characters/22222222-2222-2222-2222-222222222222',
+    );
   });
 
   it('opens the profile from the signed-in account menu', async () => {
@@ -521,6 +916,96 @@ const stubSignedOutBackend = () => {
   const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'authentication required' }, 401));
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
+};
+
+const renderInviteApp = () => {
+  return render(
+    <App
+      initialRoute={{ name: 'join-party' }}
+      initialInviteToken={inviteToken}
+    />,
+  );
+};
+
+const completeSignInForm = () => {
+  fireEvent.change(screen.getByLabelText('Username or email'), {
+    target: { value: 'Mara' },
+  });
+  fireEvent.change(screen.getByLabelText('Password'), {
+    target: { value: 'Correct-horse-battery-staple1' },
+  });
+};
+
+const clickPrivateRouteSignIn = () => {
+  fireEvent.click(
+    within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }),
+  );
+};
+
+const completeRegistrationForm = () => {
+  fireEvent.change(screen.getByLabelText('Username'), {
+    target: { value: 'Mara' },
+  });
+  fireEvent.change(screen.getByLabelText('Email'), {
+    target: { value: 'mara@example.com' },
+  });
+  fireEvent.change(screen.getByLabelText('Password'), {
+    target: { value: 'Correct-horse-battery-staple1' },
+  });
+};
+
+const partyFetchMock = ({
+  restoredUser = false,
+  inspectionResponse,
+  party = partyDetail,
+}: {
+  restoredUser?: boolean;
+  inspectionResponse?: Response;
+  party?: unknown;
+} = {}) => {
+  vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+
+  return vi.fn((url: string, init?: RequestInit) => {
+    const path = new URL(url).pathname;
+
+    if (path === '/auth/session' && init?.method === 'DELETE') {
+      return Promise.resolve(new Response(null, { status: 204 }));
+    }
+
+    if (path === '/auth/session') {
+      return Promise.resolve(
+        restoredUser
+          ? jsonResponse({ user: maraUser })
+          : jsonResponse({ error: 'authentication required' }, 401),
+      );
+    }
+
+    if (path === '/auth/sessions' || path === '/auth/register') {
+      return Promise.resolve(jsonResponse({ user: maraUser }));
+    }
+
+    if (path === '/party-invites/inspect') {
+      return Promise.resolve(inspectionResponse ?? jsonResponse(partyInspection));
+    }
+
+    if (path === '/party-invites/join') {
+      return Promise.resolve(jsonResponse(joinedParty, 201));
+    }
+
+    if (path === '/characters') {
+      return Promise.resolve(jsonResponse({ characters: [fighterCharacterSummary] }));
+    }
+
+    if (path === '/parties/party-1') {
+      return Promise.resolve(jsonResponse(party));
+    }
+
+    return Promise.resolve(jsonResponse({ error: 'not found' }, 404));
+  });
+};
+
+const requestedPaths = (fetchMock: ReturnType<typeof vi.fn>) => {
+  return fetchMock.mock.calls.map(([url]) => new URL(String(url)).pathname);
 };
 
 const finishStrengthQuiz = () => {

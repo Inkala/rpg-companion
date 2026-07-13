@@ -209,6 +209,70 @@ describe('JoinPartyPage', () => {
     expect(alert).not.toHaveTextContent('backend rejected');
     expect(document.body).not.toHaveTextContent(token);
     expect(characterOption).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Join party' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
+    await waitFor(() => expect(joinParty).toHaveBeenCalledTimes(2));
+  });
+
+  it('reports join-time invite unavailability and replaces the form with a safe state', async () => {
+    const onInviteUnavailable = vi.fn();
+    renderPage({
+      joinParty: vi.fn().mockRejectedValue(
+        new PartiesApiError('backend detail', 400, 'invite_unavailable'),
+      ),
+      onInviteUnavailable,
+    });
+
+    fireEvent.click(await screen.findByRole('radio', { name: /Branna Shieldhand/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+    expect(onInviteUnavailable).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Join party' })).not.toBeInTheDocument();
+    expect(screen.queryByText('backend detail')).not.toBeInTheDocument();
+    expect(screen.queryByText('The Lantern Guard')).not.toBeInTheDocument();
+  });
+
+  it('ignores a late unavailable join failure for a replaced invite', async () => {
+    const oldJoin = deferred<JoinPartyResponseDTO>();
+    const onInviteUnavailable = vi.fn();
+    const props = defaultProps({
+      joinParty: vi.fn().mockReturnValue(oldJoin.promise),
+      onInviteUnavailable,
+    });
+    const { rerender } = render(<JoinPartyPage {...props} />);
+
+    fireEvent.click(await screen.findByRole('radio', { name: /Branna Shieldhand/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
+    rerender(
+      <JoinPartyPage
+        {...props}
+        token={'b'.repeat(43)}
+        inspectInvite={vi.fn().mockResolvedValue({
+          party: { id: 'party-2', name: 'The Silver Company' },
+          expiresAt: '2026-07-19T10:00:00Z',
+        })}
+        joinParty={vi.fn().mockResolvedValue({
+          ...joinedParty,
+          partyId: 'party-2',
+        })}
+      />,
+    );
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Silver Company' }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      oldJoin.reject(new PartiesApiError('backend detail', 400, 'invite_unavailable'));
+      await oldJoin.promise.catch(() => undefined);
+    });
+
+    expect(onInviteUnavailable).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Join The Silver Company' })).toBeInTheDocument();
   });
 
   it('shows a safe recoverable load error and retries', async () => {
@@ -228,6 +292,57 @@ describe('JoinPartyPage', () => {
     expect(await screen.findByRole('heading', { name: 'Join The Lantern Guard' })).toBeInTheDocument();
     expect(inspectInvite).toHaveBeenCalledTimes(2);
     expect(loadCharacters).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    new PartiesApiError('backend detail', 400, 'invite_unavailable'),
+    new PartiesApiError('backend detail', 400),
+  ])('reports unavailable inspection failures through the clearing bridge', async (error) => {
+    const onInviteUnavailable = vi.fn();
+    renderPage({
+      inspectInvite: vi.fn().mockRejectedValue(error),
+      onInviteUnavailable,
+    });
+
+    expect(
+      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+    expect(onInviteUnavailable).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByText('backend detail')).not.toBeInTheDocument();
+    expect(screen.queryByText('The Lantern Guard')).not.toBeInTheDocument();
+  });
+
+  it('does not report a late unavailable result for a replaced invite', async () => {
+    const oldInspection = deferred<PartyInviteInspectionResponseDTO>();
+    const onInviteUnavailable = vi.fn();
+    const props = defaultProps({
+      inspectInvite: vi.fn().mockReturnValue(oldInspection.promise),
+      onInviteUnavailable,
+    });
+    const { rerender } = render(<JoinPartyPage {...props} />);
+
+    rerender(
+      <JoinPartyPage
+        {...props}
+        token={'b'.repeat(43)}
+        inspectInvite={vi.fn().mockResolvedValue({
+          party: { id: 'party-2', name: 'The Silver Company' },
+          expiresAt: '2026-07-19T10:00:00Z',
+        })}
+      />,
+    );
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Silver Company' }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      oldInspection.reject(new PartiesApiError('backend detail', 400, 'invite_unavailable'));
+      await oldInspection.promise.catch(() => undefined);
+    });
+
+    expect(onInviteUnavailable).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Join The Silver Company' })).toBeInTheDocument();
   });
 
   it('ignores stale load results after token and loader changes', async () => {
@@ -337,14 +452,17 @@ const defaultProps = (
   onCreateCharacter: vi.fn(),
   onJoined: vi.fn(),
   onCancel: vi.fn(),
+  onInviteUnavailable: vi.fn(),
   ...overrides,
 });
 
 const deferred = <T,>() => {
   let resolve: (value: T) => void = () => {};
-  const promise = new Promise<T>((resolvePromise) => {
+  let reject: (reason?: unknown) => void = () => {};
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
     resolve = resolvePromise;
+    reject = rejectPromise;
   });
 
-  return { promise, resolve };
+  return { promise, reject, resolve };
 };
