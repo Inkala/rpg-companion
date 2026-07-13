@@ -405,6 +405,27 @@ describe('CharacterCreationPage', () => {
     );
   });
 
+  it('customizes the successful-save action label without changing its callback', async () => {
+    const onOpenCharacterReference = vi.fn();
+    createCharacterMock.mockResolvedValue(createdManualCharacterResponse('Seren Ashfall'));
+    reviewValidMinimumManualCharacter({
+      isSignedIn: true,
+      onOpenCharacterReference,
+      savedCharacterActionLabel: 'Return to party invite',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+    await screen.findByText(/Seren Ashfall is saved/);
+    expect(
+      screen.queryByRole('button', { name: 'Open Character Reference' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Return to party invite' }));
+
+    expect(onOpenCharacterReference).toHaveBeenCalledWith(
+      '44444444-4444-4444-4444-444444444444',
+    );
+  });
+
   it('shows a 5-question quiz with 4 answer options per question', () => {
     startQuiz();
 

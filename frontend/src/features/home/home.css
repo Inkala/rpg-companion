@@ -144,10 +144,21 @@
   box-shadow: var(--shadow-card);
 }
 
-.home-panel--parties,
-.home-panel__intro {
+.home-panel--parties {
   display: grid;
   gap: var(--space-3);
+  min-width: 0;
+}
+
+.home-panel--parties .party-list,
+.home-panel--parties .party-list__items,
+.home-panel--parties .party-list__item,
+.home-panel--parties .party-list-card {
+  min-width: 0;
+}
+
+.home-panel--parties .party-list-card__title {
+  overflow-wrap: anywhere;
 }
 
 .character-summary-list {
@@ -308,12 +319,6 @@
 
   .home-panel--parties {
     grid-template-columns: minmax(0, 1fr);
-    align-items: start;
-  }
-
-  .home-panel--parties .home-panel__intro {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: start;
   }
 

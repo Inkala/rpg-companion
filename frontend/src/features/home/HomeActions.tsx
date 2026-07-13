@@ -1,10 +1,14 @@
-import { PlannedActionButton } from './PlannedActionButton';
-
 type HomeActionsProps = {
   onCreateCharacter: () => void;
+  onCreateParty: () => void;
+  onJoinParty: () => void;
 };
 
-export const HomeActions = ({ onCreateCharacter }: HomeActionsProps) => {
+export const HomeActions = ({
+  onCreateCharacter,
+  onCreateParty,
+  onJoinParty,
+}: HomeActionsProps) => {
   return (
     <section className="home-actions" aria-labelledby="home-actions-title">
       <header>
@@ -13,8 +17,8 @@ export const HomeActions = ({ onCreateCharacter }: HomeActionsProps) => {
           Choose how Hunin helps next.
         </h2>
         <p className="home-actions__copy">
-          Start a character now. Party tools stay visible so the path is
-          clear, but they wait for account-backed party work.
+          Start a character, create a Party for your group, or open an invite
+          you received.
         </p>
       </header>
 
@@ -26,8 +30,20 @@ export const HomeActions = ({ onCreateCharacter }: HomeActionsProps) => {
         >
           Create character
         </button>
-        <PlannedActionButton label="Create party" />
-        <PlannedActionButton label="Join party" />
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={onCreateParty}
+        >
+          Create party
+        </button>
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={onJoinParty}
+        >
+          Join party
+        </button>
       </div>
     </section>
   );

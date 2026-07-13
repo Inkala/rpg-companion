@@ -25,6 +25,7 @@ type JoinPartyPageProps = {
   onCreateCharacter: () => void;
   onJoined: (partyId: string) => void;
   onCancel: () => void;
+  onInviteUnavailable: (token: string) => void;
 };
 
 type LoadKey = {
@@ -42,6 +43,7 @@ type LoadState = LoadKey & (
     inspection: PartyInviteInspectionResponseDTO;
     characters: CharacterSummaryDTO[];
   }
+  | { status: 'unavailable' }
   | { status: 'error' }
 );
 
@@ -66,6 +68,7 @@ export const JoinPartyPage = ({
   onCreateCharacter,
   onJoined,
   onCancel,
+  onInviteUnavailable,
 }: JoinPartyPageProps) => {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const currentLoadKey: LoadKey = {
@@ -129,7 +132,9 @@ export const JoinPartyPage = ({
 
     setLoadState({ status: 'loading', ...requestKey });
     Promise.all([
-      inspectInvite({ token }),
+      inspectInvite({ token }).catch((error) => {
+        throw new InviteInspectionFailure(error);
+      }),
       loadCharacters(),
     ])
       .then(([inspection, characters]) => {
@@ -142,8 +147,17 @@ export const JoinPartyPage = ({
           });
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (isActive) {
+          if (
+            error instanceof InviteInspectionFailure &&
+            isUnavailableInviteError(error.cause)
+          ) {
+            setLoadState({ status: 'unavailable', ...requestKey });
+            onInviteUnavailable(token);
+            return;
+          }
+
           setLoadState({ status: 'error', ...requestKey });
         }
       });
@@ -151,7 +165,7 @@ export const JoinPartyPage = ({
     return () => {
       isActive = false;
     };
-  }, [inspectInvite, isSignedIn, loadAttempt, loadCharacters, token]);
+  }, [inspectInvite, isSignedIn, loadAttempt, loadCharacters, onInviteUnavailable, token]);
 
   const selectCharacter = (characterId: string) => {
     setInteractionState({
@@ -209,6 +223,12 @@ export const JoinPartyPage = ({
         isMountedRef.current &&
         interactionKeysMatch(currentInteractionKeyRef.current, joinKey)
       ) {
+        if (isUnavailableJoinError(error)) {
+          setLoadState({ status: 'unavailable', ...joinKey });
+          onInviteUnavailable(token);
+          return;
+        }
+
         setInteractionState({
           ...joinKey,
           selectedCharacterId,
@@ -242,12 +262,14 @@ export const JoinPartyPage = ({
         </button>
       </header>
 
-      {!isSignedIn ? (
-        <SignedOutJoinState onSignIn={onSignIn} />
-      ) : token === null ? (
+      {token === null ? (
         <UnavailableInviteState />
+      ) : !isSignedIn ? (
+        <SignedOutJoinState onSignIn={onSignIn} />
       ) : visibleLoadState.status === 'loading' ? (
         <LoadingInviteState />
+      ) : visibleLoadState.status === 'unavailable' ? (
+        <UnavailableInviteState />
       ) : visibleLoadState.status === 'error' ? (
         <InviteLoadError onRetry={() => setLoadAttempt((current) => current + 1)} />
       ) : visibleLoadState.characters.length === 0 ? (
@@ -454,4 +476,23 @@ const safeJoinErrorMessage = (error: unknown) => {
   }
 
   return 'Could not join the party. Please try again.';
+};
+
+const isUnavailableJoinError = (error: unknown) => {
+  return error instanceof PartiesApiError && error.code === 'invite_unavailable';
+};
+
+class InviteInspectionFailure {
+  cause: unknown;
+
+  constructor(cause: unknown) {
+    this.cause = cause;
+  }
+}
+
+const isUnavailableInviteError = (error: unknown) => {
+  return (
+    error instanceof PartiesApiError &&
+    (error.code === 'invite_unavailable' || error.status === 400)
+  );
 };

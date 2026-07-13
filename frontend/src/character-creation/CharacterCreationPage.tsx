@@ -28,6 +28,7 @@ type CharacterCreationPageProps = {
   onSignIn?: () => void;
   onCreateAccount?: () => void;
   onOpenCharacterReference?: (characterId: string) => void;
+  savedCharacterActionLabel?: string;
 };
 
 type SaveState =
@@ -411,6 +412,7 @@ export const CharacterCreationPage = ({
   onSignIn,
   onCreateAccount,
   onOpenCharacterReference,
+  savedCharacterActionLabel = 'Open Character Reference',
 }: CharacterCreationPageProps) => {
   const [draft, setDraft] = useState<CharacterCreationDraft>(
     initialCharacterCreationDraft,
@@ -1086,7 +1088,7 @@ export const CharacterCreationPage = ({
                   className="button button--secondary"
                   onClick={() => onOpenCharacterReference(saveState.characterId)}
                 >
-                  Open Character Reference
+                  {savedCharacterActionLabel}
                 </button>
               ) : null}
             </div>
@@ -1395,7 +1397,7 @@ export const CharacterCreationPage = ({
                   className="button button--secondary"
                   onClick={() => onOpenCharacterReference(saveState.characterId)}
                 >
-                  Open Character Reference
+                  {savedCharacterActionLabel}
                 </button>
               ) : null}
             </div>
