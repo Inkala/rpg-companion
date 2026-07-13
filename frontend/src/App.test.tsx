@@ -417,7 +417,7 @@ describe('App', () => {
     render(<App />);
 
     const accountMenu = await screen.findByRole('button', { name: 'Mara account menu' });
-    expect(screen.getByRole('heading', { name: 'No saved characters yet' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'No saved characters yet' })).toBeInTheDocument();
 
     fireEvent.click(accountMenu);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
