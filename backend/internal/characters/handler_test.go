@@ -19,6 +19,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 )
@@ -597,6 +598,80 @@ func TestCharacterCreateRejectsInvalidCharacterSheetSupportingDataBeforePersiste
 	if strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
 		t.Fatalf("validation response reflected rejected supporting data: %s", recorder.Body.String())
 	}
+}
+
+func TestCharacterCreateMapsInvalidDatabaseDataToSafeBadRequest(t *testing.T) {
+	postgresText := "database-detail-must-not-be-exposed"
+	rejectedValue := "rejected-value-must-not-be-exposed"
+	handler := Handler{
+		repository: &Repository{},
+		createCharacter: func(context.Context, Character) (Character, error) {
+			return Character{}, mapCharacterCreateError(&pgconn.PgError{
+				Code:           "23514",
+				ConstraintName: "characters_level_check",
+				Message:        postgresText,
+				Detail:         rejectedValue,
+			})
+		},
+	}
+	recorder := performValidCharacterCreate(t, handler)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if recorder.Body.String() != "{\"error\":\"character validation failed\"}\n" {
+		t.Fatalf("expected exact safe response, got %s", recorder.Body.String())
+	}
+	for _, secret := range []string{postgresText, rejectedValue, "characters_level_check"} {
+		if strings.Contains(recorder.Body.String(), secret) {
+			t.Fatalf("response exposed database data %q: %s", secret, recorder.Body.String())
+		}
+	}
+}
+
+func TestCharacterCreateKeepsUnrelatedDatabaseFailuresGeneric(t *testing.T) {
+	databaseText := "connection-detail-must-not-be-exposed"
+	handler := Handler{
+		repository: &Repository{},
+		createCharacter: func(context.Context, Character) (Character, error) {
+			return Character{}, errors.New(databaseText)
+		},
+	}
+	recorder := performValidCharacterCreate(t, handler)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusInternalServerError, recorder.Code, recorder.Body.String())
+	}
+	if recorder.Body.String() != "{\"error\":\"could not persist character\"}\n" {
+		t.Fatalf("expected exact safe response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), databaseText) {
+		t.Fatalf("response exposed database error: %s", recorder.Body.String())
+	}
+}
+
+func TestCharacterCreateSuccessRemainsCreated(t *testing.T) {
+	handler := Handler{
+		repository: &Repository{},
+		createCharacter: func(_ context.Context, character Character) (Character, error) {
+			return character, nil
+		},
+	}
+	recorder := performValidCharacterCreate(t, handler)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusCreated, recorder.Code, recorder.Body.String())
+	}
+}
+
+func performValidCharacterCreate(t *testing.T, handler Handler) *httptest.ResponseRecorder {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(validCharacterJSON()))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+	handler.Create(recorder, request)
+	return recorder
 }
 
 func withAuthenticatedUser(request *http.Request, userID uuid.UUID) *http.Request {

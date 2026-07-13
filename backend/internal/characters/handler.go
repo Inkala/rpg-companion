@@ -1,6 +1,7 @@
 package characters
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -14,11 +15,16 @@ import (
 const characterRequestBodyLimit int64 = 131072
 
 type Handler struct {
-	repository *Repository
+	repository      *Repository
+	createCharacter func(context.Context, Character) (Character, error)
 }
 
 func NewHandler(repository *Repository) Handler {
-	return Handler{repository: repository}
+	handler := Handler{repository: repository}
+	if repository != nil {
+		handler.createCharacter = repository.Create
+	}
+	return handler
 }
 
 func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +75,11 @@ func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	character.OwnerSubjectID = &ownerID
 
-	created, err := handler.repository.Create(r.Context(), character)
+	created, err := handler.createCharacter(r.Context(), character)
+	if errors.Is(err, ErrInvalidCharacterData) {
+		writeError(w, http.StatusBadRequest, "character validation failed")
+		return
+	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not persist character")
 		return

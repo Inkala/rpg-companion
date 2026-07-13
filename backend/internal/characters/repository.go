@@ -4,14 +4,29 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrNotFound = errors.New("character not found")
+var (
+	ErrNotFound             = errors.New("character not found")
+	ErrInvalidCharacterData = errors.New("invalid character data")
+)
+
+var knownCharacterCheckConstraints = map[string]struct{}{
+	"characters_level_check":             {},
+	"characters_hp_current_check":        {},
+	"characters_hp_max_check":            {},
+	"characters_armor_class_check":       {},
+	"characters_speed_ft_check":          {},
+	"characters_reference_payload_check": {},
+	"characters_check":                   {},
+}
 
 type Repository struct {
 	pool *pgxpool.Pool
@@ -63,10 +78,27 @@ INSERT INTO characters (
 		character.UpdatedAt,
 	)
 	if err != nil {
-		return Character{}, err
+		return Character{}, mapCharacterCreateError(err)
 	}
 
 	return character, nil
+}
+
+func mapCharacterCreateError(err error) error {
+	var postgresError *pgconn.PgError
+	if !errors.As(err, &postgresError) {
+		return err
+	}
+
+	isKnownClientDataFailure := postgresError.Code == "22003"
+	if postgresError.Code == "23514" {
+		_, isKnownClientDataFailure = knownCharacterCheckConstraints[postgresError.ConstraintName]
+	}
+	if !isKnownClientDataFailure {
+		return err
+	}
+
+	return fmt.Errorf("%w: %w", ErrInvalidCharacterData, err)
 }
 
 func (repository *Repository) GetByID(ctx context.Context, id uuid.UUID) (Character, error) {
