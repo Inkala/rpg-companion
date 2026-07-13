@@ -5,9 +5,9 @@ Submission deadline: 20 July 2026
 Active task: T-017 Party MVP
 
 State: T-018 whole-application security hardening is complete. T-017A backend and T-017B isolated
-frontend are complete, validated, and merged through PR #24 (`02b0bc8`) and PR #25 (`af592ec`). The
-backend Party API is reachable and the isolated Party pages are present on `main`. T-017C central
-frontend integration is the final implementation stage before combined validation and deployment.
+frontend are merged. T-017C central frontend integration is complete, validated, committed, and
+pushed at `6aaa298`, but is not merged. T-017D combined validation and deployment follows after the
+T-017C PR passes CI and the production deployment-trigger order is confirmed.
 
 ## Completed T-017 feature worktrees
 
@@ -32,15 +32,18 @@ frontend integration is the final implementation stage before combined validatio
   passed 350 frontend tests, lint, typecheck, and build.
 - Cleanup requires explicit approval later.
 
-## Planned T-017C integration worktree
+## T-017C integration worktree
 
-- Required base: `main` at `af592ec` or its next orchestration-only descendant.
-- Classification: Red.
-- Recommendation: one dedicated worktree and one coding session.
-- Expected ownership: central frontend App, router, Home, initial-navigation, route-focus, and focused
-  Party integration tests and styles.
-- Prohibited parallel code: any other task editing `App.tsx`, router, Home, global frontend shell, or
-  shared coordination records.
+- Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-party-integration`
+- Branch: `codex/t017c-party-integration`
+- Base: orchestration checkpoint `1c448d0`.
+- Final branch HEAD: `6aaa298`.
+- Status: complete and pushed. Route/bootstrap, typed invite authentication return, create/join,
+  Party detail, invite tools, GM Character Reference, Home integration, responsive behavior, and
+  central route focus passed 432 frontend tests, lint, typecheck, build, and manual 320px, 390px, and
+  768px signed-out checks.
+- Integration: PR not yet created. Do not merge until deployment triggers and production migration
+  order are confirmed.
 
 ## Completed T-018 worktrees
 
@@ -68,6 +71,9 @@ frontend integration is the final implementation stage before combined validatio
 - The frozen Party request, inspection, join-throttle, no-store, replay-status, and cross-user
   Character Reference rules are approved in the T-017 task documents.
 - T-017A and T-017B are merged. Their PR checks passed on the combined backend baseline.
+- T-017C is complete and pushed at `6aaa298`; its PR and CI remain pending.
+- The approved invite-refresh clarification keeps raw tokens memory-only. Reloading a scrubbed
+  `/parties/join` is safely unavailable and requires reopening the original link.
 - No product work starts directly in the main checkout.
 
 ## Source of truth
@@ -87,8 +93,8 @@ frontend integration is the final implementation stage before combined validatio
 - T-014A compact Character Reference polish is merged.
 - T-015 read-only profile page and mobile profile navigation are merged.
 - T-018 whole-application Security baseline is merged, deployed, and verified.
-- T-017 backend and isolated Party frontend foundations are merged through `af592ec` but are not yet
-  connected to central frontend routing.
+- T-017 backend and isolated Party frontend foundations are merged through `af592ec`. The completed
+  central integration remains on `codex/t017c-party-integration` until its PR is reviewed.
 
 ## Final-week constraints
 
@@ -101,7 +107,8 @@ frontend integration is the final implementation stage before combined validatio
 
 ## Single next action
 
-Commit this integration-state checkpoint. Then create one T-017C worktree from the clean checkpoint
-and begin the first central frontend route and secure-invite bootstrap slice.
+Review and commit the approved orchestration correction, then open the T-017C PR. Before merging,
+confirm Railway and Cloudflare Pages deployment triggers and decide the additive production
+migration order.
 
 Last updated: 2026-07-13

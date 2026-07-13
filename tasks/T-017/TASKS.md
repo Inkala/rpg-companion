@@ -25,6 +25,9 @@ complete and merged through PR #24 (`02b0bc8`) and PR #25 (`af592ec`).
   of the T-018 baseline.
 - [x] Freeze exact Party API DTOs, database constraints, Party-specific limits, and security behavior
   after the T-017A investigation report.
+- [x] Approve the security-preserving refresh rule: Party and GM Character Reference routes survive
+  reload, while a scrubbed invite reload is safely unavailable and requires reopening the original
+  shared link.
 
 ## 2. Prepare child tasks and clean base
 
@@ -87,19 +90,19 @@ complete and merged through PR #24 (`02b0bc8`) and PR #25 (`af592ec`).
 - [x] Prove the isolated invite-fragment helper scrubs the fragment and never places it in an API
   URL. Pre-React invocation remains T-017C work.
 - [x] Prove signed-out invite UI reveals no invite validity or party information.
-- [ ] Prove auth return uses typed internal state and cannot perform an open redirect.
-- [ ] Apply no-store and no-referrer behavior to the invite flow.
+- [x] Prove auth return uses typed internal state and cannot perform an open redirect.
+- [x] Apply no-store and no-referrer behavior to the invite flow.
 - [x] Run focused and full frontend validation for the isolated Party feature.
 
 ## 5. T-017C central frontend integration
 
-- [ ] Add route parser/serializer tests first.
-- [ ] Add app integration tests for create, invite, auth return, join, party detail, and GM character
+- [x] Add route parser/serializer tests first.
+- [x] Add app integration tests for create, invite, auth return, join, party detail, and GM character
   navigation.
-- [ ] Wire party routes through `App`.
-- [ ] Replace the Home party placeholders with the real party list/actions.
-- [ ] Preserve all existing account, character creation, profile, sample, and saved-reference flows.
-- [ ] Run full frontend validation and narrow-width manual checks.
+- [x] Wire party routes through `App`.
+- [x] Replace the Home party placeholders with the real party list/actions.
+- [x] Preserve all existing account, character creation, profile, sample, and saved-reference flows.
+- [x] Run full frontend validation and narrow-width manual checks.
 
 ## 6. T-017D combined validation and deployment
 

@@ -403,3 +403,16 @@ base.
   backend and isolated frontend are merged but not reachable as one user flow.
 - Next action: create one Red T-017C worktree and begin central route and secure invite bootstrap
   integration.
+
+## 2026-07-13: Completed T-017C central Party frontend integration
+
+- Completed secure pre-React invite capture, typed authentication return, Party routes, create and
+  join flows, GM invite tools, Party Character Reference, character-creation return, Home Party
+  integration, and central route focus across five reviewed slices.
+- Pushed the clean T-017C branch at `6aaa298` after 432 frontend tests, lint, typecheck, build, and
+  signed-out browser checks at 320px, 390px, and 768px passed.
+- Reconciled the contradictory invite-refresh acceptance statement. Marcela approved preserving
+  immediate fragment scrubbing and memory-only token state. Reloading scrubbed `/parties/join` is
+  intentionally unavailable; reopening the original link restarts the flow.
+- Kept T-017D deployment gated on PR CI, disposable-database validation, a local two-user smoke
+  test, and confirmation of Railway and Cloudflare Pages deployment triggers.

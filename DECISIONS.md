@@ -344,3 +344,28 @@ fragment bootstrap, and typed authentication return remain T-017C work. No Party
 the existing owner-scoped character endpoint or introduce Party administration. The parent
 `tasks/T-017/` folder remains the single approved contract for workstreams A through D so status and
 security requirements are not duplicated across drifting child folders.
+
+## 2026-07-13: Scrubbed Party invites do not persist across full reloads
+
+Context:
+The approved Party contract required immediate URL-fragment scrubbing, memory-only typed invite
+state, no raw token in browser storage or history state, and an acceptance statement that invite
+refresh preserved the view. A full reload after scrubbing destroys React memory, so those
+requirements could not all hold simultaneously.
+
+Decision:
+Preserve the stricter token controls. Opening the original `/parties/join#<token>` link captures the
+token before React and scrubs the fragment immediately. Typed in-memory state preserves the flow
+through authentication, Back and Forward navigation, and character creation. Reloading the already
+scrubbed `/parties/join` URL shows the generic unavailable state. Reopening the original shared link
+restarts the flow. Party detail and GM Character Reference URLs continue to survive refresh.
+
+Reason:
+Persisting the raw invite in localStorage, sessionStorage, history state, a query, or a path would
+weaken the reviewed security boundary solely to preserve a convenience behavior. The safe fallback
+is explicit, predictable, and sufficient for the educational MVP.
+
+Consequences:
+Public and local smoke tests must expect scrubbed invite reload to become unavailable and must verify
+that reopening the original link works. No additional backend session, cookie, or token-exchange
+mechanism is added before submission.

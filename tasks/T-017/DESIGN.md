@@ -81,6 +81,13 @@ join page reads the fragment, immediately removes it with `history.replaceState`
 only in the POST JSON body. Invite responses use `Cache-Control: no-store`, and the invite page uses
 `Referrer-Policy: no-referrer`.
 
+After scrubbing, the raw token exists only in typed React memory for the active invite and
+authentication-return flow. Browser Back and Forward within that flow may restore the typed memory
+state. A full reload of the scrubbed `/parties/join` URL cannot reconstruct the token and therefore
+shows the generic unavailable state. The user must reopen the original shared link. Do not place the
+token in localStorage, sessionStorage, history state, a query, a path, or another persistence
+mechanism to make reload survive.
+
 Party JSON request bodies use the shared strict decoder with a 4,096-byte limit. Join is limited to
 10 syntactically valid attempts per authenticated user per minute using a SHA-256-derived user key.
 The check occurs after authentication, decoding, and character UUID parsing but before invite

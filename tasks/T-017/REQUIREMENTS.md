@@ -153,7 +153,10 @@ and allowing the GM to view them. AI assistance is explicitly later and optional
   GM creates party -> GM copies invite -> player opens invite -> player signs in -> player selects
   owned character -> player joins -> both see party -> GM sees roster -> GM opens player Character
   Reference.
-- Refreshing party, invite, and GM Character Reference URLs preserves the correct view.
+- Refreshing Party and GM Character Reference URLs preserves the correct view. Opening the original
+  invite URL captures its fragment and starts the flow. Refreshing the already-scrubbed
+  `/parties/join` URL intentionally shows the generic unavailable state; reopening the original
+  shared link restarts the flow.
 - PostgreSQL constraints and backend tests cover duplicate membership and character-link rules.
 - PostgreSQL constraints enforce one GM membership per party, GM memberships without a character,
   player memberships with a character, one active invite per party, and valid invite timestamps.
@@ -173,4 +176,6 @@ and allowing the GM to view them. AI assistance is explicitly later and optional
 
 Marcela approved the original seven product defaults on 2026-07-12 and approved continuing the
 reviewed Security-amended Party contract on 2026-07-13. T-018 is complete. T-017A and T-017B are
-rebased, fully validated, pushed, and ready for their next bounded increments.
+merged. On 2026-07-13 Marcela approved the security-preserving invite-refresh clarification: raw
+invite tokens remain memory-only after immediate fragment scrubbing and are never persisted merely
+to survive a full page reload.
