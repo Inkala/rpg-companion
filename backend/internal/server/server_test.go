@@ -17,6 +17,7 @@ import (
 
 	"github.com/Inkala/rpg-companion/backend/internal/auth"
 	"github.com/Inkala/rpg-companion/backend/internal/characters"
+	"github.com/Inkala/rpg-companion/backend/internal/parties"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -260,6 +261,7 @@ func TestProductionSessionCookieIsSecure(t *testing.T) {
 	pool := setupIntegrationDatabase(t)
 	handler := New(
 		characters.NewRepository(pool),
+		parties.NewRepository(pool),
 		auth.NewRepository(pool),
 		Options{
 			AllowedOrigins: []string{localOrigin},
@@ -441,7 +443,7 @@ func TestCORSAndOriginChecks(t *testing.T) {
 }
 
 func TestAPISecurityHeadersApplyToSuccessAndErrorResponses(t *testing.T) {
-	handler := New(nil, nil, Options{AllowedOrigins: []string{localOrigin}})
+	handler := New(nil, nil, nil, Options{AllowedOrigins: []string{localOrigin}})
 	tests := []struct {
 		name    string
 		request *http.Request
@@ -471,6 +473,169 @@ func TestAPISecurityHeadersApplyToSuccessAndErrorResponses(t *testing.T) {
 	}
 }
 
+func TestPartyRoutesRequireSessionAndSetNoStore(t *testing.T) {
+	handler := New(nil, nil, nil, Options{AllowedOrigins: []string{localOrigin}})
+	partyID := "00000000-0000-0000-0000-000000000001"
+	characterID := "00000000-0000-0000-0000-000000000002"
+	tests := []struct {
+		name   string
+		method string
+		path   string
+	}{
+		{name: "create", method: http.MethodPost, path: "/parties"},
+		{name: "list", method: http.MethodGet, path: "/parties"},
+		{name: "detail", method: http.MethodGet, path: "/parties/" + partyID},
+		{name: "create or regenerate invite", method: http.MethodPost, path: "/parties/" + partyID + "/invites"},
+		{name: "inspect invite", method: http.MethodPost, path: "/party-invites/inspect"},
+		{name: "join", method: http.MethodPost, path: "/party-invites/join"},
+		{name: "GM character reference", method: http.MethodGet, path: "/parties/" + partyID + "/characters/" + characterID},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(tt.method, tt.path, nil)
+			if tt.method == http.MethodPost {
+				request.Header.Set("Origin", localOrigin)
+			}
+
+			handler.ServeHTTP(recorder, request)
+
+			if recorder.Code != http.StatusUnauthorized {
+				t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, recorder.Code)
+			}
+			assertNoStore(t, recorder)
+		})
+	}
+}
+
+func TestPartyPathsSetNoStoreForAllResponseStatuses(t *testing.T) {
+	statuses := []int{
+		http.StatusOK,
+		http.StatusBadRequest,
+		http.StatusUnauthorized,
+		http.StatusForbidden,
+		http.StatusNotFound,
+		http.StatusConflict,
+		http.StatusTooManyRequests,
+		http.StatusInternalServerError,
+		http.StatusMethodNotAllowed,
+	}
+	paths := []string{
+		"/parties",
+		"/parties/00000000-0000-0000-0000-000000000001",
+		"/parties/00000000-0000-0000-0000-000000000001/invites",
+		"/party-invites/inspect",
+		"/party-invites/join",
+	}
+
+	for _, path := range paths {
+		for _, status := range statuses {
+			t.Run(path+"/"+http.StatusText(status), func(t *testing.T) {
+				handler := withPrivateResponseNoStore(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(status)
+				}))
+				recorder := httptest.NewRecorder()
+
+				handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, path, nil))
+
+				if recorder.Code != status {
+					t.Fatalf("expected status %d, got %d", status, recorder.Code)
+				}
+				assertNoStore(t, recorder)
+			})
+		}
+	}
+}
+
+func TestPartyCORSRejectionKeepsNoStoreAndSecurityHeaders(t *testing.T) {
+	handler := New(nil, nil, nil, Options{AllowedOrigins: []string{localOrigin}})
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/party-invites/join", nil)
+	request.Header.Set("Origin", "https://evil.example")
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("expected status %d, got %d", http.StatusForbidden, recorder.Code)
+	}
+	assertNoStore(t, recorder)
+	assertSecurityHeaders(t, recorder)
+}
+
+func TestUnsupportedPartyMethodsDoNotReachHandlers(t *testing.T) {
+	handler := New(nil, nil, nil, Options{})
+	partyID := "00000000-0000-0000-0000-000000000001"
+	characterID := "00000000-0000-0000-0000-000000000002"
+	paths := []string{
+		"/parties",
+		"/parties/" + partyID,
+		"/parties/" + partyID + "/invites",
+		"/party-invites/inspect",
+		"/party-invites/join",
+		"/parties/" + partyID + "/characters/" + characterID,
+	}
+	methods := []string{http.MethodPut, http.MethodPatch, http.MethodDelete}
+
+	for _, path := range paths {
+		for _, method := range methods {
+			t.Run(method+" "+path, func(t *testing.T) {
+				recorder := httptest.NewRecorder()
+				request := httptest.NewRequest(method, path, nil)
+
+				handler.ServeHTTP(recorder, request)
+
+				if recorder.Code != http.StatusMethodNotAllowed {
+					t.Fatalf("expected status %d, got %d", http.StatusMethodNotAllowed, recorder.Code)
+				}
+				assertNoStore(t, recorder)
+			})
+		}
+	}
+}
+
+func TestUnsupportedPartyMethodsDoNotMutatePersistence(t *testing.T) {
+	pool := setupIntegrationDatabase(t)
+	handler := newTestServer(pool)
+	sessionCookie, _ := registerTestUser(t, handler, "party-method-user")
+	tests := []struct {
+		method string
+		path   string
+		body   string
+	}{
+		{method: http.MethodPut, path: "/parties", body: `{"name":"Never created"}`},
+		{method: http.MethodPatch, path: "/parties", body: `{"name":"Never created"}`},
+		{method: http.MethodDelete, path: "/parties"},
+	}
+
+	for _, tt := range tests {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest(tt.method, tt.path, strings.NewReader(tt.body))
+		request.Header.Set("Origin", localOrigin)
+		if tt.body != "" {
+			request.Header.Set("Content-Type", "application/json")
+		}
+		request.AddCookie(sessionCookie)
+
+		handler.ServeHTTP(recorder, request)
+
+		if recorder.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("expected status %d, got %d", http.StatusMethodNotAllowed, recorder.Code)
+		}
+		assertNoStore(t, recorder)
+	}
+
+	for _, table := range []string{"parties", "party_memberships", "party_invites"} {
+		var count int
+		if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM "+table).Scan(&count); err != nil {
+			t.Fatalf("count %s: %v", table, err)
+		}
+		if count != 0 {
+			t.Fatalf("expected %s to remain empty, got %d rows", table, count)
+		}
+	}
+}
+
 func TestStrictTransportSecurityOnlyWhenCookiesAreSecure(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -483,7 +648,7 @@ func TestStrictTransportSecurityOnlyWhenCookiesAreSecure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := New(nil, nil, Options{CookieSecure: tt.cookieSecure})
+			handler := New(nil, nil, nil, Options{CookieSecure: tt.cookieSecure})
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 
@@ -497,7 +662,7 @@ func TestStrictTransportSecurityOnlyWhenCookiesAreSecure(t *testing.T) {
 }
 
 func TestPrivateRoutesSetNoStoreOnSuccessAndErrors(t *testing.T) {
-	handler := New(nil, nil, Options{AllowedOrigins: []string{localOrigin}})
+	handler := New(nil, nil, nil, Options{AllowedOrigins: []string{localOrigin}})
 	tests := []struct {
 		name       string
 		method     string
@@ -538,7 +703,7 @@ func TestPrivateRoutesSetNoStoreOnSuccessAndErrors(t *testing.T) {
 }
 
 func TestHealthResponseDoesNotSetNoStore(t *testing.T) {
-	handler := New(nil, nil, Options{})
+	handler := New(nil, nil, nil, Options{})
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 
@@ -552,6 +717,7 @@ func TestHealthResponseDoesNotSetNoStore(t *testing.T) {
 func newTestServer(pool *pgxpool.Pool) http.Handler {
 	return New(
 		characters.NewRepository(pool),
+		parties.NewRepository(pool),
 		auth.NewRepository(pool),
 		Options{
 			AllowedOrigins: []string{localOrigin},

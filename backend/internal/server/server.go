@@ -6,6 +6,7 @@ import (
 	"github.com/Inkala/rpg-companion/backend/internal/auth"
 	"github.com/Inkala/rpg-companion/backend/internal/characters"
 	"github.com/Inkala/rpg-companion/backend/internal/health"
+	"github.com/Inkala/rpg-companion/backend/internal/parties"
 )
 
 type Options struct {
@@ -15,9 +16,10 @@ type Options struct {
 	SessionConfig  auth.SessionConfig
 }
 
-func New(characterRepository *characters.Repository, authRepository *auth.Repository, options Options) http.Handler {
+func New(characterRepository *characters.Repository, partyRepository *parties.Repository, authRepository *auth.Repository, options Options) http.Handler {
 	mux := http.NewServeMux()
 	characterHandler := characters.NewHandler(characterRepository)
+	partyHandler := parties.NewHandler(partyRepository)
 	sessionConfig := options.SessionConfig
 	sessionConfig.Secure = options.CookieSecure
 	authHandler := auth.NewHandler(authRepository, options.PasswordConfig, sessionConfig)
@@ -31,6 +33,13 @@ func New(characterRepository *characters.Repository, authRepository *auth.Reposi
 	mux.Handle("POST /characters", authenticator.RequireSession(http.HandlerFunc(characterHandler.Create)))
 	mux.Handle("GET /characters", authenticator.RequireSession(http.HandlerFunc(characterHandler.List)))
 	mux.Handle("GET /characters/{id}", authenticator.RequireSession(http.HandlerFunc(characterHandler.GetByID)))
+	mux.Handle("POST /parties", authenticator.RequireSession(http.HandlerFunc(partyHandler.Create)))
+	mux.Handle("GET /parties", authenticator.RequireSession(http.HandlerFunc(partyHandler.List)))
+	mux.Handle("GET /parties/{partyId}", authenticator.RequireSession(http.HandlerFunc(partyHandler.GetForMember)))
+	mux.Handle("POST /parties/{partyId}/invites", authenticator.RequireSession(http.HandlerFunc(partyHandler.CreateOrRegenerateInvite)))
+	mux.Handle("POST /party-invites/inspect", authenticator.RequireSession(http.HandlerFunc(partyHandler.InspectInvite)))
+	mux.Handle("POST /party-invites/join", authenticator.RequireSession(http.HandlerFunc(partyHandler.Join)))
+	mux.Handle("GET /parties/{partyId}/characters/{characterId}", authenticator.RequireSession(http.HandlerFunc(characterHandler.GetByIDForPartyGM)))
 
 	handler := withCORS(mux, options.AllowedOrigins)
 	handler = withPrivateResponseNoStore(handler)
