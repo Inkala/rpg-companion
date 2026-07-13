@@ -3,6 +3,7 @@ import type { CharacterDTO } from '../characters/apiTypes';
 import { CharacterReference } from '../characters/CharacterReference';
 import { characterSheetToReference } from '../characters/characterSheetToReference';
 import { isCharacterSheetV1 } from '../characters/characterSheetValidation';
+import './parties.css';
 
 type LoadPartyCharacter = (
   partyId: string,
@@ -154,7 +155,7 @@ const PartyCharacterStateLayout = ({
   onBack: () => void;
   children: ReactNode;
 }) => (
-  <main className="app-shell account-page">
+  <main className="app-shell account-page party-page party-character-state-page">
     <header className="reference-nav">
       <button
         type="button"
@@ -165,9 +166,17 @@ const PartyCharacterStateLayout = ({
         Back
       </button>
     </header>
-    <section className="account-card" aria-labelledby="party-character-state-title">
+    <section
+      className="account-card party-state-card party-character-state"
+      aria-labelledby="party-character-state-title"
+    >
       <p className="eyebrow">Character Reference</p>
-      <h1 id="party-character-state-title" className="account-title">{title}</h1>
+      <h1
+        id="party-character-state-title"
+        className="account-title party-character-state__title"
+      >
+        {title}
+      </h1>
       {children}
     </section>
   </main>

@@ -7,6 +7,7 @@ import type {
   PartyInviteInspectionRequestDTO,
   PartyInviteInspectionResponseDTO,
 } from './apiTypes';
+import './parties.css';
 
 type InspectInvite = (
   input: PartyInviteInspectionRequestDTO,
@@ -234,7 +235,7 @@ export const JoinPartyPage = ({
   };
 
   return (
-    <main className="app-shell account-page">
+    <main className="app-shell account-page party-page party-join-page">
       <header className="reference-nav">
         <button type="button" className="back-button" onClick={onCancel}>
           Cancel
@@ -269,7 +270,10 @@ export const JoinPartyPage = ({
 };
 
 const SignedOutJoinState = ({ onSignIn }: { onSignIn: () => void }) => (
-  <section className="account-card" aria-labelledby="signed-out-invite-title">
+  <section
+    className="account-card party-state-card party-join-state"
+    aria-labelledby="signed-out-invite-title"
+  >
     <p className="eyebrow">Party invite</p>
     <h1 id="signed-out-invite-title" className="account-title">
       Sign in to use this party invite
@@ -282,21 +286,30 @@ const SignedOutJoinState = ({ onSignIn }: { onSignIn: () => void }) => (
 );
 
 const UnavailableInviteState = () => (
-  <section className="account-card" aria-labelledby="unavailable-invite-title">
+  <section
+    className="account-card party-state-card party-join-state"
+    aria-labelledby="unavailable-invite-title"
+  >
     <h1 id="unavailable-invite-title" className="account-title">Party invite unavailable</h1>
     <p role="alert">This party invite is unavailable.</p>
   </section>
 );
 
 const LoadingInviteState = () => (
-  <section className="account-card" aria-labelledby="loading-invite-title">
+  <section
+    className="account-card party-state-card party-join-state"
+    aria-labelledby="loading-invite-title"
+  >
     <h1 id="loading-invite-title" className="account-title">Party invite</h1>
     <p role="status">Checking party invite...</p>
   </section>
 );
 
 const InviteLoadError = ({ onRetry }: { onRetry: () => void }) => (
-  <section className="account-card" aria-labelledby="invite-error-title">
+  <section
+    className="account-card party-state-card party-join-state"
+    aria-labelledby="invite-error-title"
+  >
     <h1 id="invite-error-title" className="account-title">Could not load party invite</h1>
     <p role="alert">Could not load this party invite. Please try again.</p>
     <button type="button" className="button button--secondary" onClick={onRetry}>Retry</button>
@@ -310,8 +323,11 @@ const NoCharactersState = ({
   partyName: string;
   onCreateCharacter: () => void;
 }) => (
-  <section className="account-card" aria-labelledby="no-characters-title">
-    <p>Party: <strong>{partyName}</strong></p>
+  <section
+    className="account-card party-state-card party-join-state"
+    aria-labelledby="no-characters-title"
+  >
+    <p className="party-join__party-name">Party: <strong>{partyName}</strong></p>
     <h1 id="no-characters-title" className="account-title">Create or transfer a character first</h1>
     <p>You need one saved character before joining this party.</p>
     <button type="button" className="button button--primary" onClick={onCreateCharacter}>
@@ -335,18 +351,28 @@ const JoinCharacterForm = ({
   onSelectCharacter: (characterId: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) => (
-  <section className="account-card" aria-labelledby="join-party-title">
+  <section
+    className="account-card party-state-card party-join-card"
+    aria-labelledby="join-party-title"
+  >
     <p className="eyebrow">Party invite</p>
-    <h1 id="join-party-title" className="account-title">Join {partyName}</h1>
-    <form onSubmit={onSubmit} noValidate aria-busy={interaction.isJoining}>
+    <h1 id="join-party-title" className="account-title party-join__title">Join {partyName}</h1>
+    <form
+      className="party-join-form"
+      onSubmit={onSubmit}
+      noValidate
+      aria-busy={interaction.isJoining}
+    >
       <fieldset
+        className="party-character-picker"
         aria-invalid={interaction.selectionError ? 'true' : undefined}
         aria-describedby={interaction.selectionError ? characterSelectionErrorId : undefined}
       >
-        <legend>Choose a character</legend>
+        <legend className="party-character-picker__legend">Choose a character</legend>
         {characters.map((character, index) => (
-          <label key={character.id}>
+          <label className="party-character-option" key={character.id}>
             <input
+              className="party-character-option__input"
               ref={index === 0 ? firstCharacterInputRef : undefined}
               type="radio"
               name="party-character"
@@ -355,9 +381,11 @@ const JoinCharacterForm = ({
               disabled={interaction.isJoining}
               onChange={() => onSelectCharacter(character.id)}
             />
-            <span>
-              <strong>{character.name}</strong>
-              <span>{characterClassLine(character)}</span>
+            <span className="party-character-option__content">
+              <strong className="party-character-option__name">{character.name}</strong>
+              <span className="party-character-option__meta">
+                {characterClassLine(character)}
+              </span>
             </span>
           </label>
         ))}
@@ -372,9 +400,11 @@ const JoinCharacterForm = ({
         <p className="form-error" role="alert">{interaction.joinError}</p>
       ) : null}
 
-      <button type="submit" className="button button--primary" disabled={interaction.isJoining}>
-        {interaction.isJoining ? 'Joining party...' : 'Join party'}
-      </button>
+      <div className="party-actions party-join-form__actions">
+        <button type="submit" className="button button--primary" disabled={interaction.isJoining}>
+          {interaction.isJoining ? 'Joining party...' : 'Join party'}
+        </button>
+      </div>
     </form>
   </section>
 );

@@ -24,6 +24,25 @@ describe('CreatePartyPage', () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
+  it('provides scoped form and action-group hooks', () => {
+    const { container } = renderPage({ onCancel: vi.fn() });
+
+    expect(container.querySelector('main')).toHaveClass('party-page', 'party-create-page');
+    expect(screen.getByRole('heading', { name: 'Create a party' })).toHaveClass(
+      'party-form__title',
+    );
+
+    const nameInput = screen.getByLabelText('Party name');
+    expect(nameInput).toHaveClass('party-form__input');
+    expect(nameInput.closest('label')).toHaveClass('party-form__field');
+
+    const form = screen.getByRole('button', { name: 'Create party' }).closest('form');
+    expect(form).toHaveClass('party-form');
+    expect(form?.querySelector('.party-actions')).toContainElement(
+      screen.getByRole('button', { name: 'Cancel' }),
+    );
+  });
+
   it('shows inline validation and focuses an invalid Party name field', () => {
     const createParty = vi.fn();
 

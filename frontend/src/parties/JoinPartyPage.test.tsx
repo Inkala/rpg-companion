@@ -121,6 +121,22 @@ describe('JoinPartyPage', () => {
     expect(within(characterGroup).getByText('Ranger - Hunter - Level 3')).toBeInTheDocument();
   });
 
+  it('provides scoped join-form and radio-card hooks without adding another group', async () => {
+    const { container } = renderPage();
+
+    const heading = await screen.findByRole('heading', { name: 'Join The Lantern Guard' });
+    expect(container.querySelector('main')).toHaveClass('party-page', 'party-join-page');
+    expect(heading).toHaveClass('party-join__title');
+    expect(heading.closest('section')).toHaveClass('party-join-card');
+
+    const groups = screen.getAllByRole('group', { name: 'Choose a character' });
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toHaveClass('party-character-picker');
+    within(groups[0]).getAllByRole('radio').forEach((radio) => {
+      expect(radio.closest('label')).toHaveClass('party-character-option');
+    });
+  });
+
   it('requires one character selection before joining', async () => {
     const joinParty = vi.fn();
     renderPage({ joinParty });
@@ -134,6 +150,7 @@ describe('JoinPartyPage', () => {
       'aria-invalid',
       'true',
     );
+    expect(screen.getAllByRole('radio')[0]).toHaveFocus();
   });
 
   it('directs a user without characters to create or transfer one', async () => {
@@ -162,6 +179,7 @@ describe('JoinPartyPage', () => {
     fireEvent.submit(form);
 
     expect(screen.getByRole('button', { name: 'Joining party...' })).toBeDisabled();
+    expect(characterOption).toBeDisabled();
     expect(joinParty).toHaveBeenCalledOnce();
     expect(joinParty).toHaveBeenCalledWith({ token, characterId: 'character-1' });
 

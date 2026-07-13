@@ -71,6 +71,22 @@ describe('PartyList', () => {
     expect(onOpenParty).toHaveBeenCalledWith('party-2');
   });
 
+  it('provides scoped list and card hooks for responsive Party summaries', async () => {
+    const { container } = renderList({
+      loadParties: vi.fn().mockResolvedValue(parties),
+    });
+
+    expect(container.querySelector('section')).toHaveClass('party-list');
+    expect(screen.getByRole('heading', { name: 'My parties' })).toHaveClass('party-list__title');
+
+    const partyList = await screen.findByRole('list', { name: 'Your parties' });
+    expect(partyList).toHaveClass('party-list__items');
+    within(partyList).getAllByRole('listitem').forEach((item) => {
+      expect(item).toHaveClass('party-list__item');
+      expect(item.querySelector('article')).toHaveClass('party-list-card');
+    });
+  });
+
   it('shows a safe recoverable error and retries the load', async () => {
     const loadParties = vi
       .fn()

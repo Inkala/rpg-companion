@@ -31,6 +31,25 @@ describe('PartyCharacterReferencePage', () => {
     expect(onBack).toHaveBeenCalledOnce();
   });
 
+  it('provides scoped shell hooks for private Character Reference states', () => {
+    const pendingLoad = deferred<CharacterDTO>();
+    const { container } = renderPage({
+      loadPartyCharacter: vi.fn().mockReturnValue(pendingLoad.promise),
+    });
+
+    expect(container.querySelector('main')).toHaveClass(
+      'party-page',
+      'party-character-state-page',
+    );
+    expect(screen.getByRole('heading', { name: 'Character Reference' })).toHaveClass(
+      'party-character-state__title',
+    );
+    expect(screen.getByRole('status').closest('section')).toHaveClass(
+      'party-state-card',
+      'party-character-state',
+    );
+  });
+
   it('loads with both identifiers and shows an accessible loading state', () => {
     const pendingLoad = deferred<CharacterDTO>();
     const loadPartyCharacter = vi.fn().mockReturnValue(pendingLoad.promise);

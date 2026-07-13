@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { PartiesApiError } from './api';
 import type { CreatePartyRequestDTO, CreatePartyResponseDTO } from './apiTypes';
 import { validatePartyName } from './validation';
+import './parties.css';
 
 type CreatePartyPageProps = {
   createParty: (input: CreatePartyRequestDTO) => Promise<CreatePartyResponseDTO>;
@@ -64,22 +65,26 @@ export const CreatePartyPage = ({
   };
 
   return (
-    <main className="app-shell account-page">
-      <section className="account-card" aria-labelledby="create-party-title">
+    <main className="app-shell account-page party-page party-create-page">
+      <section
+        className="account-card party-state-card party-create-card"
+        aria-labelledby="create-party-title"
+      >
         <p className="eyebrow">Parties</p>
-        <h1 id="create-party-title" className="account-title">
+        <h1 id="create-party-title" className="account-title party-form__title">
           Create a party
         </h1>
 
         <form
-          className="account-form"
+          className="account-form party-form"
           onSubmit={submitParty}
           noValidate
           aria-busy={isSubmitting}
         >
-          <label className="form-field">
+          <label className="form-field party-form__field">
             <span>Party name</span>
             <input
+              className="party-form__input"
               ref={partyNameInputRef}
               type="text"
               autoComplete="off"
@@ -102,20 +107,22 @@ export const CreatePartyPage = ({
             </p>
           ) : null}
 
-          <button type="submit" className="button button--primary" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating party...' : 'Create party'}
-          </button>
-
-          {onCancel ? (
-            <button
-              type="button"
-              className="button button--secondary"
-              onClick={onCancel}
-              disabled={isSubmitting}
-            >
-              Cancel
+          <div className="party-actions party-form__actions">
+            <button type="submit" className="button button--primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating party...' : 'Create party'}
             </button>
-          ) : null}
+
+            {onCancel ? (
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={onCancel}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+            ) : null}
+          </div>
         </form>
       </section>
     </main>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { PartySummaryDTO } from './apiTypes';
+import './parties.css';
 
 type PartyListProps = {
   isSignedIn: boolean;
@@ -61,14 +62,14 @@ export const PartyList = ({
   }, [isSignedIn, loadAttempt, loadParties]);
 
   return (
-    <section aria-labelledby="my-parties-title">
+    <section className="party-list" aria-labelledby="my-parties-title">
       <p className="eyebrow">Parties</p>
-      <h2 id="my-parties-title">My parties</h2>
+      <h2 id="my-parties-title" className="party-list__title">My parties</h2>
 
       {!isSignedIn ? (
         <SignedOutPartyList onSignIn={onSignIn} />
       ) : state.status === 'loading' ? (
-        <p role="status">Loading your parties...</p>
+        <p className="party-list__status" role="status">Loading your parties...</p>
       ) : state.status === 'empty' ? (
         <EmptyPartyList onCreateParty={onCreateParty} onJoinParty={onJoinParty} />
       ) : state.status === 'error' ? (
@@ -82,7 +83,7 @@ export const PartyList = ({
 
 const SignedOutPartyList = ({ onSignIn }: { onSignIn: () => void }) => {
   return (
-    <section aria-labelledby="signed-out-parties-title">
+    <section className="party-list__state" aria-labelledby="signed-out-parties-title">
       <h3 id="signed-out-parties-title">Sign in to see your parties</h3>
       <p>Party membership is private to your Hunin account.</p>
       <button type="button" className="button button--primary" onClick={onSignIn}>
@@ -100,22 +101,24 @@ const EmptyPartyList = ({
   onJoinParty: () => void;
 }) => {
   return (
-    <section aria-labelledby="empty-parties-title">
+    <section className="party-list__state" aria-labelledby="empty-parties-title">
       <h3 id="empty-parties-title">No parties yet</h3>
       <p role="status">You have not joined a party yet.</p>
-      <button type="button" className="button button--primary" onClick={onCreateParty}>
-        Create party
-      </button>
-      <button type="button" className="button button--secondary" onClick={onJoinParty}>
-        Join party
-      </button>
+      <div className="party-actions">
+        <button type="button" className="button button--primary" onClick={onCreateParty}>
+          Create party
+        </button>
+        <button type="button" className="button button--secondary" onClick={onJoinParty}>
+          Join party
+        </button>
+      </div>
     </section>
   );
 };
 
 const PartyListError = ({ onRetry }: { onRetry: () => void }) => {
   return (
-    <section aria-labelledby="party-list-error-title">
+    <section className="party-list__state" aria-labelledby="party-list-error-title">
       <h3 id="party-list-error-title">Could not load parties</h3>
       <p role="alert">Could not load your parties. Please try again.</p>
       <button type="button" className="button button--secondary" onClick={onRetry}>
@@ -133,21 +136,21 @@ const LoadedPartyList = ({
   onOpenParty: (partyId: string) => void;
 }) => {
   return (
-    <ul aria-label="Your parties">
+    <ul className="party-list__items" aria-label="Your parties">
       {parties.map((party, index) => {
         const titleId = `party-list-title-${index}`;
         const roleLabel = party.role === 'gm' ? 'GM' : 'Player';
 
         return (
-          <li key={party.id}>
-            <article aria-labelledby={titleId}>
-              <h3 id={titleId}>{party.name}</h3>
-              <p>
+          <li className="party-list__item" key={party.id}>
+            <article className="party-list-card" aria-labelledby={titleId}>
+              <h3 id={titleId} className="party-list-card__title">{party.name}</h3>
+              <p className="party-list-card__role">
                 Role: <strong>{roleLabel}</strong>
               </p>
               <button
                 type="button"
-                className="button button--secondary"
+                className="button button--secondary party-list-card__action"
                 onClick={() => onOpenParty(party.id)}
                 aria-label={`Open ${party.name}`}
               >
