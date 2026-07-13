@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -23,6 +24,211 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 )
+
+func TestNewHandlerInitializesPartyGMRepositorySeam(t *testing.T) {
+	handler := NewHandler(&Repository{})
+	if handler.getCharacterForPartyGM == nil {
+		t.Fatal("expected NewHandler to initialize the Party GM repository seam")
+	}
+}
+
+func TestGetByIDForPartyGMRequiresAuthenticatedContext(t *testing.T) {
+	partyID := uuid.New()
+	characterID := uuid.New()
+	handler := NewHandler(nil)
+	handler.getCharacterForPartyGM = func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (Character, error) {
+		panic("unauthenticated Party GM request reached the repository")
+	}
+	request := httptest.NewRequest(http.MethodGet, "/parties/"+partyID.String()+"/characters/"+characterID.String(), nil)
+	request.SetPathValue("partyId", partyID.String())
+	request.SetPathValue("characterId", characterID.String())
+	response := httptest.NewRecorder()
+
+	handler.GetByIDForPartyGM(response, request)
+
+	assertSafeCharacterError(t, response, http.StatusUnauthorized, "authentication required")
+}
+
+func TestGetByIDForPartyGMRejectsMalformedPathUUIDs(t *testing.T) {
+	requesterID := uuid.New()
+	partyID := uuid.New()
+	characterID := uuid.New()
+	handler := NewHandler(nil)
+	handler.getCharacterForPartyGM = func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (Character, error) {
+		panic("malformed Party GM path reached the repository")
+	}
+
+	tests := []struct {
+		name        string
+		partyID     string
+		characterID string
+	}{
+		{name: "malformed Party ID", partyID: "private-party-value", characterID: characterID.String()},
+		{name: "malformed Character ID", partyID: partyID.String(), characterID: "private-character-value"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/", nil)
+			request.SetPathValue("partyId", tt.partyID)
+			request.SetPathValue("characterId", tt.characterID)
+			request = withAuthenticatedUser(request, requesterID)
+			response := httptest.NewRecorder()
+
+			handler.GetByIDForPartyGM(response, request)
+
+			if response.Code != http.StatusBadRequest {
+				t.Fatalf("expected status 400, got %d", response.Code)
+			}
+			if strings.Contains(response.Body.String(), tt.partyID) || strings.Contains(response.Body.String(), tt.characterID) {
+				t.Fatal("path validation response exposed a supplied path value")
+			}
+		})
+	}
+}
+
+func TestGetByIDForPartyGMReturnsCompleteValidatedCharacterWithoutOwner(t *testing.T) {
+	requesterID := uuid.New()
+	partyID := uuid.New()
+	characterID := uuid.New()
+	ownerID := uuid.New()
+	character := validStoredPartyGMCharacter(t)
+	character.ID = characterID
+	character.OwnerSubjectID = &ownerID
+	originalPayload := append(json.RawMessage(nil), character.ReferencePayload...)
+	handler := NewHandler(nil)
+	handler.getCharacterForPartyGM = func(
+		_ context.Context,
+		gotCharacterID uuid.UUID,
+		gotPartyID uuid.UUID,
+		gotRequesterID uuid.UUID,
+	) (Character, error) {
+		if gotCharacterID != characterID || gotPartyID != partyID || gotRequesterID != requesterID {
+			t.Fatal("Party GM handler used incorrect authorization-scoped identifiers")
+		}
+		return character, nil
+	}
+	request := partyGMCharacterRequest(requesterID, partyID, characterID)
+	response := httptest.NewRecorder()
+
+	handler.GetByIDForPartyGM(response, request)
+
+	assertCompletePartyGMCharacterResponse(t, response, character)
+	if character.OwnerSubjectID == nil || *character.OwnerSubjectID != ownerID {
+		t.Fatal("Party GM handler mutated the repository character owner")
+	}
+	if !bytes.Equal(character.ReferencePayload, originalPayload) {
+		t.Fatal("Party GM handler mutated the repository character payload")
+	}
+}
+
+func TestGetByIDForPartyGMReturnsIndistinguishableNotFoundResponses(t *testing.T) {
+	requesterID := uuid.New()
+	partyID := uuid.New()
+	characterID := uuid.New()
+	scenarios := []string{"unknown", "nonmember", "Player", "unlinked", "cross-party"}
+	var firstResponse string
+
+	for _, scenario := range scenarios {
+		t.Run(scenario, func(t *testing.T) {
+			handler := NewHandler(nil)
+			handler.getCharacterForPartyGM = func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (Character, error) {
+				return Character{}, ErrNotFound
+			}
+			response := httptest.NewRecorder()
+
+			handler.GetByIDForPartyGM(response, partyGMCharacterRequest(requesterID, partyID, characterID))
+
+			assertSafeCharacterError(t, response, http.StatusNotFound, "character not found")
+			if firstResponse == "" {
+				firstResponse = response.Body.String()
+			} else if response.Body.String() != firstResponse {
+				t.Fatal("authorization failures returned distinguishable Character responses")
+			}
+		})
+	}
+}
+
+func TestGetByIDForPartyGMFailsClosedForUnsafeStoredPayloads(t *testing.T) {
+	requesterID := uuid.New()
+	partyID := uuid.New()
+	characterID := uuid.New()
+	valid := validStoredPartyGMCharacter(t)
+
+	tests := []struct {
+		name      string
+		payload   json.RawMessage
+		forbidden string
+	}{
+		{name: "malformed", payload: json.RawMessage(`{"secret":"private-malformed-payload"`), forbidden: "private-malformed-payload"},
+		{
+			name:      "unsupported",
+			payload:   json.RawMessage(strings.Replace(string(valid.ReferencePayload), "CharacterSheetV1", "CharacterSheetV2", 1)),
+			forbidden: "CharacterSheetV2",
+		},
+		{
+			name:      "oversized",
+			payload:   json.RawMessage(`{"marker":"private-oversized-payload","padding":"` + strings.Repeat("x", maxReferencePayloadBytes) + `"}`),
+			forbidden: "private-oversized-payload",
+		},
+		{
+			name:      "core-inconsistent",
+			payload:   json.RawMessage(strings.Replace(string(valid.ReferencePayload), valid.Name, "Private Different Name", 1)),
+			forbidden: "Private Different Name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			character := valid
+			character.ID = characterID
+			character.ReferencePayload = tt.payload
+			handler := NewHandler(nil)
+			handler.getCharacterForPartyGM = func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (Character, error) {
+				return character, nil
+			}
+			response := httptest.NewRecorder()
+
+			handler.GetByIDForPartyGM(response, partyGMCharacterRequest(requesterID, partyID, characterID))
+
+			assertSafeCharacterError(t, response, http.StatusInternalServerError, "could not load character")
+			if strings.Contains(response.Body.String(), tt.forbidden) {
+				t.Fatal("fail-closed Party Character response exposed unsafe stored payload content")
+			}
+		})
+	}
+}
+
+func TestGetByIDForPartyGMPreservesDatabaseFailuresAsGenericServerError(t *testing.T) {
+	requesterID := uuid.New()
+	partyID := uuid.New()
+	characterID := uuid.New()
+	databaseError := errors.New("private-database-detail")
+	handler := NewHandler(nil)
+	handler.getCharacterForPartyGM = func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (Character, error) {
+		return Character{}, databaseError
+	}
+	response := httptest.NewRecorder()
+
+	handler.GetByIDForPartyGM(response, partyGMCharacterRequest(requesterID, partyID, characterID))
+
+	assertSafeCharacterError(t, response, http.StatusInternalServerError, "could not load character")
+	if strings.Contains(response.Body.String(), databaseError.Error()) {
+		t.Fatal("Party Character response exposed a database error")
+	}
+}
+
+func TestPartyGMOwnerScrubbingDoesNotChangeOwnerScopedResponseMapping(t *testing.T) {
+	character := validStoredPartyGMCharacter(t)
+	ownerID := uuid.New()
+	character.OwnerSubjectID = &ownerID
+
+	response := responseFromCharacter(character)
+
+	if response.OwnerSubjectID == nil || *response.OwnerSubjectID != ownerID.String() {
+		t.Fatal("existing owner-scoped Character response no longer includes its owner")
+	}
+}
 
 func TestCharacterHTTPPersistence(t *testing.T) {
 	pool := setupIntegrationDatabase(t)
@@ -807,6 +1013,86 @@ func runMigrations(databaseURL string) error {
 		return err
 	}
 	return nil
+}
+
+func validStoredPartyGMCharacter(t *testing.T) Character {
+	t.Helper()
+	createdAt := time.Date(2026, 7, 13, 10, 0, 0, 0, time.UTC)
+	character, err := characterFromRequest(validCreateCharacterRequest(), createdAt)
+	if err != nil {
+		t.Fatalf("create valid stored Party Character fixture: %v", err)
+	}
+	character.UpdatedAt = createdAt.Add(time.Hour)
+	return character
+}
+
+func partyGMCharacterRequest(requesterID uuid.UUID, partyID uuid.UUID, characterID uuid.UUID) *http.Request {
+	request := httptest.NewRequest(
+		http.MethodGet,
+		"/parties/"+partyID.String()+"/characters/"+characterID.String(),
+		nil,
+	)
+	request.SetPathValue("partyId", partyID.String())
+	request.SetPathValue("characterId", characterID.String())
+	return withAuthenticatedUser(request, requesterID)
+}
+
+func assertSafeCharacterError(t *testing.T, response *httptest.ResponseRecorder, wantStatus int, wantMessage string) {
+	t.Helper()
+	if response.Code != wantStatus {
+		t.Fatalf("expected status %d, got %d", wantStatus, response.Code)
+	}
+	if response.Header().Get("Content-Type") != "application/json" {
+		t.Fatal("expected an application/json Character error")
+	}
+	var body map[string]string
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal("Character error response was not valid JSON")
+	}
+	if len(body) != 1 || body["error"] != wantMessage {
+		t.Fatal("Character error response changed its safe public shape")
+	}
+}
+
+func assertCompletePartyGMCharacterResponse(t *testing.T, recorder *httptest.ResponseRecorder, character Character) {
+	t.Helper()
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
+	}
+	if recorder.Header().Get("Content-Type") != "application/json" {
+		t.Fatal("expected an application/json Party Character response")
+	}
+
+	var actual characterResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &actual); err != nil {
+		t.Fatal("Party Character response was not valid JSON")
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(recorder.Body.Bytes(), &fields); err != nil {
+		t.Fatal("Party Character response was not a JSON object")
+	}
+	if len(fields) != 15 || fields["ownerSubjectId"] == nil || string(fields["ownerSubjectId"]) != "null" {
+		t.Fatal("Party Character response changed the complete DTO or exposed its owner")
+	}
+
+	expected := responseFromCharacter(character)
+	expected.OwnerSubjectID = nil
+	actualJSON, err := json.Marshal(actual)
+	if err != nil {
+		t.Fatal("could not normalize actual Party Character response")
+	}
+	expectedJSON, err := json.Marshal(expected)
+	if err != nil {
+		t.Fatal("could not normalize expected Party Character response")
+	}
+	var actualValue any
+	var expectedValue any
+	if json.Unmarshal(actualJSON, &actualValue) != nil || json.Unmarshal(expectedJSON, &expectedValue) != nil {
+		t.Fatal("could not compare Party Character responses semantically")
+	}
+	if !reflect.DeepEqual(actualValue, expectedValue) {
+		t.Fatal("Party Character response did not preserve the complete validated Character DTO")
+	}
 }
 
 func findMigrationsPath() (string, error) {

@@ -33,9 +33,11 @@ func withPrivateResponseNoStore(next http.Handler) http.Handler {
 
 func isPrivateResponsePath(path string) bool {
 	switch path {
-	case "/auth/register", "/auth/sessions", "/auth/session", "/characters":
+	case "/auth/register", "/auth/sessions", "/auth/session", "/characters", "/parties":
 		return true
 	default:
-		return strings.HasPrefix(path, "/characters/")
+		return strings.HasPrefix(path, "/characters/") ||
+			strings.HasPrefix(path, "/parties/") ||
+			strings.HasPrefix(path, "/party-invites/")
 	}
 }

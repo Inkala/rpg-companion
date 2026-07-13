@@ -21,6 +21,38 @@ const (
 	maxReferencePayloadBytes = 65536
 )
 
+var errInvalidStoredCharacter = errors.New("stored character is invalid")
+
+func validateStoredCharacterForPartyGM(character Character) error {
+	if len(character.ReferencePayload) == 0 || len(character.ReferencePayload) > maxReferencePayloadBytes {
+		return errInvalidStoredCharacter
+	}
+	if !isJSONObject(character.ReferencePayload) {
+		return errInvalidStoredCharacter
+	}
+
+	validationErrors := validateCharacterSheetV1Envelope(
+		character.ReferencePayload,
+		characterSheetExpectedValues{
+			Name:          character.Name,
+			Ancestry:      character.Ancestry,
+			Background:    character.Background,
+			ClassName:     character.ClassName,
+			SubclassName:  character.SubclassName,
+			Level:         character.Level,
+			AbilityScores: character.AbilityScores,
+			HitPoints:     character.HitPoints,
+			ArmorClass:    character.ArmorClass,
+			SpeedFt:       character.SpeedFt,
+		},
+	)
+	if len(validationErrors) > 0 {
+		return errInvalidStoredCharacter
+	}
+
+	return nil
+}
+
 func characterFromRequest(request createCharacterRequest, now time.Time) (Character, error) {
 	var validationErrors []string
 
