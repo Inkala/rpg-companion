@@ -7,4 +7,8 @@ export type AppRoute =
   | { name: 'new-character' }
   | { name: 'sample-character' }
   | { name: 'saved-character'; id: string }
+  | { name: 'new-party' }
+  | { name: 'join-party' }
+  | { name: 'party'; partyId: string }
+  | { name: 'party-character'; partyId: string; characterId: string }
   | { name: 'not-found' };
