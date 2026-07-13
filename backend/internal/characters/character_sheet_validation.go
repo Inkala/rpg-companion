@@ -105,6 +105,8 @@ func validateCharacterSheetV1Envelope(
 		trimmed := bytes.TrimSpace(envelope.Spellcasting)
 		if !bytes.Equal(trimmed, []byte("null")) && (len(trimmed) == 0 || trimmed[0] != '{') {
 			validationErrors = append(validationErrors, "referencePayload.spellcasting must be a JSON object or null")
+		} else if !bytes.Equal(trimmed, []byte("null")) {
+			validationErrors = append(validationErrors, validateCharacterSheetSpellcasting(envelope.Spellcasting)...)
 		}
 	}
 	if identityValid {

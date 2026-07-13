@@ -349,7 +349,28 @@ func maraAuditedSampleEnvelope() map[string]any {
 		"details":  map[string]any{"collapsedLabel": "Show more details", "expandedLabel": "Hide details", "text": "The bonus applies once per turn."},
 	}
 	envelope["features"] = []any{colossusSlayer}
-	envelope["spellcasting"] = map[string]any{"ability": "wisdom", "spells": []any{}}
+	huntersMark := validTestSpell("hunters-mark")
+	huntersMark["name"] = "Hunter's Mark"
+	huntersMark["actionType"] = "Bonus Action"
+	huntersMark["castingTime"] = "Bonus Action"
+	huntersMark["summary"] = "Mark one creature and add 1d6 damage on weapon hits."
+	huntersMark["meta"] = []any{"1st-level spell", "Bonus Action", "Concentration", "Up to 1 hour"}
+	fogCloud := validTestSpell("fog-cloud")
+	fogCloud["summary"] = "Create a sphere of heavily obscuring fog."
+	fogCloud["meta"] = []any{"1st-level spell", "Action", "Concentration", "Up to 1 hour"}
+	cureWounds := validTestSpell("cure-wounds")
+	cureWounds["name"] = "Cure Wounds"
+	cureWounds["duration"] = "Instantaneous"
+	cureWounds["concentration"] = false
+	cureWounds["summary"] = "Restore hit points to a creature you touch."
+	cureWounds["meta"] = []any{"1st-level spell", "Action", "Instantaneous"}
+	envelope["spellcasting"] = map[string]any{
+		"ability":          "wisdom",
+		"spellSaveDC":      map[string]any{"needsConfirmation": true, "note": "Spell save DC must be confirmed before use."},
+		"spellAttackBonus": map[string]any{"needsConfirmation": true, "note": "Spell attack bonus must be confirmed before use."},
+		"slots":            []any{map[string]any{"level": 1, "max": 3, "used": 0}},
+		"spells":           []any{huntersMark, fogCloud, cureWounds},
+	}
 	return envelope
 }
 
