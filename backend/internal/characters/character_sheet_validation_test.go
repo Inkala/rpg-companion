@@ -325,8 +325,30 @@ func maraAuditedSampleEnvelope() map[string]any {
 			map[string]any{"id": "spells", "label": "Spells", "defaultOpen": false},
 		},
 	}
-	envelope["actions"] = []any{map[string]any{"id": "longbow", "name": "Longbow"}}
-	envelope["features"] = []any{map[string]any{"id": "colossus-slayer", "name": "Colossus Slayer"}}
+	longbow := validTestAction("longbow")
+	longbow["attackBonus"] = 7
+	longbow["damage"] = []any{map[string]any{"dice": "1d8", "bonus": 3, "type": "piercing"}}
+	longbow["range"] = map[string]any{"normal": 150, "long": 600}
+	longbow["summary"] = "Reliable ranged attack."
+	longbow["meta"] = []any{"Action", "+7 to hit", "1d8 + 3 piercing", "150 / 600 ft."}
+	envelope["actions"] = []any{longbow}
+	colossusSlayer := validTestFeature("colossus-slayer")
+	colossusSlayer["name"] = "Colossus Slayer"
+	colossusSlayer["category"] = "Hunter feature"
+	colossusSlayer["tags"] = []any{"Once per turn"}
+	colossusSlayer["summary"] = "Add 1d8 after hitting an already wounded enemy."
+	colossusSlayer["quickReference"] = map[string]any{
+		"title":   "Colossus Slayer",
+		"label":   "Hunter feature",
+		"summary": "After you hit an enemy that is already wounded, add 1d8 damage.",
+		"metadata": []any{
+			map[string]any{"label": "Timing", "value": "Once per turn"},
+			map[string]any{"label": "Resource", "value": "No limited use"},
+		},
+		"reminder": map[string]any{"heading": "Remember", "text": "The enemy must already be wounded."},
+		"details":  map[string]any{"collapsedLabel": "Show more details", "expandedLabel": "Hide details", "text": "The bonus applies once per turn."},
+	}
+	envelope["features"] = []any{colossusSlayer}
 	envelope["spellcasting"] = map[string]any{"ability": "wisdom", "spells": []any{}}
 	return envelope
 }
@@ -350,8 +372,15 @@ func generatedFighterEnvelope() map[string]any {
 			map[string]any{"id": "features", "label": "Features", "defaultOpen": false},
 		},
 	}
-	envelope["actions"] = []any{map[string]any{"id": "longsword", "name": "Longsword"}}
-	envelope["features"] = []any{map[string]any{"id": "second-wind", "name": "Second Wind"}}
+	longsword := validTestAction("longsword")
+	longsword["name"] = "Longsword"
+	longsword["summary"] = "A dependable melee attack."
+	secondWind := validTestFeature("second-wind")
+	secondWind["name"] = "Second Wind"
+	secondWind["category"] = "Fighter feature"
+	secondWind["summary"] = "Recover hit points once per rest."
+	envelope["actions"] = []any{longsword}
+	envelope["features"] = []any{secondWind}
 	return envelope
 }
 
@@ -395,8 +424,15 @@ func fullManualEnvelope() map[string]any {
 			map[string]any{"id": "features", "label": "Features", "defaultOpen": false},
 		},
 	}
-	envelope["actions"] = []any{map[string]any{"id": "mace", "name": "Mace"}}
-	envelope["features"] = []any{map[string]any{"id": "channel-divinity", "name": "Channel Divinity"}}
+	mace := validTestAction("mace")
+	mace["name"] = "Mace"
+	mace["summary"] = "A simple melee weapon attack."
+	channelDivinity := validTestFeature("channel-divinity")
+	channelDivinity["name"] = "Channel Divinity"
+	channelDivinity["category"] = "Cleric feature"
+	channelDivinity["summary"] = "Invoke a divine effect."
+	envelope["actions"] = []any{mace}
+	envelope["features"] = []any{channelDivinity}
 	envelope["personality"] = map[string]any{"notes": []any{"Transferred from an existing sheet."}}
 	return envelope
 }

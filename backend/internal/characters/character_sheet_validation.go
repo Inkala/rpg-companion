@@ -99,17 +99,6 @@ func validateCharacterSheetV1Envelope(
 		requireJSONShape(&validationErrors, field.name, field.raw, '{', "a JSON object")
 	}
 
-	arrayFields := []struct {
-		name string
-		raw  json.RawMessage
-	}{
-		{name: "actions", raw: envelope.Actions},
-		{name: "features", raw: envelope.Features},
-	}
-	for _, field := range arrayFields {
-		requireJSONShape(&validationErrors, field.name, field.raw, '[', "a JSON array")
-	}
-
 	if len(envelope.Spellcasting) == 0 {
 		validationErrors = append(validationErrors, "referencePayload.spellcasting is required")
 	} else {
@@ -132,6 +121,12 @@ func validateCharacterSheetV1Envelope(
 	}
 	if proficienciesValid {
 		validationErrors = append(validationErrors, validateCharacterSheetProficiencies(envelope.Proficiencies)...)
+	}
+	if requireJSONShape(&validationErrors, "actions", envelope.Actions, '[', "a JSON array") {
+		validationErrors = append(validationErrors, validateCharacterSheetActions(envelope.Actions)...)
+	}
+	if requireJSONShape(&validationErrors, "features", envelope.Features, '[', "a JSON array") {
+		validationErrors = append(validationErrors, validateCharacterSheetFeatures(envelope.Features)...)
 	}
 
 	return validationErrors
