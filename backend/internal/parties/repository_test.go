@@ -612,6 +612,7 @@ func TestRepositoryInspectInvitePreservesDatabaseErrors(t *testing.T) {
 
 func TestPartyMembershipModelExposesJoinResultFields(t *testing.T) {
 	requireStructFields(t, PartyMembership{}, []string{"ID", "PartyID", "Role", "CharacterID", "JoinedAt"})
+	requireStructFields(t, JoinPartyResult{}, []string{"Membership", "Created"})
 }
 
 func TestRepositoryJoinPartyCreatesPlayerMembershipAtomically(t *testing.T) {
@@ -626,7 +627,7 @@ func TestRepositoryJoinPartyCreatesPlayerMembershipAtomically(t *testing.T) {
 		func() time.Time { return now },
 	)
 
-	membership, err := repository.JoinParty(
+	result, err := repository.JoinParty(
 		context.Background(),
 		rawToken,
 		uuid.MustParse(testOtherUserID),
@@ -635,7 +636,10 @@ func TestRepositoryJoinPartyCreatesPlayerMembershipAtomically(t *testing.T) {
 	if err != nil {
 		t.Fatalf("join Party: %v", err)
 	}
-	assertJoinedMembership(t, membership, membershipID, partyID, uuid.MustParse(testThirdCharacterID), now)
+	if !result.Created {
+		t.Fatal("new Party membership was not marked as created")
+	}
+	assertJoinedMembership(t, result.Membership, membershipID, partyID, uuid.MustParse(testThirdCharacterID), now)
 
 	var storedRole string
 	var storedCharacterID string
@@ -784,7 +788,10 @@ func TestRepositoryJoinPartyIsIdempotentForIdenticalRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("repeat identical join: %v", err)
 	}
-	if first != second {
+	if !first.Created || second.Created {
+		t.Fatal("identical join did not distinguish creation from replay")
+	}
+	if first.Membership != second.Membership {
 		t.Fatal("identical join did not return the existing membership")
 	}
 	requireUserMembershipCount(t, pool, partyID, uuid.MustParse(testOtherUserID), 1)
@@ -870,8 +877,8 @@ func TestRepositoryJoinPartySerializesConcurrentIdenticalJoins(t *testing.T) {
 	)
 
 	type joinResult struct {
-		membership PartyMembership
-		err        error
+		result JoinPartyResult
+		err    error
 	}
 	start := make(chan struct{})
 	results := make(chan joinResult, 2)
@@ -879,8 +886,8 @@ func TestRepositoryJoinPartySerializesConcurrentIdenticalJoins(t *testing.T) {
 	defer cancel()
 	join := func(repository *Repository) {
 		<-start
-		membership, err := repository.JoinParty(ctx, rawToken, uuid.MustParse(testOtherUserID), uuid.MustParse(testThirdCharacterID))
-		results <- joinResult{membership: membership, err: err}
+		result, err := repository.JoinParty(ctx, rawToken, uuid.MustParse(testOtherUserID), uuid.MustParse(testThirdCharacterID))
+		results <- joinResult{result: result, err: err}
 	}
 	go join(firstRepository)
 	go join(secondRepository)
@@ -891,8 +898,11 @@ func TestRepositoryJoinPartySerializesConcurrentIdenticalJoins(t *testing.T) {
 	if first.err != nil || second.err != nil {
 		t.Fatal("expected concurrent identical joins to succeed")
 	}
-	if first.membership != second.membership {
+	if first.result.Membership != second.result.Membership {
 		t.Fatal("concurrent identical joins returned different memberships")
+	}
+	if first.result.Created == second.result.Created {
+		t.Fatal("concurrent identical joins did not return one creation and one replay")
 	}
 	requireUserMembershipCount(t, pool, partyID, uuid.MustParse(testOtherUserID), 1)
 }

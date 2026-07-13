@@ -67,3 +67,8 @@ type PartyMembership struct {
 	CharacterID uuid.UUID
 	JoinedAt    time.Time
 }
+
+type JoinPartyResult struct {
+	Membership PartyMembership
+	Created    bool
+}

@@ -358,15 +358,15 @@ func (repository *Repository) JoinParty(
 	rawToken string,
 	requesterID uuid.UUID,
 	characterID uuid.UUID,
-) (PartyMembership, error) {
+) (JoinPartyResult, error) {
 	tokenHash, err := InviteTokenHash(rawToken)
 	if err != nil {
-		return PartyMembership{}, ErrInviteUnavailable
+		return JoinPartyResult{}, ErrInviteUnavailable
 	}
 
 	transaction, err := repository.pool.Begin(ctx)
 	if err != nil {
-		return PartyMembership{}, err
+		return JoinPartyResult{}, err
 	}
 	defer func() { _ = transaction.Rollback(ctx) }()
 
@@ -377,15 +377,15 @@ WHERE token_hash = $1`
 	var partyIDText string
 	err = transaction.QueryRow(ctx, findInviteParty, tokenHash).Scan(&partyIDText)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return PartyMembership{}, ErrInviteUnavailable
+		return JoinPartyResult{}, ErrInviteUnavailable
 	}
 	if err != nil {
-		return PartyMembership{}, err
+		return JoinPartyResult{}, err
 	}
 
 	partyID, err := uuid.Parse(partyIDText)
 	if err != nil {
-		return PartyMembership{}, err
+		return JoinPartyResult{}, err
 	}
 
 	const lockParty = `
@@ -396,10 +396,10 @@ FOR UPDATE`
 	var lockedPartyID string
 	err = transaction.QueryRow(ctx, lockParty, partyID.String()).Scan(&lockedPartyID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return PartyMembership{}, ErrInviteUnavailable
+		return JoinPartyResult{}, ErrInviteUnavailable
 	}
 	if err != nil {
-		return PartyMembership{}, err
+		return JoinPartyResult{}, err
 	}
 
 	joinedAt := repository.now().UTC()
@@ -414,10 +414,10 @@ FOR UPDATE`
 	var currentInvitePartyID string
 	err = transaction.QueryRow(ctx, lockCurrentInvite, tokenHash, partyID.String(), joinedAt).Scan(&currentInvitePartyID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return PartyMembership{}, ErrInviteUnavailable
+		return JoinPartyResult{}, ErrInviteUnavailable
 	}
 	if err != nil {
-		return PartyMembership{}, err
+		return JoinPartyResult{}, err
 	}
 
 	const lockOwnedCharacter = `
@@ -429,21 +429,21 @@ FOR UPDATE`
 	var lockedCharacterID string
 	err = transaction.QueryRow(ctx, lockOwnedCharacter, characterID.String(), requesterID.String()).Scan(&lockedCharacterID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return PartyMembership{}, ErrCharacterNotFound
+		return JoinPartyResult{}, ErrCharacterNotFound
 	}
 	if err != nil {
-		return PartyMembership{}, err
+		return JoinPartyResult{}, err
 	}
 
 	existing, found, err := loadExistingPartyMembership(ctx, transaction, partyID, requesterID)
 	if err != nil {
-		return PartyMembership{}, err
+		return JoinPartyResult{}, err
 	}
 	if found {
 		if existing.Role == RolePlayer && existing.CharacterID == characterID {
-			return existing, nil
+			return JoinPartyResult{Membership: existing, Created: false}, nil
 		}
-		return PartyMembership{}, ErrAlreadyMember
+		return JoinPartyResult{}, ErrAlreadyMember
 	}
 
 	const findLinkedCharacter = `
@@ -454,10 +454,10 @@ FOR UPDATE`
 	var linkedMembershipID string
 	err = transaction.QueryRow(ctx, findLinkedCharacter, characterID.String()).Scan(&linkedMembershipID)
 	if err == nil {
-		return PartyMembership{}, ErrCharacterAlreadyLinked
+		return JoinPartyResult{}, ErrCharacterAlreadyLinked
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return PartyMembership{}, err
+		return JoinPartyResult{}, err
 	}
 
 	membership := PartyMembership{
@@ -479,20 +479,20 @@ VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::uuid, $6)`
 		membership.JoinedAt,
 	)
 	if isPartyConstraint(err, "party_memberships_party_id_user_id_key") {
-		return PartyMembership{}, ErrAlreadyMember
+		return JoinPartyResult{}, ErrAlreadyMember
 	}
 	if isPartyConstraint(err, "party_memberships_character_id_key") {
-		return PartyMembership{}, ErrCharacterAlreadyLinked
+		return JoinPartyResult{}, ErrCharacterAlreadyLinked
 	}
 	if err != nil {
-		return PartyMembership{}, err
+		return JoinPartyResult{}, err
 	}
 
 	if err := transaction.Commit(ctx); err != nil {
-		return PartyMembership{}, err
+		return JoinPartyResult{}, err
 	}
 
-	return membership, nil
+	return JoinPartyResult{Membership: membership, Created: true}, nil
 }
 
 func loadExistingPartyMembership(

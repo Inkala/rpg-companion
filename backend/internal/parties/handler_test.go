@@ -2,6 +2,8 @@ package parties
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -32,6 +34,7 @@ func TestHandlerRequiresAuthenticatedContext(t *testing.T) {
 		{name: "detail", invoke: handler.GetForMember, method: http.MethodGet, path: "/parties/" + partyID.String()},
 		{name: "invite creation", invoke: handler.CreateOrRegenerateInvite, method: http.MethodPost, path: "/parties/" + partyID.String() + "/invites"},
 		{name: "invite inspection", invoke: handler.InspectInvite, method: http.MethodPost, path: "/party-invites/inspect", body: `{"token":"unavailable"}`},
+		{name: "join", invoke: handler.Join, method: http.MethodPost, path: "/party-invites/join", body: `{"token":"unavailable","characterId":"` + uuid.New().String() + `"}`},
 	}
 
 	for _, tt := range tests {
@@ -480,6 +483,305 @@ func TestInviteHandlersMapRepositoryFailuresToGenericServerErrors(t *testing.T) 
 	})
 }
 
+func TestHandlerJoinReturnsCreationAndReplayStatusesWithoutChangingDTO(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawToken := strings.Repeat("J", 43)
+	membership := joinHandlerMembership(characterID)
+
+	tests := []struct {
+		name       string
+		created    bool
+		wantStatus int
+	}{
+		{name: "new membership", created: true, wantStatus: http.StatusCreated},
+		{name: "identical replay", created: false, wantStatus: http.StatusOK},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repository := &stubPartyHandlerRepository{
+				joinParty: func(_ context.Context, suppliedToken string, userID uuid.UUID, suppliedCharacterID uuid.UUID) (JoinPartyResult, error) {
+					if suppliedToken != rawToken || userID != requesterID || suppliedCharacterID != characterID {
+						t.Fatal("join handler changed an approved repository argument")
+					}
+					return JoinPartyResult{Membership: membership, Created: tt.created}, nil
+				},
+			}
+			response := executeJoinRequest(NewHandler(repository), requesterID, rawToken, characterID)
+
+			assertJoinResponse(t, response, tt.wantStatus, rawToken, requesterID, membership)
+		})
+	}
+}
+
+func TestHandlerJoinMapsSafeDomainErrors(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawToken := strings.Repeat("K", 43)
+	databaseError := errors.New("private-database-detail")
+
+	tests := []struct {
+		name       string
+		repository error
+		wantStatus int
+		wantCode   string
+	}{
+		{name: "invite unavailable", repository: ErrInviteUnavailable, wantStatus: http.StatusBadRequest, wantCode: "invite_unavailable"},
+		{name: "foreign or unknown character", repository: ErrCharacterNotFound, wantStatus: http.StatusNotFound, wantCode: "not_found"},
+		{name: "different existing membership", repository: ErrAlreadyMember, wantStatus: http.StatusConflict, wantCode: "already_member"},
+		{name: "character linked elsewhere", repository: ErrCharacterAlreadyLinked, wantStatus: http.StatusConflict, wantCode: "character_already_linked"},
+		{name: "database failure", repository: databaseError, wantStatus: http.StatusInternalServerError, wantCode: "server_error"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repository := &stubPartyHandlerRepository{
+				joinParty: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+					return JoinPartyResult{}, tt.repository
+				},
+			}
+			response := executeJoinRequest(NewHandler(repository), requesterID, rawToken, characterID)
+
+			assertSensitivePartyError(t, response, tt.wantStatus, tt.wantCode)
+			assertPartyResponseExcludes(t, response, rawToken)
+			assertPartyResponseExcludes(t, response, requesterID.String())
+			assertPartyResponseExcludes(t, response, databaseError.Error())
+		})
+	}
+}
+
+func TestHandlerJoinDecodesBeforeConsumingThrottleAttempt(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawToken := strings.Repeat("L", 43)
+	repositoryCalls := 0
+	repository := &stubPartyHandlerRepository{
+		joinParty: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+			repositoryCalls++
+			return JoinPartyResult{Membership: joinHandlerMembership(characterID), Created: true}, nil
+		},
+	}
+	now := time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)
+	handler := newHandlerWithJoinLimiter(repository, auth.NewSlidingWindowLimiter(func() time.Time { return now }))
+
+	invalidBodies := []string{
+		`{"token":"` + rawToken + `"`,
+		`{"token":"` + rawToken + `","characterId":"not-a-uuid"}`,
+		`{"token":"` + rawToken + `","characterId":"` + characterID.String() + `","extra":true}`,
+		joinRequestBody(rawToken, characterID) + ` {}`,
+	}
+	for attempt := 0; attempt < 10; attempt++ {
+		body := invalidBodies[attempt%len(invalidBodies)]
+		request := authenticatedPartyRequest(http.MethodPost, "/party-invites/join", body, requesterID)
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+
+		handler.Join(response, request)
+
+		assertSensitivePartyError(t, response, http.StatusBadRequest, "validation_error")
+		assertPartyResponseExcludes(t, response, rawToken)
+	}
+
+	for attempt := 0; attempt < joinAttemptLimit; attempt++ {
+		response := executeJoinRequest(handler, requesterID, rawToken, characterID)
+		assertJoinResponse(t, response, http.StatusCreated, rawToken, requesterID, joinHandlerMembership(characterID))
+	}
+	if repositoryCalls != joinAttemptLimit {
+		t.Fatal("malformed requests consumed throttle attempts or reached the repository")
+	}
+
+	response := executeJoinRequest(handler, requesterID, rawToken, characterID)
+	assertSensitivePartyError(t, response, http.StatusTooManyRequests, "rate_limited")
+	if repositoryCalls != joinAttemptLimit {
+		t.Fatal("throttle rejection reached the repository")
+	}
+}
+
+func TestHandlerJoinAcceptsExactly4096BytesAndRejects4097BeforeRepository(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawToken := strings.Repeat("M", 43)
+	baseBody := joinRequestBody(rawToken, characterID)
+	exactBody := baseBody + strings.Repeat(" ", int(partyRequestBodyLimit)-len(baseBody))
+	overBody := exactBody + " "
+	repositoryCalls := 0
+	repository := &stubPartyHandlerRepository{
+		joinParty: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+			repositoryCalls++
+			return JoinPartyResult{Membership: joinHandlerMembership(characterID), Created: true}, nil
+		},
+	}
+	handler := NewHandler(repository)
+
+	exactRequest := authenticatedPartyRequest(http.MethodPost, "/party-invites/join", exactBody, requesterID)
+	exactRequest.Header.Set("Content-Type", "application/json")
+	exactResponse := httptest.NewRecorder()
+	handler.Join(exactResponse, exactRequest)
+	assertJoinResponse(t, exactResponse, http.StatusCreated, rawToken, requesterID, joinHandlerMembership(characterID))
+
+	unsupportedRequest := authenticatedPartyRequest(http.MethodPost, "/party-invites/join", baseBody, requesterID)
+	unsupportedResponse := httptest.NewRecorder()
+	handler.Join(unsupportedResponse, unsupportedRequest)
+	assertSensitivePartyError(t, unsupportedResponse, http.StatusUnsupportedMediaType, "validation_error")
+
+	overRequest := authenticatedPartyRequest(http.MethodPost, "/party-invites/join", overBody, requesterID)
+	overRequest.Header.Set("Content-Type", "application/json")
+	overResponse := httptest.NewRecorder()
+	handler.Join(overResponse, overRequest)
+	assertSensitivePartyError(t, overResponse, http.StatusRequestEntityTooLarge, "validation_error")
+	if repositoryCalls != 1 {
+		t.Fatal("join body boundary did not protect the repository")
+	}
+}
+
+func TestHandlerJoinCountsValidAndUnavailableAttemptsEquallyWithoutReset(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawToken := strings.Repeat("N", 43)
+	repositoryCalls := 0
+	repository := &stubPartyHandlerRepository{
+		joinParty: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+			repositoryCalls++
+			if repositoryCalls <= joinAttemptLimit/2 {
+				return JoinPartyResult{Membership: joinHandlerMembership(characterID), Created: true}, nil
+			}
+			return JoinPartyResult{}, ErrInviteUnavailable
+		},
+	}
+	now := time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)
+	handler := newHandlerWithJoinLimiter(repository, auth.NewSlidingWindowLimiter(func() time.Time { return now }))
+
+	for attempt := 0; attempt < joinAttemptLimit; attempt++ {
+		response := executeJoinRequest(handler, requesterID, rawToken, characterID)
+		if attempt < joinAttemptLimit/2 {
+			assertJoinResponse(t, response, http.StatusCreated, rawToken, requesterID, joinHandlerMembership(characterID))
+		} else {
+			assertSensitivePartyError(t, response, http.StatusBadRequest, "invite_unavailable")
+		}
+	}
+
+	response := executeJoinRequest(handler, requesterID, rawToken, characterID)
+	assertSensitivePartyError(t, response, http.StatusTooManyRequests, "rate_limited")
+	if response.Header().Get("Retry-After") != "60" {
+		t.Fatal("full-window throttle did not return a bounded 60-second Retry-After")
+	}
+	if repositoryCalls != joinAttemptLimit {
+		t.Fatal("throttled join reached the repository")
+	}
+}
+
+func TestHandlerJoinThrottleSeparatesUsersAndIsSharedAcrossHandlerCopies(t *testing.T) {
+	firstUserID := uuid.New()
+	secondUserID := uuid.New()
+	characterID := uuid.New()
+	rawToken := strings.Repeat("O", 43)
+	repositoryCalls := 0
+	repository := &stubPartyHandlerRepository{
+		joinParty: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+			repositoryCalls++
+			return JoinPartyResult{Membership: joinHandlerMembership(characterID), Created: true}, nil
+		},
+	}
+	now := time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)
+	handler := newHandlerWithJoinLimiter(repository, auth.NewSlidingWindowLimiter(func() time.Time { return now }))
+	handlerCopy := handler
+
+	for attempt := 0; attempt < joinAttemptLimit; attempt++ {
+		response := executeJoinRequest(handlerCopy, firstUserID, rawToken, characterID)
+		assertJoinResponse(t, response, http.StatusCreated, rawToken, firstUserID, joinHandlerMembership(characterID))
+	}
+	assertSensitivePartyError(t, executeJoinRequest(handler, firstUserID, rawToken, characterID), http.StatusTooManyRequests, "rate_limited")
+	assertJoinResponse(t, executeJoinRequest(handlerCopy, secondUserID, rawToken, characterID), http.StatusCreated, rawToken, secondUserID, joinHandlerMembership(characterID))
+	if repositoryCalls != joinAttemptLimit+1 {
+		t.Fatal("handler copies did not share one per-user limiter")
+	}
+}
+
+func TestHandlerJoinThrottleRecoversAfterWindow(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawToken := strings.Repeat("P", 43)
+	repositoryCalls := 0
+	repository := &stubPartyHandlerRepository{
+		joinParty: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+			repositoryCalls++
+			return JoinPartyResult{Membership: joinHandlerMembership(characterID), Created: true}, nil
+		},
+	}
+	now := time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)
+	handler := newHandlerWithJoinLimiter(repository, auth.NewSlidingWindowLimiter(func() time.Time { return now }))
+
+	for attempt := 0; attempt < joinAttemptLimit; attempt++ {
+		assertJoinResponse(t, executeJoinRequest(handler, requesterID, rawToken, characterID), http.StatusCreated, rawToken, requesterID, joinHandlerMembership(characterID))
+	}
+	assertSensitivePartyError(t, executeJoinRequest(handler, requesterID, rawToken, characterID), http.StatusTooManyRequests, "rate_limited")
+	now = now.Add(joinAttemptWindow)
+	assertJoinResponse(t, executeJoinRequest(handler, requesterID, rawToken, characterID), http.StatusCreated, rawToken, requesterID, joinHandlerMembership(characterID))
+	if repositoryCalls != joinAttemptLimit+1 {
+		t.Fatal("join throttle did not recover exactly after its window")
+	}
+}
+
+func TestHandlerJoinLimiterKeyContainsOnlyHashedUserIdentity(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawToken := strings.Repeat("Q", 43)
+	limiter := &recordingJoinLimiter{result: auth.LimitResult{Allowed: true}}
+	repository := &stubPartyHandlerRepository{
+		joinParty: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+			return JoinPartyResult{Membership: joinHandlerMembership(characterID), Created: true}, nil
+		},
+	}
+
+	response := executeJoinRequest(newHandlerWithJoinLimiter(repository, limiter), requesterID, rawToken, characterID)
+
+	assertJoinResponse(t, response, http.StatusCreated, rawToken, requesterID, joinHandlerMembership(characterID))
+	if len(limiter.keys) != 1 {
+		t.Fatal("join handler did not perform exactly one limiter operation")
+	}
+	digest := sha256.Sum256([]byte(requesterID.String()))
+	wantKey := "party-join:" + hex.EncodeToString(digest[:])
+	if limiter.keys[0] != wantKey {
+		t.Fatal("join limiter key was not the approved SHA-256-derived identity")
+	}
+	if limiter.limits[0] != 10 || limiter.windows[0] != time.Minute {
+		t.Fatal("join limiter did not use 10 attempts per one-minute window")
+	}
+	if strings.Contains(limiter.keys[0], requesterID.String()) || strings.Contains(limiter.keys[0], rawToken) {
+		t.Fatal("join limiter key retained a raw user ID or invite token")
+	}
+}
+
+func TestHandlerJoinRetryAfterIsBoundedToOneThrough60Seconds(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawToken := strings.Repeat("R", 43)
+
+	tests := []struct {
+		name       string
+		retryAfter time.Duration
+		wantHeader string
+	}{
+		{name: "zero clamps to one", retryAfter: 0, wantHeader: "1"},
+		{name: "fraction rounds up", retryAfter: 1500 * time.Millisecond, wantHeader: "2"},
+		{name: "below window rounds to 60", retryAfter: 59500 * time.Millisecond, wantHeader: "60"},
+		{name: "above window clamps to 60", retryAfter: 2 * time.Minute, wantHeader: "60"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			limiter := &recordingJoinLimiter{result: auth.LimitResult{Allowed: false, RetryAfter: tt.retryAfter}}
+			response := executeJoinRequest(newHandlerWithJoinLimiter(&stubPartyHandlerRepository{}, limiter), requesterID, rawToken, characterID)
+
+			assertSensitivePartyError(t, response, http.StatusTooManyRequests, "rate_limited")
+			if response.Header().Get("Retry-After") != tt.wantHeader {
+				t.Fatal("join throttle returned an unbounded Retry-After value")
+			}
+		})
+	}
+}
+
 func TestHandlerMapsRepositoryFailuresToGenericServerErrors(t *testing.T) {
 	requesterID := uuid.New()
 	partyID := uuid.New()
@@ -537,6 +839,7 @@ type stubPartyHandlerRepository struct {
 	getParty      func(context.Context, uuid.UUID, uuid.UUID) (PartyDetail, error)
 	createInvite  func(context.Context, uuid.UUID, uuid.UUID) (PartyInvite, error)
 	inspectInvite func(context.Context, string) (InviteInspection, error)
+	joinParty     func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error)
 }
 
 func (repository *stubPartyHandlerRepository) CreateParty(ctx context.Context, creatorID uuid.UUID, name string) (Party, error) {
@@ -574,6 +877,32 @@ func (repository *stubPartyHandlerRepository) InspectInvite(ctx context.Context,
 	return repository.inspectInvite(ctx, rawToken)
 }
 
+func (repository *stubPartyHandlerRepository) JoinParty(
+	ctx context.Context,
+	rawToken string,
+	requesterID uuid.UUID,
+	characterID uuid.UUID,
+) (JoinPartyResult, error) {
+	if repository.joinParty == nil {
+		panic("unexpected JoinParty call")
+	}
+	return repository.joinParty(ctx, rawToken, requesterID, characterID)
+}
+
+type recordingJoinLimiter struct {
+	keys    []string
+	limits  []int
+	windows []time.Duration
+	result  auth.LimitResult
+}
+
+func (limiter *recordingJoinLimiter) Allow(key string, limit int, window time.Duration) auth.LimitResult {
+	limiter.keys = append(limiter.keys, key)
+	limiter.limits = append(limiter.limits, limit)
+	limiter.windows = append(limiter.windows, window)
+	return limiter.result
+}
+
 func authenticatedPartyRequest(method string, path string, body string, userID uuid.UUID) *http.Request {
 	request := httptest.NewRequest(method, path, strings.NewReader(body))
 	user := auth.AuthenticatedUser{ID: userID, Username: "handler-user", UsernameCanonical: "handler-user"}
@@ -600,6 +929,12 @@ func expectedPartyErrorMessage(code string) string {
 		return "forbidden"
 	case "invite_unavailable":
 		return "invite unavailable"
+	case "already_member":
+		return "already a party member"
+	case "character_already_linked":
+		return "character already linked"
+	case "rate_limited":
+		return "rate limit exceeded"
 	case "server_error":
 		return "server error"
 	default:
@@ -723,5 +1058,69 @@ func assertInviteInspectionResponse(
 	}
 	if strings.Contains(response.Body.String(), rawToken) {
 		t.Fatal("invite-inspection response exposed the raw token")
+	}
+}
+
+func executeJoinRequest(handler Handler, requesterID uuid.UUID, rawToken string, characterID uuid.UUID) *httptest.ResponseRecorder {
+	request := authenticatedPartyRequest(http.MethodPost, "/party-invites/join", joinRequestBody(rawToken, characterID), requesterID)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	handler.Join(response, request)
+	return response
+}
+
+func joinRequestBody(rawToken string, characterID uuid.UUID) string {
+	body, err := json.Marshal(map[string]string{"token": rawToken, "characterId": characterID.String()})
+	if err != nil {
+		panic("could not build join request fixture")
+	}
+	return string(body)
+}
+
+func joinHandlerMembership(characterID uuid.UUID) PartyMembership {
+	return PartyMembership{
+		ID:          uuid.MustParse("75000000-0000-0000-0000-000000000001"),
+		PartyID:     uuid.MustParse("76000000-0000-0000-0000-000000000001"),
+		Role:        RolePlayer,
+		CharacterID: characterID,
+		JoinedAt:    time.Date(2026, 7, 13, 12, 30, 0, 0, time.UTC),
+	}
+}
+
+func assertJoinResponse(
+	t *testing.T,
+	response *httptest.ResponseRecorder,
+	wantStatus int,
+	rawToken string,
+	requesterID uuid.UUID,
+	membership PartyMembership,
+) {
+	t.Helper()
+	if response.Code != wantStatus {
+		t.Fatalf("expected status %d, got %d", wantStatus, response.Code)
+	}
+	if response.Header().Get("Content-Type") != "application/json" {
+		t.Fatal("expected an application/json join response")
+	}
+
+	var body joinPartyResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal("join response was not valid JSON")
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(response.Body.Bytes(), &fields); err != nil {
+		t.Fatal("join response was not a JSON object")
+	}
+	if len(fields) != 5 || fields["partyId"] == nil || fields["membershipId"] == nil ||
+		fields["role"] == nil || fields["characterId"] == nil || fields["joinedAt"] == nil {
+		t.Fatal("join response changed the frozen public field set")
+	}
+	if body.PartyID != membership.PartyID.String() || body.MembershipID != membership.ID.String() ||
+		body.Role != membership.Role || body.CharacterID != membership.CharacterID.String() ||
+		body.JoinedAt != formatPartyTimestamp(membership.JoinedAt) {
+		t.Fatal("join response did not preserve the approved membership values")
+	}
+	if strings.Contains(response.Body.String(), rawToken) || strings.Contains(response.Body.String(), requesterID.String()) {
+		t.Fatal("join response exposed an invite token or authenticated user ID")
 	}
 }

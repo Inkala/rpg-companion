@@ -2,16 +2,25 @@ package parties
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/Inkala/rpg-companion/backend/internal/auth"
 	"github.com/Inkala/rpg-companion/backend/internal/httpjson"
 	"github.com/google/uuid"
 )
 
-const partyRequestBodyLimit int64 = 4096
+const (
+	partyRequestBodyLimit int64 = 4096
+	joinAttemptLimit            = 10
+	joinAttemptWindow           = time.Minute
+	joinLimiterKeyPrefix        = "party-join:"
+)
 
 const (
 	partyErrorAuthenticationRequired = "authentication_required"
@@ -19,6 +28,9 @@ const (
 	partyErrorInviteUnavailable      = "invite_unavailable"
 	partyErrorForbidden              = "forbidden"
 	partyErrorNotFound               = "not_found"
+	partyErrorAlreadyMember          = "already_member"
+	partyErrorCharacterAlreadyLinked = "character_already_linked"
+	partyErrorRateLimited            = "rate_limited"
 	partyErrorServer                 = "server_error"
 )
 
@@ -28,14 +40,25 @@ type handlerRepository interface {
 	GetPartyForMember(context.Context, uuid.UUID, uuid.UUID) (PartyDetail, error)
 	CreateOrRegenerateInvite(context.Context, uuid.UUID, uuid.UUID) (PartyInvite, error)
 	InspectInvite(context.Context, string) (InviteInspection, error)
+	JoinParty(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error)
+}
+
+type joinAttemptLimiter interface {
+	Allow(string, int, time.Duration) auth.LimitResult
 }
 
 type Handler struct {
-	repository handlerRepository
+	repository  handlerRepository
+	joinLimiter joinAttemptLimiter
 }
 
 func NewHandler(repository handlerRepository) Handler {
-	return Handler{repository: repository}
+	clock := func() time.Time { return time.Now().UTC() }
+	return newHandlerWithJoinLimiter(repository, auth.NewSlidingWindowLimiter(clock))
+}
+
+func newHandlerWithJoinLimiter(repository handlerRepository, limiter joinAttemptLimiter) Handler {
+	return Handler{repository: repository, joinLimiter: limiter}
 }
 
 type createPartyRequest struct {
@@ -44,6 +67,11 @@ type createPartyRequest struct {
 
 type inspectInviteRequest struct {
 	Token string `json:"token"`
+}
+
+type joinPartyRequest struct {
+	Token       string `json:"token"`
+	CharacterID string `json:"characterId"`
 }
 
 type partyErrorResponse struct {
@@ -198,6 +226,80 @@ func (handler Handler) InspectInvite(w http.ResponseWriter, r *http.Request) {
 	writePartyJSON(w, http.StatusOK, responseFromInviteInspection(inspection))
 }
 
+func (handler Handler) Join(w http.ResponseWriter, r *http.Request) {
+	requesterID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writePartyError(w, http.StatusUnauthorized, partyErrorAuthenticationRequired)
+		return
+	}
+
+	var request joinPartyRequest
+	if !decodePartyRequest(w, r, &request) {
+		return
+	}
+	characterID, err := uuid.Parse(request.CharacterID)
+	if err != nil {
+		writePartyError(w, http.StatusBadRequest, partyErrorValidation)
+		return
+	}
+	if handler.repository == nil || handler.joinLimiter == nil {
+		writePartyError(w, http.StatusInternalServerError, partyErrorServer)
+		return
+	}
+
+	limitResult := handler.joinLimiter.Allow(joinLimiterKey(requesterID), joinAttemptLimit, joinAttemptWindow)
+	if !limitResult.Allowed {
+		w.Header().Set("Retry-After", strconv.FormatInt(joinRetryAfterSeconds(limitResult.RetryAfter), 10))
+		writePartyError(w, http.StatusTooManyRequests, partyErrorRateLimited)
+		return
+	}
+
+	result, err := handler.repository.JoinParty(r.Context(), request.Token, requesterID, characterID)
+	if errors.Is(err, ErrInviteUnavailable) {
+		writePartyError(w, http.StatusBadRequest, partyErrorInviteUnavailable)
+		return
+	}
+	if errors.Is(err, ErrCharacterNotFound) {
+		writePartyError(w, http.StatusNotFound, partyErrorNotFound)
+		return
+	}
+	if errors.Is(err, ErrAlreadyMember) {
+		writePartyError(w, http.StatusConflict, partyErrorAlreadyMember)
+		return
+	}
+	if errors.Is(err, ErrCharacterAlreadyLinked) {
+		writePartyError(w, http.StatusConflict, partyErrorCharacterAlreadyLinked)
+		return
+	}
+	if err != nil {
+		writePartyError(w, http.StatusInternalServerError, partyErrorServer)
+		return
+	}
+
+	statusCode := http.StatusOK
+	if result.Created {
+		statusCode = http.StatusCreated
+	}
+	writePartyJSON(w, statusCode, responseFromPartyMembership(result.Membership))
+}
+
+func joinLimiterKey(requesterID uuid.UUID) string {
+	digest := sha256.Sum256([]byte(requesterID.String()))
+	return joinLimiterKeyPrefix + hex.EncodeToString(digest[:])
+}
+
+func joinRetryAfterSeconds(retryAfter time.Duration) int64 {
+	seconds := int64((retryAfter + time.Second - 1) / time.Second)
+	if seconds < 1 {
+		return 1
+	}
+	maximum := int64(joinAttemptWindow / time.Second)
+	if seconds > maximum {
+		return maximum
+	}
+	return seconds
+}
+
 func decodePartyRequest(w http.ResponseWriter, r *http.Request, destination any) bool {
 	err := httpjson.Decode(w, r, destination, partyRequestBodyLimit)
 	switch {
@@ -234,6 +336,12 @@ func partyErrorMessage(code string) string {
 		return "forbidden"
 	case partyErrorNotFound:
 		return "party not found"
+	case partyErrorAlreadyMember:
+		return "already a party member"
+	case partyErrorCharacterAlreadyLinked:
+		return "character already linked"
+	case partyErrorRateLimited:
+		return "rate limit exceeded"
 	default:
 		return "server error"
 	}
