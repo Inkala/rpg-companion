@@ -141,6 +141,34 @@ describe('SavedCharacterReferencePage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/reference data is missing or uses an unsupported format/)).toBeInTheDocument();
   });
+
+  it('does not render malformed user-controlled nested content', async () => {
+    const maliciousContent = 'malformed-content-must-not-render';
+    const payload = structuredClone(
+      buildGeneratedFighterCharacterSheet('strength-melee-fighter', 'Branna Shieldhand'),
+    );
+    payload.actions[0] = {
+      ...payload.actions[0],
+      summary: maliciousContent,
+      section: 'invalid',
+    } as unknown as typeof payload.actions[number];
+    getCharacterByIdMock.mockResolvedValue(savedCharacterWithPayload(payload));
+
+    render(
+      <SavedCharacterReferencePage
+        characterId="saved-1"
+        isSignedIn
+        onBack={vi.fn()}
+        onSignIn={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Character Reference is not available yet' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(maliciousContent)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Branna Shieldhand' })).not.toBeInTheDocument();
+  });
 });
 
 const savedCharacterWithPayload = (referencePayload: unknown) => ({
