@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import genericAvatar from '../assets/characters/generic-avatar.webp';
 import type { PartyDetailDTO, PartyMemberDTO, PartyRoleDTO } from './apiTypes';
 
 type PartyPageProps = {
@@ -8,6 +9,7 @@ type PartyPageProps = {
   onSignIn: () => void;
   onBack: () => void;
   onOpenCharacter: (characterId: string) => void;
+  renderPartyTools?: (party: PartyDetailDTO) => ReactNode;
 };
 
 type PartyLoader = (partyId: string) => Promise<PartyDetailDTO>;
@@ -31,6 +33,7 @@ export const PartyPage = ({
   onSignIn,
   onBack,
   onOpenCharacter,
+  renderPartyTools,
 }: PartyPageProps) => {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [state, setState] = useState<PartyPageState>({
@@ -103,6 +106,7 @@ export const PartyPage = ({
         <LoadedParty
           party={visibleState.party}
           onOpenCharacter={onOpenCharacter}
+          renderPartyTools={renderPartyTools}
         />
       )}
     </main>
@@ -153,9 +157,11 @@ const PartyErrorState = ({ onRetry }: { onRetry: () => void }) => {
 const LoadedParty = ({
   party,
   onOpenCharacter,
+  renderPartyTools,
 }: {
   party: PartyDetailDTO;
   onOpenCharacter: (characterId: string) => void;
+  renderPartyTools?: (party: PartyDetailDTO) => ReactNode;
 }) => {
   const roleLabel = displayRole(party.role);
 
@@ -166,6 +172,8 @@ const LoadedParty = ({
       <p>
         <span>Your role:</span> <strong>{roleLabel}</strong>
       </p>
+
+      {renderPartyTools?.(party)}
 
       <section aria-labelledby="party-roster-title">
         <h2 id="party-roster-title">Roster</h2>
@@ -204,6 +212,12 @@ const PartyMember = ({
   return (
     <li>
       <article aria-labelledby={titleId}>
+        <img
+          className="party-member-avatar"
+          src={genericAvatar}
+          alt=""
+          aria-hidden="true"
+        />
         <h3 id={titleId}>{member.username}</h3>
         <p>
           Role: <strong>{displayRole(member.role)}</strong>

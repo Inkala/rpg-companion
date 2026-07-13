@@ -81,6 +81,120 @@ describe('PartyPage', () => {
     expect(onOpenCharacter).toHaveBeenCalledWith('character-1');
   });
 
+  it('renders deterministic decorative generic avatars for every roster member', async () => {
+    const { container } = renderPage({
+      loadParty: vi.fn().mockResolvedValue(gmParty),
+    });
+
+    await screen.findByRole('list', { name: 'The Lantern Guard roster' });
+
+    const avatars = container.querySelectorAll('img.party-member-avatar');
+    expect(avatars).toHaveLength(gmParty.members.length);
+    expect(new Set(Array.from(avatars, (avatar) => avatar.getAttribute('src'))).size).toBe(1);
+    avatars.forEach((avatar) => {
+      expect(avatar).toHaveAttribute('alt', '');
+      expect(avatar).toHaveAttribute('aria-hidden', 'true');
+    });
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('renders Party tools only after the current Party loads', async () => {
+    const pendingLoad = deferred<PartyDetailDTO>();
+    const renderPartyTools = vi.fn((party: PartyDetailDTO) => (
+      <section aria-label="Party tools">Tools for {party.name}</section>
+    ));
+
+    renderPage({
+      loadParty: vi.fn().mockReturnValue(pendingLoad.promise),
+      renderPartyTools,
+    });
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading party...');
+    expect(renderPartyTools).not.toHaveBeenCalled();
+    expect(screen.queryByRole('region', { name: 'Party tools' })).not.toBeInTheDocument();
+
+    pendingLoad.resolve(gmParty);
+
+    expect(await screen.findByRole('region', { name: 'Party tools' })).toHaveTextContent(
+      'Tools for The Lantern Guard',
+    );
+    expect(renderPartyTools).toHaveBeenCalledOnce();
+    expect(renderPartyTools).toHaveBeenCalledWith(gmParty);
+  });
+
+  it('does not retain Party tools after sign-out or through loading and error states', async () => {
+    const renderPartyTools = vi.fn(() => <div>Private tools</div>);
+    const props = defaultProps({ renderPartyTools });
+    const { rerender } = render(<PartyPage {...props} />);
+
+    expect(await screen.findByText('Private tools')).toBeInTheDocument();
+    expect(renderPartyTools).toHaveBeenCalledOnce();
+
+    rerender(<PartyPage {...props} isSignedIn={false} />);
+
+    expect(screen.queryByText('Private tools')).not.toBeInTheDocument();
+    expect(renderPartyTools).toHaveBeenCalledOnce();
+
+    const replacementLoader = vi.fn().mockRejectedValue(new Error('sensitive backend details'));
+
+    rerender(<PartyPage {...props} loadParty={replacementLoader} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading party...');
+    expect(renderPartyTools).toHaveBeenCalledOnce();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not load this party. Please try again.',
+    );
+    expect(renderPartyTools).toHaveBeenCalledOnce();
+    expect(screen.queryByText('Private tools')).not.toBeInTheDocument();
+  });
+
+  it('immediately removes Party tools when the Party id changes', async () => {
+    const secondLoad = deferred<PartyDetailDTO>();
+    const renderPartyTools = vi.fn((party: PartyDetailDTO) => (
+      <div>Tools for {party.name}</div>
+    ));
+    const loadParty = vi.fn((partyId: string) => {
+      return partyId === 'party-1' ? Promise.resolve(gmParty) : secondLoad.promise;
+    });
+    const props = defaultProps({ loadParty, renderPartyTools });
+    const { rerender } = render(<PartyPage {...props} />);
+
+    expect(await screen.findByText('Tools for The Lantern Guard')).toBeInTheDocument();
+    expect(renderPartyTools).toHaveBeenCalledTimes(1);
+
+    rerender(<PartyPage {...props} partyId="party-2" />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading party...');
+    expect(screen.queryByText('Tools for The Lantern Guard')).not.toBeInTheDocument();
+    expect(renderPartyTools).toHaveBeenCalledTimes(1);
+  });
+
+  it('immediately removes Party tools when the loader changes', async () => {
+    const replacementLoad = deferred<PartyDetailDTO>();
+    const renderPartyTools = vi.fn((party: PartyDetailDTO) => (
+      <div>Tools for {party.name}</div>
+    ));
+    const props = defaultProps({
+      loadParty: vi.fn().mockResolvedValue(gmParty),
+      renderPartyTools,
+    });
+    const { rerender } = render(<PartyPage {...props} />);
+
+    expect(await screen.findByText('Tools for The Lantern Guard')).toBeInTheDocument();
+    expect(renderPartyTools).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <PartyPage
+        {...props}
+        loadParty={vi.fn().mockReturnValue(replacementLoad.promise)}
+      />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('Loading party...');
+    expect(screen.queryByText('Tools for The Lantern Guard')).not.toBeInTheDocument();
+    expect(renderPartyTools).toHaveBeenCalledTimes(1);
+  });
+
   it('does not let a Player open member characters', async () => {
     const onOpenCharacter = vi.fn();
 
