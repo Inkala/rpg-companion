@@ -27,6 +27,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { createPartiesApiClient } from './parties/api';
 import type { PartyDetailDTO } from './parties/apiTypes';
 import { CreatePartyPage } from './parties/CreatePartyPage';
+import { captureAndScrubInviteFragment } from './parties/inviteFragment';
 import { JoinPartyPage } from './parties/JoinPartyPage';
 import { PartyCharacterReferencePage } from './parties/PartyCharacterReferencePage';
 import { PartyInvitePanel } from './parties/PartyInvitePanel';
@@ -111,8 +112,28 @@ export const App = ({
       setRoute(nextRoute);
     };
 
+    const handleHashChange = () => {
+      const capturedToken = captureAndScrubInviteFragment({
+        location: window.location,
+        history: window.history,
+      });
+
+      if (routeRef.current.name !== 'join-party') {
+        return;
+      }
+
+      inviteTokenRef.current = capturedToken;
+      pendingAuthenticationRef.current = null;
+      setInviteToken(capturedToken);
+      setPendingAuthentication(null);
+    };
+
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
   useEffect(() => {

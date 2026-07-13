@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { buildGeneratedFighterCharacterSheet } from './character-creation/generatedFighterBuilds';
@@ -289,6 +289,128 @@ describe('App', () => {
     ).toBeInTheDocument();
     expect(requestedPaths(fetchMock)).toContain('/party-invites/inspect');
     expect(requestedPaths(fetchMock)).toContain('/characters');
+  });
+
+  it('captures a valid fragment introduced after the join route is mounted', async () => {
+    const historyState = { navigationId: 17, preserved: true };
+    const fetchMock = partyFetchMock({ restoredUser: true });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(
+      historyState,
+      '',
+      '/parties/join?source=shared',
+    );
+    render(<App />);
+
+    await screen.findByRole('button', { name: 'Mara account menu' });
+    expect(
+      screen.getByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+
+    dispatchFragmentNavigation(inviteToken);
+
+    expect(window.location.pathname).toBe('/parties/join');
+    expect(window.location.search).toBe('?source=shared');
+    expect(window.location.hash).toBe('');
+    expect(window.history.state).toEqual(historyState);
+    expect(inviteAppearsInBrowserSurface(inviteToken)).toBe(false);
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
+    ).toBeInTheDocument();
+    expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(1);
+    expect(requestCount(fetchMock, '/characters')).toBe(1);
+  });
+
+  it('replaces a mounted invite and ignores a late result from the previous token', async () => {
+    const firstToken = 'a'.repeat(43);
+    const replacementToken = 'b'.repeat(43);
+    const firstInspection = deferred<Response>();
+    const replacementInspection = {
+      party: { id: 'party-2', name: 'The Silver Company' },
+      expiresAt: '2026-07-20T10:00:00Z',
+    };
+    const inspectInvite = vi.fn((requestedToken: string) => {
+      return requestedToken === firstToken
+        ? firstInspection.promise
+        : Promise.resolve(jsonResponse(replacementInspection));
+    });
+    const fetchMock = partyFetchMock({ restoredUser: true, inspectInvite });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    render(<App />);
+
+    await screen.findByRole('button', { name: 'Mara account menu' });
+    dispatchFragmentNavigation(firstToken);
+    await waitFor(() => {
+      expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(1);
+    });
+
+    dispatchFragmentNavigation(replacementToken);
+
+    expect(window.location.hash).toBe('');
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Silver Company' }),
+    ).toBeInTheDocument();
+    expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(2);
+    expect(requestCount(fetchMock, '/characters')).toBe(2);
+    expect(inviteAppearsInBrowserSurface(firstToken)).toBe(false);
+    expect(inviteAppearsInBrowserSurface(replacementToken)).toBe(false);
+
+    await act(async () => {
+      firstInspection.resolve(jsonResponse(partyInspection));
+      await firstInspection.promise;
+    });
+
+    expect(
+      screen.getByRole('heading', { name: 'Join The Silver Company' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Join The Lantern Guard' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('scrubs an invalid mounted join fragment and clears the active invite safely', async () => {
+    const fetchMock = partyFetchMock({ restoredUser: true });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    render(<App />);
+
+    await screen.findByRole('button', { name: 'Mara account menu' });
+    dispatchFragmentNavigation(inviteToken);
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
+    ).toBeInTheDocument();
+    const inspectionCount = requestCount(fetchMock, '/party-invites/inspect');
+    const characterCount = requestCount(fetchMock, '/characters');
+
+    dispatchFragmentNavigation('not-an-invite');
+
+    expect(window.location.hash).toBe('');
+    expect(
+      screen.getByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+    expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(inspectionCount);
+    expect(requestCount(fetchMock, '/characters')).toBe(characterCount);
+  });
+
+  it('scrubs and discards a fragment introduced on a non-join route', async () => {
+    const historyState = { navigationId: 18 };
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(historyState, '', '/?source=shared');
+    render(<App />);
+
+    await waitFor(() => expect(requestCount(fetchMock, '/auth/session')).toBe(1));
+    dispatchFragmentNavigation(inviteToken);
+
+    expect(window.location.pathname).toBe('/');
+    expect(window.location.search).toBe('?source=shared');
+    expect(window.location.hash).toBe('');
+    expect(window.history.state).toEqual(historyState);
+    expect(inviteAppearsInBrowserSurface(inviteToken)).toBe(false);
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
+    expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(0);
+    expect(requestCount(fetchMock, '/characters')).toBe(0);
   });
 
   it('moves invite authentication to login without exposing the token', () => {
@@ -1456,6 +1578,7 @@ const completeRegistrationForm = () => {
 const partyFetchMock = ({
   restoredUser = false,
   inspectionResponse,
+  inspectInvite,
   party = partyDetail,
   characters = [fighterCharacterSummary],
   charactersAfterCreate,
@@ -1465,6 +1588,7 @@ const partyFetchMock = ({
 }: {
   restoredUser?: boolean;
   inspectionResponse?: Response;
+  inspectInvite?: (token: string) => Promise<Response>;
   party?: unknown;
   characters?: unknown[];
   charactersAfterCreate?: unknown[];
@@ -1495,6 +1619,12 @@ const partyFetchMock = ({
     }
 
     if (path === '/party-invites/inspect') {
+      if (inspectInvite) {
+        const body = typeof init?.body === 'string'
+          ? JSON.parse(init.body) as { token?: unknown }
+          : {};
+        return inspectInvite(typeof body.token === 'string' ? body.token : '');
+      }
       return Promise.resolve(inspectionResponse ?? jsonResponse(partyInspection));
     }
 
@@ -1546,6 +1676,15 @@ const requestedPaths = (fetchMock: ReturnType<typeof vi.fn>) => {
 
 const requestCount = (fetchMock: ReturnType<typeof vi.fn>, path: string) => {
   return requestedPaths(fetchMock).filter((requestedPath) => requestedPath === path).length;
+};
+
+const dispatchFragmentNavigation = (fragment: string) => {
+  window.history.pushState(
+    window.history.state,
+    '',
+    `${window.location.pathname}${window.location.search}#${fragment}`,
+  );
+  fireEvent(window, new HashChangeEvent('hashchange'));
 };
 
 const inviteAppearsInBrowserSurface = (sensitiveValue: string) => {
@@ -1630,4 +1769,12 @@ const jsonResponse = (body: unknown, status = 200) => {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+};
+
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolver) => {
+    resolve = resolver;
+  });
+  return { promise, resolve };
 };
