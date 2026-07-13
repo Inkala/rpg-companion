@@ -14,10 +14,9 @@ import (
 )
 
 func main() {
-	cfg := config.FromEnv()
-
-	if cfg.DatabaseURL == "" {
-		log.Fatal("DATABASE_URL is required")
+	cfg, err := config.FromEnv()
+	if err != nil {
+		log.Fatal("configuration invalid")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -41,8 +40,21 @@ func main() {
 	}
 
 	addr := ":" + cfg.Port
+	httpServer := newHTTPServer(addr, server.New(characterRepository, authRepository, serverOptions))
 	log.Printf("starting hunin backend on %s in %s mode", addr, cfg.AppEnv)
-	if err := http.ListenAndServe(addr, server.New(characterRepository, authRepository, serverOptions)); err != nil {
+	if err := httpServer.ListenAndServe(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    32 * 1024,
 	}
 }

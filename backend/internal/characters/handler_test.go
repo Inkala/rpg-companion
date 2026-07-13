@@ -19,6 +19,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/lib/pq"
 )
@@ -34,6 +35,7 @@ func TestCharacterHTTPPersistence(t *testing.T) {
 
 	createRecorder := httptest.NewRecorder()
 	createRequest := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(validCharacterJSON()))
+	createRequest.Header.Set("Content-Type", "application/json")
 	createRequest = withAuthenticatedUser(createRequest, ownerID)
 	mux.ServeHTTP(createRecorder, createRequest)
 
@@ -278,6 +280,9 @@ func TestCharacterHTTPValidation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest(tt.method, tt.path, bytes.NewReader(tt.body))
+			if tt.method == http.MethodPost && len(tt.body) > 0 {
+				request.Header.Set("Content-Type", "application/json")
+			}
 			if tt.auth {
 				request = withAuthenticatedUser(request, ownerID)
 			}
@@ -288,6 +293,385 @@ func TestCharacterHTTPValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCharacterCreateRejectsOversizedRequestBody(t *testing.T) {
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/characters",
+		strings.NewReader(`{"name":"`+strings.Repeat("a", 131072)+`"}`),
+	)
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusRequestEntityTooLarge, recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestCharacterCreateRejectsOversizedReferencePayloadBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	payload := referencePayloadWithSize(t, 65537)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	var response struct {
+		Error   string   `json:"error"`
+		Details []string `json:"details"`
+	}
+	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+		t.Fatalf("decode validation response: %v", err)
+	}
+	if response.Error != "character validation failed" {
+		t.Fatalf("expected safe validation error, got %q", response.Error)
+	}
+	if !contains(response.Details, "referencePayload must be at most 65536 bytes") {
+		t.Fatalf("expected payload-size detail, got %v", response.Details)
+	}
+}
+
+func TestCharacterCreateRejectsInvalidCharacterSheetEnvelopeSafelyBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	envelope["unexpectedTopLevel"] = "must-not-be-reflected"
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "unexpectedTopLevel") || strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected payload details: %s", recorder.Body.String())
+	}
+}
+
+func TestCharacterCreateRejectsInconsistentCharacterSheetIdentityBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	envelope["identity"].(map[string]any)["name"] = "must-not-be-reflected"
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected identity: %s", recorder.Body.String())
+	}
+}
+
+func TestCharacterCreateRejectsInvalidCharacterSheetSummaryBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	testSummary(envelope)["displayLine"] = "must-not-be-reflected"
+	delete(testSummary(envelope), "landingConcept")
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected summary: %s", recorder.Body.String())
+	}
+}
+
+func TestCharacterCreateRejectsInvalidCharacterSheetCombatBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	testCombat(envelope)["concentration"] = "must-not-be-reflected"
+	delete(testCombat(envelope), "hitPoints")
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected combat data: %s", recorder.Body.String())
+	}
+}
+
+func TestCharacterCreateRejectsInvalidCharacterSheetProficienciesBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	testAuditedProficiencyList(envelope, "weapons")["note"] = "must-not-be-reflected"
+	delete(testProficiencies(envelope), "skills")
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected proficiency data: %s", recorder.Body.String())
+	}
+}
+
+func TestCharacterCreateRejectsInvalidCharacterSheetReferenceItemsBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	action := validTestAction("invalid-action")
+	action["summary"] = "must-not-be-reflected"
+	delete(action, "kind")
+	envelope["actions"] = []any{action}
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected reference item data: %s", recorder.Body.String())
+	}
+}
+
+func TestCharacterCreateRejectsInvalidCharacterSheetSpellcastingBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	spellcasting := validTestSpellcasting()
+	spell := validTestSpell("invalid-spell")
+	spell["summary"] = "must-not-be-reflected"
+	delete(spell, "source")
+	spellcasting["spells"] = []any{spell}
+	envelope["spellcasting"] = spellcasting
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected spell data: %s", recorder.Body.String())
+	}
+}
+
+func TestCharacterCreateRejectsInvalidCharacterSheetSupportingDataBeforePersistence(t *testing.T) {
+	createRequest := validCreateCharacterRequest()
+	envelope := testCharacterSheetEnvelope()
+	testAudit(envelope)["source"] = "must-not-be-reflected"
+	delete(testEquipment(envelope), "weapons")
+	payload := marshalCharacterSheetPayload(t, envelope)
+	createRequest.ReferencePayload = &payload
+	body, err := json.Marshal(createRequest)
+	if err != nil {
+		t.Fatalf("marshal character request: %v", err)
+	}
+
+	handler := NewHandler(&Repository{})
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(body))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+
+	handler.Create(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"error":"character validation failed"`) {
+		t.Fatalf("expected safe validation response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), "must-not-be-reflected") {
+		t.Fatalf("validation response reflected rejected supporting data: %s", recorder.Body.String())
+	}
+}
+
+func TestCharacterCreateMapsInvalidDatabaseDataToSafeBadRequest(t *testing.T) {
+	postgresText := "database-detail-must-not-be-exposed"
+	rejectedValue := "rejected-value-must-not-be-exposed"
+	handler := Handler{
+		repository: &Repository{},
+		createCharacter: func(context.Context, Character) (Character, error) {
+			return Character{}, mapCharacterCreateError(&pgconn.PgError{
+				Code:           "23514",
+				ConstraintName: "characters_level_check",
+				Message:        postgresText,
+				Detail:         rejectedValue,
+			})
+		},
+	}
+	recorder := performValidCharacterCreate(t, handler)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusBadRequest, recorder.Code, recorder.Body.String())
+	}
+	if recorder.Body.String() != "{\"error\":\"character validation failed\"}\n" {
+		t.Fatalf("expected exact safe response, got %s", recorder.Body.String())
+	}
+	for _, secret := range []string{postgresText, rejectedValue, "characters_level_check"} {
+		if strings.Contains(recorder.Body.String(), secret) {
+			t.Fatalf("response exposed database data %q: %s", secret, recorder.Body.String())
+		}
+	}
+}
+
+func TestCharacterCreateKeepsUnrelatedDatabaseFailuresGeneric(t *testing.T) {
+	databaseText := "connection-detail-must-not-be-exposed"
+	handler := Handler{
+		repository: &Repository{},
+		createCharacter: func(context.Context, Character) (Character, error) {
+			return Character{}, errors.New(databaseText)
+		},
+	}
+	recorder := performValidCharacterCreate(t, handler)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusInternalServerError, recorder.Code, recorder.Body.String())
+	}
+	if recorder.Body.String() != "{\"error\":\"could not persist character\"}\n" {
+		t.Fatalf("expected exact safe response, got %s", recorder.Body.String())
+	}
+	if strings.Contains(recorder.Body.String(), databaseText) {
+		t.Fatalf("response exposed database error: %s", recorder.Body.String())
+	}
+}
+
+func TestCharacterCreateSuccessRemainsCreated(t *testing.T) {
+	handler := Handler{
+		repository: &Repository{},
+		createCharacter: func(_ context.Context, character Character) (Character, error) {
+			return character, nil
+		},
+	}
+	recorder := performValidCharacterCreate(t, handler)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusCreated, recorder.Code, recorder.Body.String())
+	}
+}
+
+func performValidCharacterCreate(t *testing.T, handler Handler) *httptest.ResponseRecorder {
+	t.Helper()
+	request := httptest.NewRequest(http.MethodPost, "/characters", bytes.NewReader(validCharacterJSON()))
+	request.Header.Set("Content-Type", "application/json")
+	request = withAuthenticatedUser(request, uuid.New())
+	recorder := httptest.NewRecorder()
+	handler.Create(recorder, request)
+	return recorder
 }
 
 func withAuthenticatedUser(request *http.Request, userID uuid.UUID) *http.Request {
@@ -468,9 +852,19 @@ func validCharacterJSON() []byte {
 		"armorClass": 14,
 		"speedFt": 30,
 		"referencePayload": {
-			"actions": [{"name":"Longbow"}],
-			"features": [{"name":"Colossus Slayer"}],
-			"spells": [{"name":"Hunter's Mark"}]
+			"schemaVersion": "CharacterSheetV1",
+			"ruleset": {"system":"dnd5e","version":"2014","sourceStatus":"audited-sample"},
+			"identity": {"name":"Mara Vale","ancestry":"Human","background":"Outlander","classes":[{"name":"Ranger","level":3,"subclass":"Hunter"}]},
+			"summary": {"displayLine":"Human Ranger - Level 3","landingConcept":"A steady wilderness scout.","featuredAbilities":[],"referenceSections":[]},
+			"abilities": {"scores":{"strength":10,"dexterity":16,"constitution":14,"intelligence":10,"wisdom":14,"charisma":8}},
+			"combat": {"hitPoints":{"current":26,"max":26,"temporary":0},"armorClass":{"value":14},"initiative":3,"speed":[{"type":"walk","feet":30}],"proficiencyBonus":2,"passivePerception":{},"concentration":null},
+			"proficiencies": {"savingThrows":{"values":[]},"skills":[],"weapons":{"values":[]},"armor":{"values":[]},"tools":{"values":[]},"languages":{"values":[]}},
+			"actions": [{"id":"longbow","name":"Longbow","kind":"attack","section":"actions","actionType":"Action","summary":"Reliable ranged attack.","meta":[]}],
+			"features": [{"id":"colossus-slayer","name":"Colossus Slayer","category":"Hunter feature","source":{"rulesVersion":"2014","status":"confirmed"},"tags":[],"summary":"Add damage after hitting a wounded enemy.","includeInReference":true}],
+			"spellcasting": null,
+			"equipment": {"armor":{"values":[]},"weapons":[],"packsAndGear":{"values":[]},"tools":{"values":[]},"languages":{"values":[]},"currency":null},
+			"personality": {"traits":[],"ideals":[],"bonds":[],"flaws":[],"notes":[]},
+			"audit": {"source":"Manual character sheet","needsConfirmation":[],"rulesVersionWarnings":[],"deferredCorrections":[]}
 		}
 	}`)
 }

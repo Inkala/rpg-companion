@@ -1,0 +1,621 @@
+package characters
+
+import (
+	"encoding/json"
+	"testing"
+	"time"
+)
+
+func TestCharacterSheetEnvelopeAcceptsSupportedRulesetValues(t *testing.T) {
+	for _, version := range []string{"2014", "2024", "mixed", "unknown"} {
+		t.Run("version "+version, func(t *testing.T) {
+			envelope := testCharacterSheetEnvelope()
+			envelope["ruleset"].(map[string]any)["version"] = version
+			assertValidCharacterSheetPayload(t, envelope)
+		})
+	}
+
+	for _, sourceStatus := range []string{"draft", "audited-sample", "needs-audit"} {
+		t.Run("source status "+sourceStatus, func(t *testing.T) {
+			envelope := testCharacterSheetEnvelope()
+			envelope["ruleset"].(map[string]any)["sourceStatus"] = sourceStatus
+			assertValidCharacterSheetPayload(t, envelope)
+		})
+	}
+}
+
+func TestCharacterSheetEnvelopeRejectsUnsupportedRequiredValues(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+	}{
+		{
+			name: "schema version",
+			mutate: func(envelope map[string]any) {
+				envelope["schemaVersion"] = "CharacterSheetV2"
+			},
+		},
+		{
+			name: "rules system",
+			mutate: func(envelope map[string]any) {
+				envelope["ruleset"].(map[string]any)["system"] = "pathfinder2e"
+			},
+		},
+		{
+			name: "rules version",
+			mutate: func(envelope map[string]any) {
+				envelope["ruleset"].(map[string]any)["version"] = "2030"
+			},
+		},
+		{
+			name: "source status",
+			mutate: func(envelope map[string]any) {
+				envelope["ruleset"].(map[string]any)["sourceStatus"] = "approved"
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			envelope := testCharacterSheetEnvelope()
+			tt.mutate(envelope)
+			assertInvalidCharacterSheetPayload(t, marshalCharacterSheetPayload(t, envelope))
+		})
+	}
+}
+
+func TestCharacterSheetEnvelopeRejectsEveryMissingTopLevelField(t *testing.T) {
+	requiredFields := []string{
+		"schemaVersion",
+		"ruleset",
+		"identity",
+		"summary",
+		"abilities",
+		"combat",
+		"proficiencies",
+		"actions",
+		"features",
+		"spellcasting",
+		"equipment",
+		"personality",
+		"audit",
+	}
+
+	for _, field := range requiredFields {
+		t.Run(field, func(t *testing.T) {
+			envelope := testCharacterSheetEnvelope()
+			delete(envelope, field)
+			assertInvalidCharacterSheetPayload(t, marshalCharacterSheetPayload(t, envelope))
+		})
+	}
+}
+
+func TestCharacterSheetEnvelopeRejectsMissingRulesetFields(t *testing.T) {
+	for _, field := range []string{"system", "version", "sourceStatus"} {
+		t.Run(field, func(t *testing.T) {
+			envelope := testCharacterSheetEnvelope()
+			delete(envelope["ruleset"].(map[string]any), field)
+			assertInvalidCharacterSheetPayload(t, marshalCharacterSheetPayload(t, envelope))
+		})
+	}
+}
+
+func TestCharacterSheetEnvelopeRejectsWrongTopLevelShapes(t *testing.T) {
+	tests := []struct {
+		name  string
+		field string
+		value any
+	}{
+		{name: "ruleset array", field: "ruleset", value: []any{}},
+		{name: "identity array", field: "identity", value: []any{}},
+		{name: "summary null", field: "summary", value: nil},
+		{name: "abilities array", field: "abilities", value: []any{}},
+		{name: "combat array", field: "combat", value: []any{}},
+		{name: "proficiencies array", field: "proficiencies", value: []any{}},
+		{name: "actions object", field: "actions", value: map[string]any{}},
+		{name: "features object", field: "features", value: map[string]any{}},
+		{name: "spellcasting array", field: "spellcasting", value: []any{}},
+		{name: "equipment array", field: "equipment", value: []any{}},
+		{name: "personality array", field: "personality", value: []any{}},
+		{name: "audit array", field: "audit", value: []any{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			envelope := testCharacterSheetEnvelope()
+			envelope[tt.field] = tt.value
+			assertInvalidCharacterSheetPayload(t, marshalCharacterSheetPayload(t, envelope))
+		})
+	}
+}
+
+func TestCharacterSheetEnvelopeRejectsUnknownEnvelopeAndRulesetFields(t *testing.T) {
+	t.Run("top-level field", func(t *testing.T) {
+		envelope := testCharacterSheetEnvelope()
+		envelope["unexpected"] = true
+		assertInvalidCharacterSheetPayload(t, marshalCharacterSheetPayload(t, envelope))
+	})
+
+	t.Run("ruleset field", func(t *testing.T) {
+		envelope := testCharacterSheetEnvelope()
+		envelope["ruleset"].(map[string]any)["unexpected"] = true
+		assertInvalidCharacterSheetPayload(t, marshalCharacterSheetPayload(t, envelope))
+	})
+}
+
+func TestCharacterSheetEnvelopeRejectsCaseVariantFieldNames(t *testing.T) {
+	t.Run("top-level SchemaVersion", func(t *testing.T) {
+		envelope := testCharacterSheetEnvelope()
+		value := envelope["schemaVersion"]
+		delete(envelope, "schemaVersion")
+		envelope["SchemaVersion"] = value
+		assertInvalidCharacterSheetPayload(t, marshalCharacterSheetPayload(t, envelope))
+	})
+
+	t.Run("top-level RULESET", func(t *testing.T) {
+		envelope := testCharacterSheetEnvelope()
+		value := envelope["ruleset"]
+		delete(envelope, "ruleset")
+		envelope["RULESET"] = value
+		assertInvalidCharacterSheetPayload(t, marshalCharacterSheetPayload(t, envelope))
+	})
+
+	rulesetVariants := []struct {
+		exact   string
+		variant string
+	}{
+		{exact: "system", variant: "System"},
+		{exact: "version", variant: "Version"},
+		{exact: "sourceStatus", variant: "SourceStatus"},
+	}
+	for _, tt := range rulesetVariants {
+		t.Run("ruleset "+tt.variant, func(t *testing.T) {
+			envelope := testCharacterSheetEnvelope()
+			ruleset := envelope["ruleset"].(map[string]any)
+			value := ruleset[tt.exact]
+			delete(ruleset, tt.exact)
+			ruleset[tt.variant] = value
+			assertInvalidCharacterSheetPayload(t, marshalCharacterSheetPayload(t, envelope))
+		})
+	}
+}
+
+func TestCharacterSheetEnvelopeRejectsUnknownSupportingNestedFields(t *testing.T) {
+	envelope := testCharacterSheetEnvelope()
+	envelope["equipment"].(map[string]any)["futureNestedField"] = map[string]any{"anything": true}
+	assertInvalidCharacterSheetForRequest(t, validCreateCharacterRequest(), envelope)
+}
+
+func TestCharacterSheetEnvelopeRejectsMalformedPayload(t *testing.T) {
+	assertInvalidCharacterSheetPayload(t, json.RawMessage(`{"schemaVersion":`))
+}
+
+func TestRepresentativeCharacterSheetFixturesRemainCompatible(t *testing.T) {
+	fixtures := []struct {
+		name     string
+		envelope map[string]any
+		request  createCharacterRequest
+	}{
+		{name: "Mara audited sample", envelope: maraAuditedSampleEnvelope(), request: validCreateCharacterRequest()},
+		{name: "generated Fighter", envelope: generatedFighterEnvelope(), request: generatedFighterRequest()},
+		{name: "minimum manual character", envelope: minimumManualEnvelope(), request: minimumManualRequest()},
+		{name: "full manual character", envelope: fullManualEnvelope(), request: fullManualRequest()},
+	}
+
+	for _, fixture := range fixtures {
+		t.Run(fixture.name, func(t *testing.T) {
+			payload := marshalCharacterSheetPayload(t, fixture.envelope)
+			fixture.request.ReferencePayload = &payload
+			if _, err := characterFromRequest(fixture.request, time.Now()); err != nil {
+				t.Fatalf("expected representative fixture to remain compatible, got %v", err)
+			}
+		})
+	}
+}
+
+func testCharacterSheetEnvelope() map[string]any {
+	return map[string]any{
+		"schemaVersion": "CharacterSheetV1",
+		"ruleset": map[string]any{
+			"system":       "dnd5e",
+			"version":      "2014",
+			"sourceStatus": "draft",
+		},
+		"identity": map[string]any{
+			"name":       "Mara Velard",
+			"ancestry":   "Human",
+			"background": "Outlander",
+			"classes": []any{
+				map[string]any{"name": "Ranger", "level": 3, "subclass": "Hunter"},
+			},
+		},
+		"summary": map[string]any{
+			"displayLine":       "Human Ranger - Level 3",
+			"landingConcept":    "A steady wilderness scout.",
+			"featuredAbilities": []any{},
+			"referenceSections": []any{},
+		},
+		"abilities": map[string]any{
+			"scores": map[string]any{
+				"strength":     10,
+				"dexterity":    16,
+				"constitution": 14,
+				"intelligence": 10,
+				"wisdom":       14,
+				"charisma":     8,
+			},
+		},
+		"combat":        validTestCombat(),
+		"proficiencies": validTestProficiencies(),
+		"actions":       []any{},
+		"features":      []any{},
+		"spellcasting":  nil,
+		"equipment":     validTestEquipment(),
+		"personality":   validTestPersonality(),
+		"audit":         validTestAudit(),
+	}
+}
+
+func maraAuditedSampleEnvelope() map[string]any {
+	envelope := testCharacterSheetEnvelope()
+	envelope["ruleset"].(map[string]any)["sourceStatus"] = "audited-sample"
+	envelope["combat"] = map[string]any{
+		"hitPoints": map[string]any{"current": 26, "max": 26, "temporary": 0},
+		"armorClass": map[string]any{
+			"value":             14,
+			"needsConfirmation": true,
+			"note":              "Visible value is stable. Confirm armor source, likely leather armor plus Dexterity.",
+		},
+		"initiative":       3,
+		"speed":            []any{map[string]any{"type": "walk", "feet": 30}},
+		"proficiencyBonus": 2,
+		"passivePerception": map[string]any{
+			"value":             14,
+			"needsConfirmation": true,
+			"note":              "Visible value is stable. Confirm Perception proficiency and full skill list.",
+		},
+		"concentration": nil,
+	}
+	envelope["proficiencies"] = map[string]any{
+		"savingThrows": map[string]any{
+			"values":            []any{},
+			"needsConfirmation": true,
+			"note":              "Saving throw proficiencies are not confirmed from the current sample.",
+		},
+		"skills": []any{
+			map[string]any{
+				"name":              "Perception",
+				"proficient":        true,
+				"modifier":          4,
+				"needsConfirmation": true,
+				"note":              "Passive Perception 14 implies this, but the full skill list still needs review.",
+			},
+		},
+		"weapons": map[string]any{
+			"values":            []any{"Longbow", "Shortsword"},
+			"needsConfirmation": true,
+			"note":              "Only visible sample weapons are modeled for now.",
+		},
+		"armor": map[string]any{
+			"values":            []any{"Leather armor"},
+			"needsConfirmation": true,
+			"note":              "Included to explain AC 14, but the generated sheet/source must confirm it.",
+		},
+		"tools": map[string]any{
+			"values":            []any{},
+			"needsConfirmation": true,
+			"note":              "Tool proficiencies are not confirmed.",
+		},
+		"languages": map[string]any{
+			"values":            []any{},
+			"needsConfirmation": true,
+			"note":              "Languages are not confirmed.",
+		},
+	}
+	envelope["summary"] = map[string]any{
+		"displayLine":       "Human Ranger · Level 3",
+		"supportingLine":    "Hunter · Outlander",
+		"landingConcept":    "A steady wilderness scout with quick rules reminders.",
+		"portraitAssetId":   "mara-vale-portrait",
+		"portraitAlt":       "Portrait of Mara Velard",
+		"featuredAbilities": []any{"Longbow", "Colossus Slayer"},
+		"referenceSections": []any{
+			map[string]any{"id": "actions", "label": "Actions", "defaultOpen": true},
+			map[string]any{"id": "features", "label": "Features", "defaultOpen": false},
+			map[string]any{"id": "spells", "label": "Spells", "defaultOpen": false},
+		},
+	}
+	longbow := validTestAction("longbow")
+	longbow["attackBonus"] = 7
+	longbow["damage"] = []any{map[string]any{"dice": "1d8", "bonus": 3, "type": "piercing"}}
+	longbow["range"] = map[string]any{"normal": 150, "long": 600}
+	longbow["summary"] = "Reliable ranged attack."
+	longbow["meta"] = []any{"Action", "+7 to hit", "1d8 + 3 piercing", "150 / 600 ft."}
+	envelope["actions"] = []any{longbow}
+	colossusSlayer := validTestFeature("colossus-slayer")
+	colossusSlayer["name"] = "Colossus Slayer"
+	colossusSlayer["category"] = "Hunter feature"
+	colossusSlayer["tags"] = []any{"Once per turn"}
+	colossusSlayer["summary"] = "Add 1d8 after hitting an already wounded enemy."
+	colossusSlayer["quickReference"] = map[string]any{
+		"title":   "Colossus Slayer",
+		"label":   "Hunter feature",
+		"summary": "After you hit an enemy that is already wounded, add 1d8 damage.",
+		"metadata": []any{
+			map[string]any{"label": "Timing", "value": "Once per turn"},
+			map[string]any{"label": "Resource", "value": "No limited use"},
+		},
+		"reminder": map[string]any{"heading": "Remember", "text": "The enemy must already be wounded."},
+		"details":  map[string]any{"collapsedLabel": "Show more details", "expandedLabel": "Hide details", "text": "The bonus applies once per turn."},
+	}
+	envelope["features"] = []any{colossusSlayer}
+	huntersMark := validTestSpell("hunters-mark")
+	huntersMark["name"] = "Hunter's Mark"
+	huntersMark["actionType"] = "Bonus Action"
+	huntersMark["castingTime"] = "Bonus Action"
+	huntersMark["summary"] = "Mark one creature and add 1d6 damage on weapon hits."
+	huntersMark["meta"] = []any{"1st-level spell", "Bonus Action", "Concentration", "Up to 1 hour"}
+	fogCloud := validTestSpell("fog-cloud")
+	fogCloud["summary"] = "Create a sphere of heavily obscuring fog."
+	fogCloud["meta"] = []any{"1st-level spell", "Action", "Concentration", "Up to 1 hour"}
+	cureWounds := validTestSpell("cure-wounds")
+	cureWounds["name"] = "Cure Wounds"
+	cureWounds["duration"] = "Instantaneous"
+	cureWounds["concentration"] = false
+	cureWounds["summary"] = "Restore hit points to a creature you touch."
+	cureWounds["meta"] = []any{"1st-level spell", "Action", "Instantaneous"}
+	envelope["spellcasting"] = map[string]any{
+		"ability":          "wisdom",
+		"spellSaveDC":      map[string]any{"needsConfirmation": true, "note": "Spell save DC must be confirmed before use."},
+		"spellAttackBonus": map[string]any{"needsConfirmation": true, "note": "Spell attack bonus must be confirmed before use."},
+		"slots":            []any{map[string]any{"level": 1, "max": 3, "used": 0}},
+		"spells":           []any{huntersMark, fogCloud, cureWounds},
+	}
+	envelope["equipment"] = map[string]any{
+		"armor":        map[string]any{"values": []any{"Leather armor"}, "needsConfirmation": true, "note": "Used to explain current AC, pending sheet confirmation."},
+		"weapons":      []any{"Longbow", "Shortsword"},
+		"packsAndGear": map[string]any{"values": []any{}, "needsConfirmation": true, "note": "Pack and gear inventory are incomplete."},
+		"tools":        map[string]any{"values": []any{}, "needsConfirmation": true, "note": "Tools are incomplete."},
+		"languages":    map[string]any{"values": []any{}, "needsConfirmation": true, "note": "Languages are incomplete."},
+		"currency":     map[string]any{"needsConfirmation": true, "note": "Currency is not confirmed."},
+	}
+	envelope["personality"] = validTestPersonality()
+	envelope["audit"] = map[string]any{
+		"source": "Current visible Mara fixture plus rough generated sheet warning.",
+		"needsConfirmation": []any{
+			"Confirm AC 14 armor source.",
+			"Confirm spell save DC and spell attack bonus.",
+			"Confirm equipment, tools, languages, and currency.",
+		},
+		"rulesVersionWarnings": []any{"Do not import D&D 2024 Ranger wording into this 2014 sample."},
+		"deferredCorrections":  []any{"Decide whether Mara remains Ranger 3 Hunter long term."},
+	}
+	return envelope
+}
+
+func generatedFighterEnvelope() map[string]any {
+	envelope := testCharacterSheetEnvelope()
+	envelope["identity"] = map[string]any{
+		"name":       "Branna Shieldhand",
+		"ancestry":   "Human",
+		"background": "Soldier",
+		"classes":    []any{map[string]any{"name": "Fighter", "level": 1}},
+	}
+	envelope["abilities"] = map[string]any{"scores": abilityScoreMap(16, 11, 15, 9, 13, 14)}
+	envelope["summary"] = map[string]any{
+		"displayLine":       "Human Fighter - Level 1",
+		"supportingLine":    "Strength melee Fighter - Soldier",
+		"landingConcept":    "A sturdy beginner Fighter built to protect allies.",
+		"featuredAbilities": []any{"Longsword", "Second Wind"},
+		"referenceSections": []any{
+			map[string]any{"id": "actions", "label": "Actions", "defaultOpen": true},
+			map[string]any{"id": "features", "label": "Features", "defaultOpen": false},
+		},
+	}
+	longsword := validTestAction("longsword")
+	longsword["name"] = "Longsword"
+	longsword["summary"] = "A dependable melee attack."
+	secondWind := validTestFeature("second-wind")
+	secondWind["name"] = "Second Wind"
+	secondWind["category"] = "Fighter feature"
+	secondWind["summary"] = "Recover hit points once per rest."
+	envelope["actions"] = []any{longsword}
+	envelope["features"] = []any{secondWind}
+	return envelope
+}
+
+func minimumManualEnvelope() map[string]any {
+	envelope := testCharacterSheetEnvelope()
+	envelope["ruleset"].(map[string]any)["sourceStatus"] = "needs-audit"
+	envelope["identity"] = map[string]any{
+		"name":       "Alea",
+		"ancestry":   "Human",
+		"background": "Acolyte",
+		"classes":    []any{map[string]any{"name": "Cleric", "level": 1}},
+	}
+	envelope["abilities"] = map[string]any{"scores": abilityScoreMap(10, 10, 10, 10, 10, 10)}
+	envelope["summary"] = map[string]any{
+		"displayLine":       "Human Cleric - Level 1",
+		"landingConcept":    "Manual character transferred from an existing sheet.",
+		"featuredAbilities": []any{},
+		"referenceSections": []any{},
+	}
+	return envelope
+}
+
+func fullManualEnvelope() map[string]any {
+	envelope := minimumManualEnvelope()
+	envelope["identity"] = map[string]any{
+		"name":       "Alea Dawn",
+		"ancestry":   "Human",
+		"background": "Acolyte",
+		"alignment":  "Neutral Good",
+		"concept":    "Traveling healer",
+		"classes":    []any{map[string]any{"name": "Cleric", "level": 3, "subclass": "Life Domain"}},
+	}
+	envelope["abilities"] = map[string]any{"scores": abilityScoreMap(10, 12, 14, 10, 16, 8)}
+	envelope["summary"] = map[string]any{
+		"displayLine":       "Human Cleric - Level 3",
+		"supportingLine":    "Life Domain - Acolyte",
+		"landingConcept":    "Traveling healer",
+		"featuredAbilities": []any{"Mace", "Channel Divinity"},
+		"referenceSections": []any{
+			map[string]any{"id": "actions", "label": "Actions", "defaultOpen": true},
+			map[string]any{"id": "features", "label": "Features", "defaultOpen": false},
+		},
+	}
+	mace := validTestAction("mace")
+	mace["name"] = "Mace"
+	mace["summary"] = "A simple melee weapon attack."
+	channelDivinity := validTestFeature("channel-divinity")
+	channelDivinity["name"] = "Channel Divinity"
+	channelDivinity["category"] = "Cleric feature"
+	channelDivinity["summary"] = "Invoke a divine effect."
+	envelope["actions"] = []any{mace}
+	envelope["features"] = []any{channelDivinity}
+	envelope["personality"] = map[string]any{
+		"traits": []any{}, "ideals": []any{}, "bonds": []any{}, "flaws": []any{},
+		"notes": []any{"Transferred from an existing sheet."},
+	}
+	return envelope
+}
+
+func generatedFighterRequest() createCharacterRequest {
+	request := validCreateCharacterRequest()
+	request.Name = "Branna Shieldhand"
+	request.ClassName = "Fighter"
+	request.SubclassName = nil
+	request.Level = 1
+	request.Ancestry = "Human"
+	request.Background = "Soldier"
+	request.AbilityScores = requiredAbilityScoresFromValues(16, 11, 15, 9, 13, 14)
+	return request
+}
+
+func minimumManualRequest() createCharacterRequest {
+	request := validCreateCharacterRequest()
+	request.Name = "Alea"
+	request.ClassName = "Cleric"
+	request.SubclassName = nil
+	request.Level = 1
+	request.Ancestry = "Human"
+	request.Background = "Acolyte"
+	request.AbilityScores = requiredAbilityScoresFromValues(10, 10, 10, 10, 10, 10)
+	return request
+}
+
+func fullManualRequest() createCharacterRequest {
+	request := validCreateCharacterRequest()
+	request.Name = "Alea Dawn"
+	request.ClassName = "Cleric"
+	request.SubclassName = stringPtr("Life Domain")
+	request.Level = 3
+	request.Ancestry = "Human"
+	request.Background = "Acolyte"
+	request.AbilityScores = requiredAbilityScoresFromValues(10, 12, 14, 10, 16, 8)
+	return request
+}
+
+func abilityScoreMap(strength, dexterity, constitution, intelligence, wisdom, charisma int) map[string]any {
+	return map[string]any{
+		"strength":     strength,
+		"dexterity":    dexterity,
+		"constitution": constitution,
+		"intelligence": intelligence,
+		"wisdom":       wisdom,
+		"charisma":     charisma,
+	}
+}
+
+func validTestCombat() map[string]any {
+	return map[string]any{
+		"hitPoints": map[string]any{
+			"current":   26,
+			"max":       26,
+			"temporary": 0,
+		},
+		"armorClass":        map[string]any{"value": 14},
+		"initiative":        3,
+		"speed":             []any{map[string]any{"type": "walk", "feet": 30}},
+		"proficiencyBonus":  2,
+		"passivePerception": map[string]any{},
+		"concentration":     nil,
+	}
+}
+
+func validTestProficiencies() map[string]any {
+	return map[string]any{
+		"savingThrows": map[string]any{"values": []any{}},
+		"skills":       []any{},
+		"weapons":      map[string]any{"values": []any{}},
+		"armor":        map[string]any{"values": []any{}},
+		"tools":        map[string]any{"values": []any{}},
+		"languages":    map[string]any{"values": []any{}},
+	}
+}
+
+func validTestEquipment() map[string]any {
+	return map[string]any{
+		"armor":        map[string]any{"values": []any{}},
+		"weapons":      []any{},
+		"packsAndGear": map[string]any{"values": []any{}},
+		"tools":        map[string]any{"values": []any{}},
+		"languages":    map[string]any{"values": []any{}},
+		"currency":     nil,
+	}
+}
+
+func validTestPersonality() map[string]any {
+	return map[string]any{"traits": []any{}, "ideals": []any{}, "bonds": []any{}, "flaws": []any{}, "notes": []any{}}
+}
+
+func validTestAudit() map[string]any {
+	return map[string]any{
+		"source":               "Manual character sheet",
+		"needsConfirmation":    []any{},
+		"rulesVersionWarnings": []any{},
+		"deferredCorrections":  []any{},
+	}
+}
+
+func requiredAbilityScoresFromValues(
+	strength, dexterity, constitution, intelligence, wisdom, charisma int,
+) requiredAbilityScores {
+	return requiredAbilityScores{
+		Strength:     intPtr(strength),
+		Dexterity:    intPtr(dexterity),
+		Constitution: intPtr(constitution),
+		Intelligence: intPtr(intelligence),
+		Wisdom:       intPtr(wisdom),
+		Charisma:     intPtr(charisma),
+	}
+}
+
+func marshalCharacterSheetPayload(t *testing.T, envelope map[string]any) json.RawMessage {
+	t.Helper()
+	payload, err := json.Marshal(envelope)
+	if err != nil {
+		t.Fatalf("marshal character sheet fixture: %v", err)
+	}
+	return payload
+}
+
+func assertValidCharacterSheetPayload(t *testing.T, envelope map[string]any) {
+	t.Helper()
+	request := validCreateCharacterRequest()
+	payload := marshalCharacterSheetPayload(t, envelope)
+	request.ReferencePayload = &payload
+	if _, err := characterFromRequest(request, time.Now()); err != nil {
+		t.Fatalf("expected CharacterSheetV1 envelope to be accepted, got %v", err)
+	}
+}
+
+func assertInvalidCharacterSheetPayload(t *testing.T, payload json.RawMessage) {
+	t.Helper()
+	request := validCreateCharacterRequest()
+	request.ReferencePayload = &payload
+	_, err := characterFromRequest(request, time.Now())
+	if _, ok := isValidationError(err); !ok {
+		t.Fatalf("expected safe CharacterSheetV1 validation error, got %v", err)
+	}
+}

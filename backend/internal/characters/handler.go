@@ -1,22 +1,30 @@
 package characters
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"time"
 
 	"github.com/Inkala/rpg-companion/backend/internal/auth"
+	"github.com/Inkala/rpg-companion/backend/internal/httpjson"
 	"github.com/google/uuid"
 )
 
+const characterRequestBodyLimit int64 = 131072
+
 type Handler struct {
-	repository *Repository
+	repository      *Repository
+	createCharacter func(context.Context, Character) (Character, error)
 }
 
 func NewHandler(repository *Repository) Handler {
-	return Handler{repository: repository}
+	handler := Handler{repository: repository}
+	if repository != nil {
+		handler.createCharacter = repository.Create
+	}
+	return handler
 }
 
 func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {
@@ -30,17 +38,22 @@ func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer r.Body.Close()
-
 	var request createCharacterRequest
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&request); err != nil {
-		writeError(w, http.StatusBadRequest, "request body must be valid character JSON")
+	err := httpjson.Decode(w, r, &request, characterRequestBodyLimit)
+	if errors.Is(err, httpjson.ErrUnsupportedMediaType) {
+		writeError(w, http.StatusUnsupportedMediaType, "Content-Type must be application/json")
 		return
 	}
-	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+	if errors.Is(err, httpjson.ErrRequestBodyTooLarge) {
+		writeError(w, http.StatusRequestEntityTooLarge, "request body is too large")
+		return
+	}
+	if errors.Is(err, httpjson.ErrMultipleJSONValues) {
 		writeError(w, http.StatusBadRequest, "request body must contain one JSON object")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "request body must be valid character JSON")
 		return
 	}
 	if request.OwnerSubjectID != nil {
@@ -62,7 +75,11 @@ func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	character.OwnerSubjectID = &ownerID
 
-	created, err := handler.repository.Create(r.Context(), character)
+	created, err := handler.createCharacter(r.Context(), character)
+	if errors.Is(err, ErrInvalidCharacterData) {
+		writeError(w, http.StatusBadRequest, "character validation failed")
+		return
+	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not persist character")
 		return

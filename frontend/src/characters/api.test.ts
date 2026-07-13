@@ -132,6 +132,30 @@ describe('characters API', () => {
     );
   });
 
+  it('uses the canonical shared API origin', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ characters: [maraSummary] }));
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.hunin.example:443/');
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(listCharacterSummaries()).resolves.toEqual([maraSummary]);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.hunin.example/characters',
+      expect.objectContaining({ credentials: 'include' }),
+    );
+  });
+
+  it('makes no request when the API configuration is invalid', async () => {
+    const fetchMock = vi.fn();
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.hunin.example/api');
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(listCharacterSummaries()).rejects.toEqual(
+      new CharactersApiError('Characters are unavailable until the backend is configured.', 0),
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('throws when the character API is not configured', async () => {
     vi.stubEnv('VITE_API_BASE_URL', '');
 

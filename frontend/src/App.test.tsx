@@ -185,6 +185,21 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Mara Velard' })).toBeInTheDocument();
   });
 
+  it('keeps the public sample available when the API configuration is invalid', () => {
+    const fetchMock = vi.fn();
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.hunin.example/api');
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/characters/sample');
+
+    render(<App />);
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Character Reference' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Mara Velard' })).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('renders the character creation route from /characters/new', () => {
     window.history.replaceState(null, '', '/characters/new');
 

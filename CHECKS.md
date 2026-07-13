@@ -81,11 +81,15 @@ GitHub Actions runs the frontend and backend checks automatically on pushes to `
 requests targeting `main`.
 
 The frontend job uses Node 24 LTS and pnpm 11.7.0, installs from `frontend/` with
-`pnpm install --frozen-lockfile`, then runs lint, typecheck, test, and build.
+`pnpm install --frozen-lockfile`, then runs the high-severity dependency audit, lint, typecheck,
+test, and build.
 
 The backend job uses the Go version declared in `backend/go.mod`, starts a PostgreSQL service
-container with database `hunin_test`, sets `TEST_DATABASE_URL`, then runs test, vet, and build from
-`backend/`.
+container with database `hunin_test`, sets `TEST_DATABASE_URL`, then runs pinned `govulncheck`, test,
+vet, and build from `backend/`.
+
+A separate secret-scanning job checks the complete Git history with the digest-pinned Gitleaks
+image, full output redaction, and the reviewed exact-fingerprint ignore list.
 
 ## Backend Health Check
 
@@ -93,6 +97,9 @@ Start the backend:
 
 ```sh
 cd backend
+APP_ENV=local \
+DATABASE_URL="postgres://hunin:hunin@localhost:5432/hunin?sslmode=disable" \
+ALLOWED_ORIGINS="http://localhost:5173" \
 go run ./cmd/server
 ```
 
@@ -113,7 +120,8 @@ Expected JSON:
 ### Local auth flow
 - [x] Start PostgreSQL with `docker compose up -d postgres`.
 - [x] Apply migrations to the local `hunin` database.
-- [x] Start the backend with `ALLOWED_ORIGINS=http://localhost:5173`.
+- [x] Start the backend with `APP_ENV=local`, the local `DATABASE_URL`, and
+  `ALLOWED_ORIGINS=http://localhost:5173`.
 - [x] Start the frontend with `VITE_API_BASE_URL=http://localhost:8080`.
 - [x] Register with username, email, and a password using 8–128 characters with an uppercase letter, lowercase letter, number, and special character. Confirm no confirmation email is sent.
 - [x] Try a weak registration password and confirm the inline password error appears without a browser-native validation popup.

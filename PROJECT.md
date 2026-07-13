@@ -154,6 +154,7 @@ migrate -path backend/migrations \
   -database "postgres://hunin:hunin@localhost:5432/hunin?sslmode=disable" up
 
 cd backend
+APP_ENV=local \
 DATABASE_URL="postgres://hunin:hunin@localhost:5432/hunin?sslmode=disable" \
 ALLOWED_ORIGINS="http://localhost:5173" \
 go run ./cmd/server
