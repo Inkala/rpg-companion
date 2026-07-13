@@ -4,39 +4,43 @@ Submission deadline: 20 July 2026
 
 Active task: T-017 Party MVP
 
-State: T-018 whole-application security hardening is complete. The T-017 Security amendment is
-approved. Both Party branches are rebased onto orchestration checkpoint `a82bb34`, fully validated,
-pushed, and synchronized with origin. T-017 may resume through bounded backend and isolated
-frontend increments. Shared server and central frontend integration remain sequential gates.
+State: T-018 whole-application security hardening is complete. T-017A backend and T-017B isolated
+frontend are complete, validated, and merged through PR #24 (`02b0bc8`) and PR #25 (`af592ec`). The
+backend Party API is reachable and the isolated Party pages are present on `main`. T-017C central
+frontend integration is the final implementation stage before combined validation and deployment.
 
-## Active T-017 worktrees
+## Completed T-017 feature worktrees
 
 ### T-017A backend
 
 - Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-party-backend`
 - Branch: `codex/t017a-party-backend`
-- Current HEAD: `f305d9c`
-- Classification: Yellow for the next Party-package handler slice. Later server routing is Red and
-  requires a separate integration gate.
-- Status: migration, repositories, invite/join transactions, scoped GM character query, and response
-  DTO mappings are committed and pushed. The rebased PostgreSQL-backed baseline passed. Next is the
-  strict request/error contract plus create/list/detail handlers inside `internal/parties`.
-- Expected ownership after rebase: Party migration, `backend/internal/parties/`, narrow
-  server/character integration, Party-specific abuse controls, and focused tests.
-- Prohibited: frontend and orchestrator-owned shared records.
+- Final branch HEAD: `8f69c94`
+- Integration: PR #24 merged as `02b0bc8`.
+- Status: complete. Migration, repositories, authenticated routes, invite and join security,
+  authorization, GM Character Reference, PostgreSQL integration, race, and server-flow tests passed.
+- Cleanup requires explicit approval later.
 
 ### T-017B isolated frontend
 
 - Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-party-frontend`
 - Branch: `codex/t017b-party-frontend`
-- Current HEAD: `c4bb107`
-- Classification: Green while work remains inside `frontend/src/parties/`. Central routing and App
-  integration are Red and remain prohibited.
-- Status: isolated Party API, create/join/list/detail/invite/reference components, and fragment helper
-  are committed and pushed. The rebased frontend baseline passed 339 tests. A narrowly scoped Party
-  accessibility/styling increment may proceed without central integration.
-- Expected ownership after rebase: `frontend/src/parties/` only.
-- Prohibited: central App/router/Home files, backend, and orchestrator-owned shared records.
+- Final branch HEAD: `8073d4a`
+- Integration: PR #25 merged as `af592ec` after rebasing onto the backend merge.
+- Status: complete. Party API client, create/join/list/detail/invite/reference components, secure
+  fragment helper, stale-state protections, avatars, accessibility hooks, and responsive styling
+  passed 350 frontend tests, lint, typecheck, and build.
+- Cleanup requires explicit approval later.
+
+## Planned T-017C integration worktree
+
+- Required base: `main` at `af592ec` or its next orchestration-only descendant.
+- Classification: Red.
+- Recommendation: one dedicated worktree and one coding session.
+- Expected ownership: central frontend App, router, Home, initial-navigation, route-focus, and focused
+  Party integration tests and styles.
+- Prohibited parallel code: any other task editing `App.tsx`, router, Home, global frontend shell, or
+  shared coordination records.
 
 ## Completed T-018 worktrees
 
@@ -63,6 +67,7 @@ frontend increments. Shared server and central frontend integration remain seque
   coordination documents.
 - The frozen Party request, inspection, join-throttle, no-store, replay-status, and cross-user
   Character Reference rules are approved in the T-017 task documents.
+- T-017A and T-017B are merged. Their PR checks passed on the combined backend baseline.
 - No product work starts directly in the main checkout.
 
 ## Source of truth
@@ -82,7 +87,8 @@ frontend increments. Shared server and central frontend integration remain seque
 - T-014A compact Character Reference polish is merged.
 - T-015 read-only profile page and mobile profile navigation are merged.
 - T-018 whole-application Security baseline is merged, deployed, and verified.
-- CI on `main` at `cab97da` passed frontend, backend, govulncheck, build, and secret-history gates.
+- T-017 backend and isolated Party frontend foundations are merged through `af592ec` but are not yet
+  connected to central frontend routing.
 
 ## Final-week constraints
 
@@ -95,8 +101,7 @@ frontend increments. Shared server and central frontend integration remain seque
 
 ## Single next action
 
-Review and commit this T-017 contract checkpoint. Then run the next backend handler slice and the
-isolated frontend accessibility/styling slice in parallel, with both workers stopping before commit
-and before any shared server or central frontend integration.
+Commit this integration-state checkpoint. Then create one T-017C worktree from the clean checkpoint
+and begin the first central frontend route and secure-invite bootstrap slice.
 
 Last updated: 2026-07-13

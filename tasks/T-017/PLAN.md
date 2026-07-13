@@ -2,24 +2,21 @@
 
 Status: approved and in progress
 
-Dependency: satisfied. T-018 is integrated and verified, and both Party worktrees are rebased onto
-the orchestration checkpoint at `a82bb34`.
+Dependency: satisfied. T-018 is integrated and verified. T-017A backend and T-017B isolated frontend
+are merged through PR #24 (`02b0bc8`) and PR #25 (`af592ec`).
 
 ## Parallel-work assessment
 
 - Classification: Red for the complete epic. Yellow/Green child worktrees can begin after contract
   approval and a clean base.
-- Can start in a separate worktree now: Yes, within the declared T-017A backend and T-017B isolated
-  frontend ownership. Shared integration remains Red and sequential.
-- Required base branch or commit: both child branches contain verified `main` checkpoint `a82bb34`.
+- Can start in a separate worktree now: Yes, only for the declared T-017C central integration.
+- Required base branch or commit: clean `main` containing `af592ec` and this orchestration checkpoint.
 - Files/folders this planning step owns: `tasks/T-017/` and orchestrator bookkeeping only.
 - Shared files it must not modify during planning: frontend/backend product code, migrations, CI,
   deployment configuration, and the T-015/T-016 diffs.
-- Dependencies or tasks that must merge first: satisfied by T-018, PR #22, PR #23, final CI, and
-  deployed verification.
-- Planned integration point: T-017A first, then T-017B, then central T-017C integration.
-- Intended merge order: T-017A backend, T-017B isolated frontend feature, T-017C central frontend
-  integration, T-017D validation/deployment.
+- Dependencies or tasks that must merge first: satisfied by T-018, T-017A, and T-017B.
+- Planned integration point: central T-017C frontend integration.
+- Remaining merge order: T-017C central frontend integration, then T-017D validation/deployment.
 
 ## Goal
 
@@ -69,5 +66,5 @@ features.
 
 ## Next Action
 
-Commit the reconciled T-017 contract checkpoint. Then resume one bounded backend handler slice and
-one isolated frontend accessibility/styling slice, each stopping for review before commit.
+Commit the reconciled integration checkpoint. Then create one dedicated T-017C worktree and begin
+the route parser, serializer, and secure pre-React invite-fragment bootstrap slice.

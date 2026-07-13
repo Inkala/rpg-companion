@@ -3,8 +3,8 @@
 Status: approved and in progress
 
 Marcela approved the original contract on 2026-07-12 and approved continuing the reviewed
-Security-amended contract on 2026-07-13. T-018 is integrated and verified. Both Party branches are
-rebased onto `a82bb34`, validated, and synchronized with origin.
+Security-amended contract on 2026-07-13. T-018 is integrated and verified. T-017A and T-017B are
+complete and merged through PR #24 (`02b0bc8`) and PR #25 (`af592ec`).
 
 ## 1. Approve product and security contract
 
@@ -39,43 +39,43 @@ rebased onto `a82bb34`, validated, and synchronized with origin.
 ## 3. T-017A backend party implementation
 
 - [x] Add failing migration/repository tests first.
-- [ ] Add failing Party join-throttling, invite no-store, and token-redaction tests first.
-- [ ] Reuse the approved T-018 request, server, auth, cache, logging, and payload controls.
+- [x] Add failing Party join-throttling, invite no-store, and token-redaction tests first.
+- [x] Reuse the approved T-018 request, server, auth, cache, logging, and payload controls.
 - [x] Add party, membership, and invite migration with constraints.
-- [ ] Add failing create/list/invite/join/roster/GM-access handler tests first.
-- [ ] Implement the smallest backend party package and routes.
-- [ ] Cover 401, 403, 404, 409, duplicate membership, foreign character, cross-party GM, and expired
+- [x] Add failing create/list/invite/join/roster/GM-access handler tests first.
+- [x] Implement the smallest backend party package and routes.
+- [x] Cover 401, 403, 404, 409, duplicate membership, foreign character, cross-party GM, and expired
   invite behavior.
-- [ ] Pass every merge-blocking authorization and race test below.
-- [ ] Run migration, backend test, vet, build, and diff validation.
+- [x] Pass every merge-blocking authorization and race test below.
+- [x] Run migration, backend test, vet, build, and diff validation.
 
 ### Merge-blocking backend test contract
 
-- [ ] Every Party endpoint returns `401` without a session.
-- [ ] Party creation atomically creates exactly one GM membership.
-- [ ] Failed GM-membership creation rolls back party creation.
-- [ ] A member lists only parties they joined.
-- [ ] A nonmember cannot distinguish another user's party from an unknown party.
-- [ ] A player cannot generate or regenerate an invite.
-- [ ] A GM in Party A cannot generate an invite for Party B.
-- [ ] Regeneration leaves one non-revoked invite and rejects the previous token.
-- [ ] PostgreSQL never stores the raw invite token.
-- [ ] Invalid, malformed, expired, revoked, and replaced invites create no membership.
-- [ ] A player joins only with a character they own.
-- [ ] A foreign character returns `404` and creates no membership.
-- [ ] A character linked elsewhere returns `409` and creates no membership.
-- [ ] Repeating the identical successful join is idempotent.
-- [ ] Concurrent duplicate joins create one membership only.
-- [ ] Concurrent attempts to link one character to two parties produce one success and one conflict.
-- [ ] A same-party player cannot open another player's full sheet.
-- [ ] The managing GM can read a linked character.
-- [ ] A GM from another party receives `404`.
-- [ ] A managing GM cannot read an unlinked character through the Party endpoint.
-- [ ] Party character endpoints expose no edit method.
-- [ ] The existing owner endpoint still returns `404` for other users.
-- [ ] Roster DTOs exclude email, owner IDs, token hashes, invite data, and full character payload.
-- [ ] GM Character Reference fails closed on malformed or unsupported payloads.
-- [ ] No response other than one-time invite creation, and no log, contains a raw invite token.
+- [x] Every Party endpoint returns `401` without a session.
+- [x] Party creation atomically creates exactly one GM membership.
+- [x] Failed GM-membership creation rolls back party creation.
+- [x] A member lists only parties they joined.
+- [x] A nonmember cannot distinguish another user's party from an unknown party.
+- [x] A player cannot generate or regenerate an invite.
+- [x] A GM in Party A cannot generate an invite for Party B.
+- [x] Regeneration leaves one non-revoked invite and rejects the previous token.
+- [x] PostgreSQL never stores the raw invite token.
+- [x] Invalid, malformed, expired, revoked, and replaced invites create no membership.
+- [x] A player joins only with a character they own.
+- [x] A foreign character returns `404` and creates no membership.
+- [x] A character linked elsewhere returns `409` and creates no membership.
+- [x] Repeating the identical successful join is idempotent.
+- [x] Concurrent duplicate joins create one membership only.
+- [x] Concurrent attempts to link one character to two parties produce one success and one conflict.
+- [x] A same-party player cannot open another player's full sheet.
+- [x] The managing GM can read a linked character.
+- [x] A GM from another party receives `404`.
+- [x] A managing GM cannot read an unlinked character through the Party endpoint.
+- [x] Party character endpoints expose no edit method.
+- [x] The existing owner endpoint still returns `404` for other users.
+- [x] Roster DTOs exclude email, owner IDs, token hashes, invite data, and full character payload.
+- [x] GM Character Reference fails closed on malformed or unsupported payloads.
+- [x] No response other than one-time invite creation, and no log, contains a raw invite token.
 
 ## 4. T-017B isolated frontend party feature
 

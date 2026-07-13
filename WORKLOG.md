@@ -386,3 +386,20 @@ base.
   strict GM Character Reference response boundary.
 - Next action: review and commit the reconciled task records, then resume one bounded T-017A handler
   slice and one isolated T-017B accessibility/styling slice.
+
+## 2026-07-13: Integrated T-017A backend and T-017B isolated frontend
+
+- Completed the Party migration, repositories, strict handlers, authenticated routes, invite and
+  join security, authorization matrix, GM Character Reference boundary, and PostgreSQL server-flow
+  tests on T-017A.
+- Merged backend PR #24 as `02b0bc8` after frontend, backend, secret-history, and Cloudflare checks
+  passed.
+- Completed the isolated Party API client, create/join/list/detail/invite/reference components,
+  secure fragment helper, stale-state protections, avatars, accessibility hooks, and responsive
+  styling on T-017B.
+- Rebased T-017B onto the backend merge without conflicts, passed 350 frontend tests, lint,
+  typecheck, and build, and merged PR #25 as `af592ec` after all required checks passed.
+- No central App, router, Home, or authentication-return wiring is implemented yet. The Party
+  backend and isolated frontend are merged but not reachable as one user flow.
+- Next action: create one Red T-017C worktree and begin central route and secure invite bootstrap
+  integration.
