@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from '../config/apiBaseUrl';
+
 export type AuthUser = {
   id: string;
   usernameCanonical: string;
@@ -100,9 +102,4 @@ const readErrorMessage = async (response: Response) => {
   } catch {
     return 'The account request failed.';
   }
-};
-
-const getApiBaseUrl = () => {
-  const configured = import.meta.env.VITE_API_BASE_URL?.trim() ?? '';
-  return configured.replace(/\/$/, '');
 };

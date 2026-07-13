@@ -75,6 +75,31 @@ describe('auth API', () => {
     );
   });
 
+  it('uses the canonical shared API origin', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ user: maraUser }));
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.hunin.example:443/');
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(currentSession()).resolves.toEqual(maraUser);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.hunin.example/auth/session',
+      expect.objectContaining({ credentials: 'include' }),
+    );
+  });
+
+  it('makes no request when the API configuration is invalid', async () => {
+    const fetchMock = vi.fn();
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.hunin.example/api');
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(authApiAvailable()).toBe(false);
+    await expect(currentSession()).rejects.toEqual(
+      new AuthApiError('Accounts are unavailable until the backend is configured.', 0),
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('returns null for an unauthenticated current session', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
     vi.stubGlobal(

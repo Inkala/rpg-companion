@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '../config/apiBaseUrl';
 import type {
   CharacterDTO,
   CharacterListResponse,
@@ -67,9 +68,4 @@ const readErrorMessage = async (response: Response) => {
   } catch {
     return 'The character request failed.';
   }
-};
-
-const getApiBaseUrl = () => {
-  const configured = import.meta.env.VITE_API_BASE_URL?.trim() ?? '';
-  return configured.replace(/\/$/, '');
 };
