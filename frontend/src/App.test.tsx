@@ -342,11 +342,13 @@ describe('App', () => {
     window.history.back();
     await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
     fireEvent(window, new PopStateEvent('popstate'));
+    expect(inviteAppearsInBrowserSurface(inviteToken)).toBe(false);
 
     window.history.forward();
     await waitFor(() => expect(window.location.pathname).toBe('/login'));
     fireEvent(window, new PopStateEvent('popstate'));
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(inviteAppearsInBrowserSurface(inviteToken)).toBe(false);
 
     completeSignInForm();
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -781,6 +783,7 @@ describe('App', () => {
       await screen.findByRole('button', { name: 'Open Branna Shieldhand Character Reference' }),
     );
 
+    expect(screen.getByRole('heading', { name: 'Character Reference' })).toHaveFocus();
     expect(window.location.pathname).toBe(
       '/parties/party-1/characters/22222222-2222-2222-2222-222222222222',
     );
@@ -872,6 +875,7 @@ describe('App', () => {
     await screen.findByRole('heading', { name: 'Branna Shieldhand' });
     fireEvent.click(screen.getByRole('button', { name: 'Back to party' }));
 
+    expect(screen.getByRole('heading', { name: 'Party' })).toHaveFocus();
     expect(window.location.pathname).toBe('/parties/party-1');
     expect(
       await screen.findByRole('heading', { name: 'The Lantern Guard' }),
@@ -933,7 +937,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'My profile' }));
 
     expect(window.location.pathname).toBe('/profile');
-    expect(await screen.findByRole('heading', { name: 'Mara' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Mara' })).toHaveFocus();
   });
 
   it('restores a signed-in session on direct profile navigation', async () => {
@@ -1166,7 +1170,10 @@ describe('App', () => {
     expect(window.location.pathname).toBe('/parties/new');
     expect(
       screen.getByRole('heading', { name: 'Sign in to create a party' }),
-    ).toBeInTheDocument();
+    ).toHaveFocus();
+    expect(
+      screen.getByRole('heading', { name: 'Sign in to create a party' }),
+    ).toHaveAttribute('tabindex', '-1');
   });
 
   it('opens a safe generic Join Party route without carrying invite data', async () => {
@@ -1182,7 +1189,8 @@ describe('App', () => {
     expect(JSON.stringify(window.history.state).includes(inviteToken)).toBe(false);
     expect(
       screen.getByRole('heading', { name: 'Party invite unavailable' }),
-    ).toBeInTheDocument();
+    ).toHaveFocus();
+    expect(inviteAppearsInBrowserSurface(inviteToken)).toBe(false);
     await waitFor(() => expect(requestedPaths(fetchMock)).toContain('/auth/session'));
     expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(0);
   });
@@ -1199,6 +1207,7 @@ describe('App', () => {
       await screen.findByRole('button', { name: 'Open The Lantern Guard' }),
     );
 
+    expect(screen.getByRole('heading', { name: 'Party' })).toHaveFocus();
     expect(window.location.pathname).toBe('/parties/party-1');
     expect(
       await screen.findByRole('heading', { name: 'The Lantern Guard' }),
@@ -1213,13 +1222,13 @@ describe('App', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Sign in' })[0]);
 
     expect(window.location.pathname).toBe('/login');
-    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toHaveFocus();
 
     fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Create account' })[0]);
 
     expect(window.location.pathname).toBe('/sign-up');
-    expect(screen.getByRole('heading', { name: 'Create account' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Create account' })).toHaveFocus();
   });
 
   it('updates the URL from account form switches', () => {
@@ -1386,7 +1395,10 @@ describe('App', () => {
     });
     fireEvent(window, new PopStateEvent('popstate'));
 
-    expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Choose how Hunin helps next.' }),
+    ).toHaveFocus();
+    expect(screen.getByRole('heading', { name: 'Hunin' })).not.toHaveFocus();
 
     window.history.forward();
     await waitFor(() => {
@@ -1394,7 +1406,7 @@ describe('App', () => {
     });
     fireEvent(window, new PopStateEvent('popstate'));
 
-    expect(screen.getByRole('heading', { name: 'Start a character draft.' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Start a character draft.' })).toHaveFocus();
   });
 });
 
@@ -1534,6 +1546,25 @@ const requestedPaths = (fetchMock: ReturnType<typeof vi.fn>) => {
 
 const requestCount = (fetchMock: ReturnType<typeof vi.fn>, path: string) => {
   return requestedPaths(fetchMock).filter((requestedPath) => requestedPath === path).length;
+};
+
+const inviteAppearsInBrowserSurface = (sensitiveValue: string) => {
+  const storageValues = (storage: Storage) => {
+    return Array.from({ length: storage.length }, (_, index) => {
+      const key = storage.key(index) ?? '';
+      return `${key}:${storage.getItem(key) ?? ''}`;
+    }).join('|');
+  };
+
+  return [
+    window.location.pathname,
+    window.location.search,
+    window.location.hash,
+    JSON.stringify(window.history.state),
+    document.body.textContent ?? '',
+    storageValues(window.localStorage),
+    storageValues(window.sessionStorage),
+  ].some((surface) => surface.includes(sensitiveValue));
 };
 
 const requestCountByMethod = (

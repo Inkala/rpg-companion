@@ -6,6 +6,7 @@ import {
   pathForRoute,
 } from './app/router';
 import { AppShell } from './app/AppShell';
+import { RouteFocusManager } from './app/RouteFocusManager';
 import {
   AuthApiError,
   authApiAvailable,
@@ -489,6 +490,7 @@ export const App = ({
       ) : (
         <NotFoundPage onHome={showHome} />
       )}
+      <RouteFocusManager routeKey={pathForRoute(route)} />
     </AppShell>
   );
 };
