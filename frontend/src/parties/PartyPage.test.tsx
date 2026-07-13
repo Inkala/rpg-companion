@@ -81,6 +81,25 @@ describe('PartyPage', () => {
     expect(onOpenCharacter).toHaveBeenCalledWith('character-1');
   });
 
+  it('provides scoped semantic hooks for the Party detail and roster layout', async () => {
+    renderPage({ loadParty: vi.fn().mockResolvedValue(gmParty) });
+
+    const partyTitle = await screen.findByRole('heading', { name: 'The Lantern Guard' });
+    const partyDetail = partyTitle.closest('section');
+    expect(partyDetail).toHaveClass('party-detail');
+    expect(partyTitle).toHaveClass('party-detail__title');
+    expect(getCurrentRoleText('Your role: GM')).toHaveClass('party-detail__role');
+
+    const roster = screen.getByRole('list', { name: 'The Lantern Guard roster' });
+    expect(roster).toHaveClass('party-roster__list');
+    expect(roster.closest('section')).toHaveClass('party-roster');
+
+    const members = within(roster).getAllByRole('listitem');
+    expect(members[0]).toHaveClass('party-roster__item');
+    expect(members[0].querySelector('article')).toHaveClass('party-member-card');
+    expect(members[0].querySelector('.party-member-card__content')).toBeInTheDocument();
+  });
+
   it('renders deterministic decorative generic avatars for every roster member', async () => {
     const { container } = renderPage({
       loadParty: vi.fn().mockResolvedValue(gmParty),

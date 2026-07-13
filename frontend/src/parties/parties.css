@@ -1,0 +1,223 @@
+.party-page,
+.party-detail,
+.party-detail__header,
+.party-roster,
+.party-roster__list,
+.party-roster__item,
+.party-member-card,
+.party-member-card__content,
+.party-invite-panel,
+.party-invite-panel__field {
+  min-width: 0;
+}
+
+.party-page {
+  width: min(100%, var(--layout-content-max-width));
+  padding-bottom: var(--space-8);
+}
+
+.party-detail {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.party-detail__header,
+.party-roster,
+.party-member-card__content,
+.party-invite-panel,
+.party-invite-panel__field {
+  display: grid;
+}
+
+.party-detail__header {
+  gap: var(--space-2);
+}
+
+.party-detail__title,
+.party-roster__title,
+.party-invite-panel__title,
+.party-member-card__name {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-family: Fraunces, Georgia, serif;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.party-detail__title {
+  font-size: clamp(1.75rem, 9vw, 2.25rem);
+}
+
+.party-detail__role {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.party-detail__role strong {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+  padding: 0 var(--space-3);
+  font-size: 0.875rem;
+}
+
+.party-roster {
+  gap: var(--space-3);
+}
+
+.party-roster__title,
+.party-invite-panel__title {
+  font-size: 1.35rem;
+}
+
+.party-roster__list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.party-member-card {
+  display: grid;
+  height: 100%;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.party-member-avatar {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface-muted);
+  object-fit: cover;
+  object-position: center top;
+}
+
+.party-member-card__content {
+  gap: var(--space-2);
+}
+
+.party-member-card__content > * {
+  min-width: 0;
+}
+
+.party-member-card__name {
+  font-size: 1.2rem;
+}
+
+.party-member-card__meta,
+.party-member-card__character,
+.party-member-card__empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.party-member-card__character strong {
+  color: var(--color-text-primary);
+}
+
+.party-member-card__action,
+.party-invite-panel .button {
+  min-height: 44px;
+  max-width: 100%;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  white-space: normal;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.party-member-card__action {
+  justify-self: stretch;
+}
+
+.party-invite-panel {
+  width: 100%;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface-muted);
+  box-shadow: var(--shadow-card);
+}
+
+.party-invite-panel > p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.party-invite-panel__field {
+  width: 100%;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  font-weight: 800;
+}
+
+.party-invite-panel__url {
+  display: block;
+  min-height: 44px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface-raised);
+  color: var(--color-text-primary);
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.party-invite-panel__url:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.party-invite-panel .button {
+  justify-self: stretch;
+}
+
+@media (min-width: 720px) {
+  .party-roster__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .party-member-card__action,
+  .party-invite-panel .button {
+    width: auto;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 390px) {
+  .party-member-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+
+  .party-member-avatar {
+    width: 48px;
+    height: 48px;
+  }
+}

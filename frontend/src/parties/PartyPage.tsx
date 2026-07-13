@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import genericAvatar from '../assets/characters/generic-avatar.webp';
 import type { PartyDetailDTO, PartyMemberDTO, PartyRoleDTO } from './apiTypes';
+import './parties.css';
 
 type PartyPageProps = {
   partyId: string;
@@ -89,7 +90,7 @@ export const PartyPage = ({
   }, [isSignedIn, loadAttempt, loadParty, partyId]);
 
   return (
-    <main className="app-shell account-page">
+    <main className="app-shell account-page party-page">
       <header className="reference-nav">
         <button type="button" className="back-button" onClick={onBack}>
           Back
@@ -166,18 +167,24 @@ const LoadedParty = ({
   const roleLabel = displayRole(party.role);
 
   return (
-    <section aria-labelledby="party-title">
-      <p className="eyebrow">Party</p>
-      <h1 id="party-title">{party.name}</h1>
-      <p>
-        <span>Your role:</span> <strong>{roleLabel}</strong>
-      </p>
+    <section className="party-detail" aria-labelledby="party-title">
+      <header className="party-detail__header">
+        <p className="eyebrow">Party</p>
+        <h1 id="party-title" className="party-detail__title">
+          {party.name}
+        </h1>
+        <p className="party-detail__role">
+          <span>Your role:</span> <strong>{roleLabel}</strong>
+        </p>
+      </header>
 
       {renderPartyTools?.(party)}
 
-      <section aria-labelledby="party-roster-title">
-        <h2 id="party-roster-title">Roster</h2>
-        <ul aria-label={`${party.name} roster`}>
+      <section className="party-roster" aria-labelledby="party-roster-title">
+        <h2 id="party-roster-title" className="party-roster__title">
+          Roster
+        </h2>
+        <ul className="party-roster__list" aria-label={`${party.name} roster`}>
           {party.members.map((member, index) => (
             <PartyMember
               key={`${member.username}-${index}`}
@@ -210,37 +217,41 @@ const PartyMember = ({
     currentUserRole === 'gm' && member.role === 'player' && character !== null;
 
   return (
-    <li>
-      <article aria-labelledby={titleId}>
+    <li className="party-roster__item">
+      <article className="party-member-card" aria-labelledby={titleId}>
         <img
           className="party-member-avatar"
           src={genericAvatar}
           alt=""
           aria-hidden="true"
         />
-        <h3 id={titleId}>{member.username}</h3>
-        <p>
-          Role: <strong>{displayRole(member.role)}</strong>
-        </p>
-        {character ? (
-          <>
-            <p>
-              Character: <strong>{character.name}</strong>
-            </p>
-            {canOpenCharacter ? (
-              <button
-                type="button"
-                className="button button--secondary"
-                aria-label={`Open ${character.name} Character Reference`}
-                onClick={() => onOpenCharacter(character.id)}
-              >
-                Open Character Reference
-              </button>
-            ) : null}
-          </>
-        ) : (
-          <p>No character linked</p>
-        )}
+        <div className="party-member-card__content">
+          <h3 id={titleId} className="party-member-card__name">
+            {member.username}
+          </h3>
+          <p className="party-member-card__meta">
+            Role: <strong>{displayRole(member.role)}</strong>
+          </p>
+          {character ? (
+            <>
+              <p className="party-member-card__character">
+                Character: <strong>{character.name}</strong>
+              </p>
+              {canOpenCharacter ? (
+                <button
+                  type="button"
+                  className="button button--secondary party-member-card__action"
+                  aria-label={`Open ${character.name} Character Reference`}
+                  onClick={() => onOpenCharacter(character.id)}
+                >
+                  Open Character Reference
+                </button>
+              ) : null}
+            </>
+          ) : (
+            <p className="party-member-card__empty">No character linked</p>
+          )}
+        </div>
       </article>
     </li>
   );

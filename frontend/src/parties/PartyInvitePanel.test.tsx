@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { PartyInviteDTO } from './apiTypes';
 import { PartyInvitePanel } from './PartyInvitePanel';
@@ -59,6 +59,23 @@ describe('PartyInvitePanel', () => {
     expect(inviteUrl.pathname).toBe('/parties/join');
     expect(inviteUrl.search).toBe('');
     expect(inviteUrl.hash).toBe(`#${firstToken}`);
+  });
+
+  it('provides an accessible scoped layout for the read-only invite URL and controls', async () => {
+    await renderGeneratedInvite();
+
+    const panel = screen.getByRole('region', { name: 'Invite players' });
+    expect(panel).toHaveClass('party-invite-panel');
+
+    const inviteInput = screen.getByLabelText('Shareable invite URL');
+    expect(inviteInput).toHaveClass('party-invite-panel__url');
+    expect(inviteInput).toHaveAttribute('readonly');
+    expect(inviteInput.closest('label')).toHaveClass('party-invite-panel__field');
+
+    expect(within(panel).getByRole('button', { name: 'Copy invite link' })).toBeInTheDocument();
+    expect(
+      within(panel).getByRole('button', { name: 'Regenerate invite link' }),
+    ).toBeInTheDocument();
   });
 
   it('shows a safe recoverable generation error and retries', async () => {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PartyInviteDTO, PartyRoleDTO } from './apiTypes';
+import './parties.css';
 
 type CreateInvite = (partyId: string) => Promise<PartyInviteDTO>;
 type BuildInviteURL = (path: string) => string;
@@ -199,9 +200,10 @@ export const PartyInvitePanel = ({
   if (visibleInviteState.status === 'loaded') {
     return (
       <InvitePanelLayout>
-        <label>
-          <span>Shareable invite URL</span>
+        <label className="party-invite-panel__field">
+          <span className="party-invite-panel__label">Shareable invite URL</span>
           <input
+            className="party-invite-panel__url"
             type="text"
             readOnly
             value={visibleInviteState.inviteURL}
@@ -246,8 +248,10 @@ export const PartyInvitePanel = ({
 };
 
 const InvitePanelLayout = ({ children }: { children: React.ReactNode }) => (
-  <section aria-labelledby="party-invite-panel-title">
-    <h2 id="party-invite-panel-title">Invite players</h2>
+  <section className="party-invite-panel" aria-labelledby="party-invite-panel-title">
+    <h2 id="party-invite-panel-title" className="party-invite-panel__title">
+      Invite players
+    </h2>
     {children}
   </section>
 );
