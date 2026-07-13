@@ -1,0 +1,21 @@
+# T-018 approved exact fingerprints. Do not broaden these suppressions.
+5e5890a6d9fb046f0149d720a016b6a5de73320e:frontend/src/accounts/AuthForm.test.tsx:generic-api-key:69
+1a0ed0c167256fc0bcd2fa41cce1deb411abec18:frontend/src/auth/api.test.ts:generic-api-key:31
+1a0ed0c167256fc0bcd2fa41cce1deb411abec18:frontend/src/auth/api.test.ts:generic-api-key:59
+1a0ed0c167256fc0bcd2fa41cce1deb411abec18:frontend/src/auth/api.test.ts:generic-api-key:69
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:frontend/src/App.test.tsx:generic-api-key:99
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:frontend/src/App.test.tsx:generic-api-key:165
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:backend/internal/server/server_test.go:generic-api-key:40
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:backend/internal/server/server_test.go:generic-api-key:69
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:backend/internal/server/server_test.go:generic-api-key:81
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:backend/internal/server/server_test.go:generic-api-key:93
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:backend/internal/server/server_test.go:generic-api-key:105
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:backend/internal/server/server_test.go:generic-api-key:127
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:backend/internal/server/server_test.go:generic-api-key:137
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:backend/internal/server/server_test.go:generic-api-key:271
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:backend/internal/server/server_test.go:generic-api-key:296
+50f2a866b7f7ab31a9227fd70488e4cbf8f66a80:backend/internal/server/server_test.go:generic-api-key:396
+976bb8546d57ac75636b2ee25a9f10d3b968acc8:contenido/7. Desarrollo potenciado por IA/1. Proyecto front _ Web ecommerce con React y Vite/slides/18-env-secrets.md:generic-api-key:28
+976bb8546d57ac75636b2ee25a9f10d3b968acc8:contenido/7. Desarrollo potenciado por IA/1. Proyecto front _ Web ecommerce con React y Vite/slides/18-env-secrets.md:generic-api-key:200
+976bb8546d57ac75636b2ee25a9f10d3b968acc8:contenido/7. Desarrollo potenciado por IA/1. Proyecto front _ Web ecommerce con React y Vite/slides/18-env-secrets.md:generic-api-key:232
+976bb8546d57ac75636b2ee25a9f10d3b968acc8:contenido/7. Desarrollo potenciado por IA/1. Proyecto front _ Web ecommerce con React y Vite/slides/18-env-secrets.md:generic-api-key:242
