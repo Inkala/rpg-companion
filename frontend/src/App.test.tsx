@@ -41,6 +41,33 @@ const fighterCharacter = {
   createdAt: '2026-07-07T10:00:00Z',
 };
 
+const manualCharacter = {
+  ...fighterCharacter,
+  id: '44444444-4444-4444-4444-444444444444',
+  name: 'Seren Ashfall',
+  className: 'Ranger',
+  subclassName: null,
+  level: 3,
+  ancestry: 'Human',
+  background: 'Outlander',
+  abilityScores: {
+    strength: 12,
+    dexterity: 16,
+    constitution: 14,
+    intelligence: 10,
+    wisdom: 15,
+    charisma: 8,
+  },
+  hitPoints: { current: 26, max: 28 },
+  armorClass: 15,
+  referencePayload: buildGeneratedFighterCharacterSheet(
+    'dexterity-archer-fighter',
+    'Seren Ashfall',
+  ),
+  createdAt: '2026-07-11T10:00:00Z',
+  updatedAt: '2026-07-11T10:00:00Z',
+};
+
 const inviteToken = 'i'.repeat(43);
 
 const partyInspection = {
@@ -1488,7 +1515,7 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Branna Shieldhand' })).toBeInTheDocument();
   });
 
-  it('opens saved Character Reference from generated save success', async () => {
+  it('opens saved Character Reference immediately after generated save success', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
     const fetchMock = vi.fn((url: string, init?: RequestInit) => {
       if (url.endsWith('/auth/session')) {
@@ -1523,11 +1550,50 @@ describe('App', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
 
-    expect(await screen.findByText(/Branna Shieldhand is saved/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Open Character Reference' }));
-
-    expect(window.location.pathname).toBe('/characters/22222222-2222-2222-2222-222222222222');
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/characters/22222222-2222-2222-2222-222222222222');
+    });
+    expect(screen.queryByRole('button', { name: 'Open Character Reference' })).not.toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Branna Shieldhand' })).toBeInTheDocument();
+  });
+
+  it('opens saved Character Reference immediately after manual save success', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.endsWith('/auth/session')) {
+        return Promise.resolve(jsonResponse({ user: maraUser }));
+      }
+
+      if (url.endsWith('/characters') && init?.method === 'POST') {
+        return Promise.resolve(jsonResponse(manualCharacter, 201));
+      }
+
+      if (url.endsWith('/characters')) {
+        return Promise.resolve(jsonResponse({ characters: [] }));
+      }
+
+      if (url.includes('/characters/')) {
+        return Promise.resolve(jsonResponse(manualCharacter));
+      }
+
+      return Promise.resolve(jsonResponse({ error: 'not found' }, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/characters/new');
+
+    render(<App />);
+
+    expect(await screen.findByRole('button', { name: 'Mara account menu' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Fill the sheet myself/ }));
+    fillValidMinimumManualCharacter();
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/characters/44444444-4444-4444-4444-444444444444');
+    });
+    expect(screen.queryByRole('button', { name: 'Open Character Reference' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Seren Ashfall' })).toBeInTheDocument();
   });
 
   it('supports browser Back and Forward between routes', async () => {
@@ -1788,6 +1854,57 @@ const finishStrengthQuiz = () => {
         name: index === 4 ? 'See recommendation' : 'Next',
       }),
     );
+  });
+};
+
+const fillValidMinimumManualCharacter = () => {
+  fireEvent.change(screen.getByLabelText('Name'), {
+    target: { value: 'Seren Ashfall' },
+  });
+  fireEvent.change(screen.getByLabelText('Class'), {
+    target: { value: 'Ranger' },
+  });
+  fireEvent.change(screen.getByLabelText('Level'), {
+    target: { value: '3' },
+  });
+  fireEvent.change(screen.getByLabelText('Ancestry'), {
+    target: { value: 'Human' },
+  });
+  fireEvent.change(screen.getByLabelText('Background'), {
+    target: { value: 'Outlander' },
+  });
+  fireEvent.change(screen.getByLabelText('Strength'), {
+    target: { value: '12' },
+  });
+  fireEvent.change(screen.getByLabelText('Dexterity'), {
+    target: { value: '16' },
+  });
+  fireEvent.change(screen.getByLabelText('Constitution'), {
+    target: { value: '14' },
+  });
+  fireEvent.change(screen.getByLabelText('Intelligence'), {
+    target: { value: '10' },
+  });
+  fireEvent.change(screen.getByLabelText('Wisdom'), {
+    target: { value: '15' },
+  });
+  fireEvent.change(screen.getByLabelText('Charisma'), {
+    target: { value: '8' },
+  });
+  fireEvent.change(screen.getByLabelText('Current HP'), {
+    target: { value: '26' },
+  });
+  fireEvent.change(screen.getByLabelText('Maximum HP'), {
+    target: { value: '28' },
+  });
+  fireEvent.change(screen.getByLabelText('Armor Class'), {
+    target: { value: '15' },
+  });
+  fireEvent.change(screen.getByLabelText('Speed'), {
+    target: { value: '30' },
+  });
+  fireEvent.change(screen.getByLabelText('Proficiency bonus'), {
+    target: { value: '2' },
   });
 };
 

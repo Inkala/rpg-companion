@@ -166,6 +166,47 @@ describe('CharacterCreationPage', () => {
     });
   });
 
+  it('marks required manual entry fields without marking optional fields', () => {
+    startManualEntry();
+
+    [
+      'Name',
+      'Class',
+      'Level',
+      'Ancestry',
+      'Background',
+      'Strength',
+      'Dexterity',
+      'Constitution',
+      'Intelligence',
+      'Wisdom',
+      'Charisma',
+      'Current HP',
+      'Maximum HP',
+      'Armor Class',
+      'Speed',
+      'Proficiency bonus',
+    ].forEach((label) => {
+      const field = screen.getByLabelText(label);
+      expect(field).toBeRequired();
+      expect(field.closest('label')).toHaveTextContent(`${label} *`);
+    });
+
+    [
+      'Subclass',
+      'Concept',
+      'Notes',
+      'Initiative',
+      'Passive Perception',
+      'Action name',
+      'Feature name',
+    ].forEach((label) => {
+      const field = screen.getByLabelText(label);
+      expect(field).not.toBeRequired();
+      expect(field.closest('label')).not.toHaveTextContent(`${label} *`);
+    });
+  });
+
   it('lets the user fill a valid minimum manual character and reach review', () => {
     startManualEntry();
     fillValidMinimumManualCharacter();
@@ -202,6 +243,47 @@ describe('CharacterCreationPage', () => {
     expect(screen.getByText('Background is required.')).toBeInTheDocument();
     expect(screen.getByText('Strength is required.')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Review manual character.' })).not.toBeInTheDocument();
+  });
+
+  it('focuses and scrolls to the first invalid manual field', async () => {
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    });
+    startManualEntry();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Name')).toHaveFocus();
+    });
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Fix the highlighted fields before reviewing.',
+    );
+  });
+
+  it('focuses the first invalid manual field in form order instead of validator order', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: vi.fn(),
+    });
+    startManualEntry();
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Seren Ashfall' },
+    });
+    fireEvent.change(screen.getByLabelText('Class'), {
+      target: { value: 'Ranger' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Level')).toHaveFocus();
+    });
+    expect(screen.getByText('Level is required.')).toBeInTheDocument();
+    expect(screen.getByText('Ancestry is required.')).toBeInTheDocument();
   });
 
   it('shows validation messages for invalid manual numeric values', () => {
@@ -321,7 +403,7 @@ describe('CharacterCreationPage', () => {
     expect(screen.queryByText(/Saving manual characters comes next/)).not.toBeInTheDocument();
   });
 
-  it('saves the manual character for signed-in users', async () => {
+  it('saves the manual character for signed-in users and opens the ordinary reference immediately', async () => {
     const onOpenCharacterReference = vi.fn();
     createCharacterMock.mockResolvedValue(createdManualCharacterResponse('Seren Ashfall'));
     reviewValidMinimumManualCharacter({ isSignedIn: true, onOpenCharacterReference });
@@ -354,8 +436,34 @@ describe('CharacterCreationPage', () => {
         }),
       );
     });
-    expect(screen.getByText(/Seren Ashfall is saved/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open Character Reference' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(onOpenCharacterReference).toHaveBeenCalledWith(
+        '44444444-4444-4444-4444-444444444444',
+      );
+    });
+    expect(screen.queryByRole('button', { name: 'Open Character Reference' })).not.toBeInTheDocument();
+  });
+
+  it('shows a custom manual save action without auto-opening the reference', async () => {
+    const onOpenCharacterReference = vi.fn();
+    createCharacterMock.mockResolvedValue(createdManualCharacterResponse('Seren Ashfall'));
+    reviewValidMinimumManualCharacter({
+      isSignedIn: true,
+      onOpenCharacterReference,
+      savedCharacterActionLabel: 'Return to party invite',
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+    await screen.findByText(/Seren Ashfall is saved/);
+    expect(
+      screen.queryByRole('button', { name: 'Open Character Reference' }),
+    ).not.toBeInTheDocument();
+    expect(onOpenCharacterReference).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Return to party invite' }));
+
+    expect(onOpenCharacterReference).toHaveBeenCalledWith(
+      '44444444-4444-4444-4444-444444444444',
+    );
   });
 
   it('disables the manual save button while saving', async () => {
@@ -389,41 +497,6 @@ describe('CharacterCreationPage', () => {
     );
     expect(screen.getByRole('heading', { name: 'Review manual character.' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save character' })).not.toBeDisabled();
-  });
-
-  it('opens saved Character Reference after manual save success', async () => {
-    const onOpenCharacterReference = vi.fn();
-    createCharacterMock.mockResolvedValue(createdManualCharacterResponse('Seren Ashfall'));
-    reviewValidMinimumManualCharacter({ isSignedIn: true, onOpenCharacterReference });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
-    await screen.findByText(/Seren Ashfall is saved/);
-    fireEvent.click(screen.getByRole('button', { name: 'Open Character Reference' }));
-
-    expect(onOpenCharacterReference).toHaveBeenCalledWith(
-      '44444444-4444-4444-4444-444444444444',
-    );
-  });
-
-  it('customizes the successful-save action label without changing its callback', async () => {
-    const onOpenCharacterReference = vi.fn();
-    createCharacterMock.mockResolvedValue(createdManualCharacterResponse('Seren Ashfall'));
-    reviewValidMinimumManualCharacter({
-      isSignedIn: true,
-      onOpenCharacterReference,
-      savedCharacterActionLabel: 'Return to party invite',
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
-    await screen.findByText(/Seren Ashfall is saved/);
-    expect(
-      screen.queryByRole('button', { name: 'Open Character Reference' }),
-    ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Return to party invite' }));
-
-    expect(onOpenCharacterReference).toHaveBeenCalledWith(
-      '44444444-4444-4444-4444-444444444444',
-    );
   });
 
   it('shows a 5-question quiz with 4 answer options per question', () => {
@@ -656,7 +729,7 @@ describe('CharacterCreationPage', () => {
     expect(createCharacterMock).not.toHaveBeenCalled();
   });
 
-  it('saves the generated character for signed-in users', async () => {
+  it('saves the generated character for signed-in users and opens the ordinary reference immediately', async () => {
     const onOpenCharacterReference = vi.fn();
     createCharacterMock.mockResolvedValue(createdCharacterResponse('Branna Shieldhand'));
     renderCreationPage({ isSignedIn: true, onOpenCharacterReference });
@@ -693,12 +766,12 @@ describe('CharacterCreationPage', () => {
         }),
       );
     });
-    expect(screen.getByText(/Branna Shieldhand is saved/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Open Character Reference' }));
-
-    expect(onOpenCharacterReference).toHaveBeenCalledWith(
-      '22222222-2222-2222-2222-222222222222',
-    );
+    await waitFor(() => {
+      expect(onOpenCharacterReference).toHaveBeenCalledWith(
+        '22222222-2222-2222-2222-222222222222',
+      );
+    });
+    expect(screen.queryByRole('button', { name: 'Open Character Reference' })).not.toBeInTheDocument();
   });
 
   it('disables the save button while saving', async () => {
