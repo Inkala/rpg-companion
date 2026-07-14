@@ -50,12 +50,15 @@ func TestAuthSessionFlow(t *testing.T) {
 	}
 	assertNoStore(t, registerRecorder)
 	assertCredentialCORS(t, registerRecorder)
-	sessionCookie := requireSessionCookie(t, registerRecorder)
-	if !sessionCookie.HttpOnly {
-		t.Fatal("expected session cookie to be HttpOnly")
+	if got := registerRecorder.Header().Values("Set-Cookie"); len(got) != 0 {
+		t.Fatalf("expected registration not to set a session cookie, got %q", got)
 	}
-	if sessionCookie.Secure {
-		t.Fatal("expected local development session cookie to be non-Secure")
+	var sessionRowsAfterRegistration int
+	if err := pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM user_sessions`).Scan(&sessionRowsAfterRegistration); err != nil {
+		t.Fatalf("count sessions after registration: %v", err)
+	}
+	if sessionRowsAfterRegistration != 0 {
+		t.Fatalf("expected registration to create no session rows, got %d", sessionRowsAfterRegistration)
 	}
 
 	var registered authResponse
@@ -126,6 +129,13 @@ func TestAuthSessionFlow(t *testing.T) {
 	}
 	assertErrorResponse(t, invalidLoginRecorder, "Username, email, or password is incorrect.")
 
+	anonymousCurrentRecorder := httptest.NewRecorder()
+	anonymousCurrentRequest := httptest.NewRequest(http.MethodGet, "/auth/session", nil)
+	handler.ServeHTTP(anonymousCurrentRecorder, anonymousCurrentRequest)
+	if anonymousCurrentRecorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected anonymous current session status %d, got %d with body %s", http.StatusUnauthorized, anonymousCurrentRecorder.Code, anonymousCurrentRecorder.Body.String())
+	}
+
 	usernameLoginRecorder := httptest.NewRecorder()
 	usernameLoginRequest := jsonRequest(http.MethodPost, "/auth/sessions", `{
 		"usernameOrEmail": "mARA",
@@ -136,6 +146,13 @@ func TestAuthSessionFlow(t *testing.T) {
 		t.Fatalf("expected username login status %d, got %d with body %s", http.StatusOK, usernameLoginRecorder.Code, usernameLoginRecorder.Body.String())
 	}
 	assertNoStore(t, usernameLoginRecorder)
+	sessionCookie := requireSessionCookie(t, usernameLoginRecorder)
+	if !sessionCookie.HttpOnly {
+		t.Fatal("expected session cookie to be HttpOnly")
+	}
+	if sessionCookie.Secure {
+		t.Fatal("expected local development session cookie to be non-Secure")
+	}
 
 	emailLoginRecorder := httptest.NewRecorder()
 	emailLoginRequest := jsonRequest(http.MethodPost, "/auth/sessions", `{
@@ -260,7 +277,7 @@ func TestRegistrationPasswordPolicy(t *testing.T) {
 	}
 }
 
-func TestProductionSessionCookieIsSecure(t *testing.T) {
+func TestProductionSignInSessionCookieIsSecure(t *testing.T) {
 	pool := setupIntegrationDatabase(t)
 	handler := New(
 		characters.NewRepository(pool),
@@ -284,8 +301,22 @@ func TestProductionSessionCookieIsSecure(t *testing.T) {
 	if recorder.Code != http.StatusCreated {
 		t.Fatalf("expected register status %d, got %d with body %s", http.StatusCreated, recorder.Code, recorder.Body.String())
 	}
+	if got := recorder.Header().Values("Set-Cookie"); len(got) != 0 {
+		t.Fatalf("expected registration not to set a session cookie, got %q", got)
+	}
 
-	sessionCookie := requireSessionCookie(t, recorder)
+	loginRecorder := httptest.NewRecorder()
+	loginRequest := jsonRequest(http.MethodPost, "/auth/sessions", `{
+		"usernameOrEmail": "secure-user",
+		"password": "Correct-horse-battery-staple1"
+	}`)
+	handler.ServeHTTP(loginRecorder, loginRequest)
+
+	if loginRecorder.Code != http.StatusOK {
+		t.Fatalf("expected login status %d, got %d with body %s", http.StatusOK, loginRecorder.Code, loginRecorder.Body.String())
+	}
+
+	sessionCookie := requireSessionCookie(t, loginRecorder)
 	if !sessionCookie.HttpOnly {
 		t.Fatal("expected production session cookie to be HttpOnly")
 	}
@@ -310,7 +341,17 @@ func TestSessionStoresOnlyTokenHash(t *testing.T) {
 		t.Fatalf("expected register status %d, got %d with body %s", http.StatusCreated, recorder.Code, recorder.Body.String())
 	}
 
-	sessionCookie := requireSessionCookie(t, recorder)
+	loginRecorder := httptest.NewRecorder()
+	loginRequest := jsonRequest(http.MethodPost, "/auth/sessions", `{
+		"usernameOrEmail": "hash-user",
+		"password": "Correct-horse-battery-staple1"
+	}`)
+	handler.ServeHTTP(loginRecorder, loginRequest)
+	if loginRecorder.Code != http.StatusOK {
+		t.Fatalf("expected login status %d, got %d with body %s", http.StatusOK, loginRecorder.Code, loginRecorder.Body.String())
+	}
+
+	sessionCookie := requireSessionCookie(t, loginRecorder)
 	var storedTokenHash []byte
 	err := pool.QueryRow(context.Background(), `
 SELECT token_hash
@@ -1603,7 +1644,15 @@ func registerTestUser(t *testing.T, handler http.Handler, username string) (*htt
 
 	var response authResponse
 	decodeResponse(t, recorder, &response)
-	return requireSessionCookie(t, recorder), response
+
+	loginRecorder := httptest.NewRecorder()
+	loginRequest := jsonRequest(http.MethodPost, "/auth/sessions", signInJSON(username, "Correct-horse-battery-staple1"))
+	handler.ServeHTTP(loginRecorder, loginRequest)
+	if loginRecorder.Code != http.StatusOK {
+		t.Fatalf("sign in %s: expected status %d, got %d with body %s", username, http.StatusOK, loginRecorder.Code, loginRecorder.Body.String())
+	}
+
+	return requireSessionCookie(t, loginRecorder), response
 }
 
 func registrationJSON(username string, email string, password string) string {
@@ -1611,6 +1660,17 @@ func registrationJSON(username string, email string, password string) string {
 		"username": username,
 		"email":    email,
 		"password": password,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return string(body)
+}
+
+func signInJSON(usernameOrEmail string, password string) string {
+	body, err := json.Marshal(map[string]string{
+		"usernameOrEmail": usernameOrEmail,
+		"password":        password,
 	})
 	if err != nil {
 		panic(err)

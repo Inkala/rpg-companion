@@ -160,6 +160,34 @@ func TestRegisterDuplicateIdentityResponsesAreIdentical(t *testing.T) {
 	}
 }
 
+func TestRegisterCreatesUserWithoutSessionCookie(t *testing.T) {
+	repository := &fakeHandlerRepository{}
+	handler := newArgonGateTestHandler(repository)
+	handler.hashPassword = func(string, PasswordConfig) (string, error) {
+		return "encoded-password-hash", nil
+	}
+	recorder := httptest.NewRecorder()
+	request := authHandlerJSONRequest(
+		"/auth/register",
+		`{"username":"Mara","email":"mara@example.com","password":"Valid-password1!"}`,
+	)
+
+	handler.Register(recorder, request)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d with body %s", http.StatusCreated, recorder.Code, recorder.Body.String())
+	}
+	if repository.user.ID == uuid.Nil {
+		t.Fatal("expected registration to create a user")
+	}
+	if repository.createSessionCount != 0 {
+		t.Fatalf("expected no session rows to be created, got %d", repository.createSessionCount)
+	}
+	if got := recorder.Header().Values("Set-Cookie"); len(got) != 0 {
+		t.Fatalf("expected no session cookie, got %q", got)
+	}
+}
+
 func TestSignInUnknownOrInvalidIdentityPerformsOneDummyVerification(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -349,8 +377,9 @@ func TestSignInArgonGateReleasesAfterSuccessAndFailure(t *testing.T) {
 }
 
 type fakeHandlerRepository struct {
-	user            User
-	createUserError error
+	user               User
+	createUserError    error
+	createSessionCount int
 }
 
 func (repository *fakeHandlerRepository) CreateUser(_ context.Context, user User) (User, error) {
@@ -376,6 +405,7 @@ func (repository *fakeHandlerRepository) FindUserByEmail(context.Context, string
 }
 
 func (repository *fakeHandlerRepository) CreateSession(_ context.Context, session Session) (Session, error) {
+	repository.createSessionCount++
 	return session, nil
 }
 

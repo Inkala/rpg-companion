@@ -163,7 +163,7 @@ describe('App', () => {
   });
 
   it.each(['sign-in', 'register'] as const)(
-    'returns %s success to the typed create Party destination',
+    'preserves %s flow for the typed create Party destination',
     async (accountMode) => {
       const fetchMock = partyFetchMock();
       vi.stubGlobal('fetch', fetchMock);
@@ -177,6 +177,12 @@ describe('App', () => {
         );
         completeRegistrationForm();
         fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+        expect(
+          await screen.findByRole('heading', { name: 'Sign in' }),
+        ).toBeInTheDocument();
+        expect(window.location.pathname).toBe('/login');
+        completeSignInForm();
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
       } else {
         completeSignInForm();
         fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -522,6 +528,11 @@ describe('App', () => {
     expect(window.location.pathname).toBe('/sign-up');
     completeRegistrationForm();
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/login');
+    completeSignInForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
@@ -935,7 +946,7 @@ describe('App', () => {
   });
 
   it.each(['sign-in', 'register'] as const)(
-    'returns Party Character %s to the exact typed identifiers',
+    'preserves Party Character %s for the exact typed identifiers',
     async (accountMode) => {
       const fetchMock = partyFetchMock();
       vi.stubGlobal('fetch', fetchMock);
@@ -953,6 +964,12 @@ describe('App', () => {
         );
         completeRegistrationForm();
         fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+        expect(
+          await screen.findByRole('heading', { name: 'Sign in' }),
+        ).toBeInTheDocument();
+        expect(window.location.pathname).toBe('/login');
+        completeSignInForm();
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
       } else {
         completeSignInForm();
         fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -1370,8 +1387,13 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
   });
 
-  it('registers and returns to the signed-in home', async () => {
+  it('registers, stays signed out, shows a dismissible success toast, and opens sign-in', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const submittedValues = {
+      username: 'Mara',
+      email: 'mara@example.com',
+      password: 'Correct-horse-battery-staple1',
+    };
     const fetchMock = vi.fn((url: string) => {
       const path = new URL(url).pathname;
       if (path === '/auth/session') {
@@ -1396,26 +1418,31 @@ describe('App', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Create account' })[0]);
     fireEvent.change(screen.getByLabelText('Username'), {
-      target: { value: 'Mara' },
+      target: { value: submittedValues.username },
     });
     fireEvent.change(screen.getByLabelText('Email'), {
-      target: { value: 'mara@example.com' },
+      target: { value: submittedValues.email },
     });
     fireEvent.change(screen.getByLabelText('Password'), {
-      target: { value: 'Correct-horse-battery-staple1' },
+      target: { value: submittedValues.password },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByRole('button', { name: 'Mara account menu' })).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: 'No saved characters yet' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mara account menu' })).not.toBeInTheDocument();
+    const toast = await screen.findByText('Account created. Sign in to continue.');
+    expect(toast).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dismiss notification' })).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(submittedValues.email);
+    expect(document.body).not.toHaveTextContent(submittedValues.password);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss notification' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Account created. Sign in to continue.')).not.toBeInTheDocument();
+    });
     expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:8080/auth/register',
       expect.objectContaining({
-        body: JSON.stringify({
-          username: 'Mara',
-          email: 'mara@example.com',
-          password: 'Correct-horse-battery-staple1',
-        }),
+        body: JSON.stringify(submittedValues),
         credentials: 'include',
         method: 'POST',
       }),

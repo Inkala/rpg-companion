@@ -170,10 +170,6 @@ func (handler Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !handler.createSessionCookie(w, r, created) {
-		return
-	}
-
 	writeJSON(w, http.StatusCreated, sessionResponse{User: PublicUserFromUser(created)})
 }
 
