@@ -2,12 +2,13 @@
 
 Submission deadline: 20 July 2026
 
-Active task: T-017 Party MVP
+Active task: T-019 account and character UX polish
 
-State: T-018 whole-application security hardening is complete. T-017A backend and T-017B isolated
-frontend are merged. T-017C central frontend integration is complete, validated, committed, and
-pushed at `6aaa298`, but is not merged. T-017D combined validation and deployment follows after the
-T-017C PR passes CI and the production deployment-trigger order is confirmed.
+State: T-017 Party MVP is complete, deployed, and publicly smoke-tested at merge SHA `4f7116f`.
+Marcela completed an initial production review and approved planning three T-019 slices covering
+registration confirmation, character-entry usability, ordinary post-save navigation, shared
+character cards, and the My characters layout. Marcela approved the exact three-slice T-019
+checklist. The planning checkpoint must be committed before creating the dedicated worktree.
 
 ## Completed T-017 feature worktrees
 
@@ -32,18 +33,27 @@ T-017C PR passes CI and the production deployment-trigger order is confirmed.
   passed 350 frontend tests, lint, typecheck, and build.
 - Cleanup requires explicit approval later.
 
-## T-017C integration worktree
+## Completed T-017C integration worktree
 
 - Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-party-integration`
 - Branch: `codex/t017c-party-integration`
 - Base: orchestration checkpoint `1c448d0`.
-- Final branch HEAD: `6aaa298`.
-- Status: complete and pushed. Route/bootstrap, typed invite authentication return, create/join,
+- Final branch HEAD: `38bb93c`.
+- Status: complete and merged through PR #26 as `4f7116f`. Route/bootstrap, typed invite
+  authentication return, create/join,
   Party detail, invite tools, GM Character Reference, Home integration, responsive behavior, and
-  central route focus passed 432 frontend tests, lint, typecheck, build, and manual 320px, 390px, and
+  central route focus passed 436 frontend tests, lint, typecheck, build, and manual 320px, 390px, and
   768px signed-out checks.
-- Integration: PR not yet created. Do not merge until deployment triggers and production migration
-  order are confirmed.
+- Integration: deployed and publicly validated through T-017D.
+
+## T-017D release result
+
+- Production migration version: 3, clean.
+- Railway deployment: `687f8c8c-c186-4a21-b1cf-06edf58c9692`.
+- Cloudflare deployment: `06f55411`.
+- Public flow: GM creation/invite, Player authentication/join, roster, GM read-only reference,
+  refresh, invalid/revoked invites, authorization, and narrow widths passed.
+- Automatic Railway and Cloudflare production deployments are restored.
 
 ## Completed T-018 worktrees
 
@@ -71,7 +81,7 @@ T-017C PR passes CI and the production deployment-trigger order is confirmed.
 - The frozen Party request, inspection, join-throttle, no-store, replay-status, and cross-user
   Character Reference rules are approved in the T-017 task documents.
 - T-017A and T-017B are merged. Their PR checks passed on the combined backend baseline.
-- T-017C is complete and pushed at `6aaa298`; its PR and CI remain pending.
+- T-017 is complete and deployed at `4f7116f`; final Party smoke validation passed.
 - The approved invite-refresh clarification keeps raw tokens memory-only. Reloading a scrubbed
   `/parties/join` is safely unavailable and requires reopening the original link.
 - No product work starts directly in the main checkout.
@@ -93,8 +103,8 @@ T-017C PR passes CI and the production deployment-trigger order is confirmed.
 - T-014A compact Character Reference polish is merged.
 - T-015 read-only profile page and mobile profile navigation are merged.
 - T-018 whole-application Security baseline is merged, deployed, and verified.
-- T-017 backend and isolated Party frontend foundations are merged through `af592ec`. The completed
-  central integration remains on `codex/t017c-party-integration` until its PR is reviewed.
+- T-017 Party creation, secure invitation, atomic joining, roster, and GM read-only access are
+  deployed and publicly smoke-tested.
 
 ## Final-week constraints
 
@@ -102,13 +112,13 @@ T-017C PR passes CI and the production deployment-trigger order is confirmed.
 - No new coding task starts in the dirty main checkout.
 - Parallel coding uses separate worktrees with disjoint ownership.
 - Worker sessions do not edit shared coordination records.
-- Party is the active product priority. Guest draft migration, unrelated account features, resource
-  tracking, AI, and post-MVP Party administration remain deferred.
+- T-019 may proceed only through its approved sequential slices. Presentation work is paused at
+  Marcela's request while she performs short production-review sessions, but the 20 July submission
+  package remains the hard deadline.
 
 ## Single next action
 
-Review and commit the approved orchestration correction, then open the T-017C PR. Before merging,
-confirm Railway and Cloudflare Pages deployment triggers and decide the additive production
-migration order.
+Commit this approved planning checkpoint. Then create one dedicated T-019 worktree from the clean
+planning commit and start Slice 1 only.
 
-Last updated: 2026-07-13
+Last updated: 2026-07-14

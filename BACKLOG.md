@@ -17,9 +17,9 @@ Task IDs reflect actual task folders and do not map reliably to the older GitHub
   `0a724fb`; CI passed.
 - [x] T-016: orchestration, documentation, submission, and GitHub synchronization reset integrated
   in `7f5e787`; CI passed.
-- [ ] T-018: approved whole-application security baseline. Active before any new feature work;
-  implementation values pending the worker investigation.
-- [ ] T-017: Party MVP paused until T-018 is integrated and verified.
+- [x] T-018: whole-application security baseline integrated and deployed.
+- [x] T-017: Party MVP integrated, deployed, and publicly smoke-tested.
+- [ ] T-019: account and character UX polish planning pending approval.
 
 ## P0: TFM submission package
 
@@ -44,10 +44,13 @@ Recommended parallel tasks after the current dirty-main integration is resolved:
 ## Deferred product work
 
 - [ ] Guest draft localStorage persistence and account conversion.
-- [ ] Party creation, invite link/code, joining, and character linking.
-- [ ] GM roster and server-side party authorization.
+- [x] Party creation, invite link, joining, and character linking.
+- [x] GM roster and server-side party authorization.
 - [ ] Post-MVP Party follow-up: let a GM remove a Player membership without deleting or modifying
   the linked character. The removed character becomes available to join another party.
+- [ ] Post-MVP Party follow-up: character creation launched from an invite uses the ordinary
+  creation experience, automatically links the saved character to the pending Party, and opens the
+  expanded Character Reference.
 - [ ] Profile editing, email verification, and password reset.
 - [ ] Account, character, and production test-data deletion.
 - [ ] Attack reminder badges and calculation breakdowns.
@@ -69,3 +72,4 @@ Recommended parallel tasks after the current dirty-main integration is resolved:
 - [x] Public frontend, Railway backend, PostgreSQL, and smoke testing.
 - [x] Compact Character Reference header/stat polish.
 - [x] Read-only profile page.
+- [x] Party creation, secure invite, atomic join, roster, and GM read-only Character Reference.

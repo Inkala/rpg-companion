@@ -1,6 +1,6 @@
 # T-017 Tasks: Party MVP vertical slice
 
-Status: approved and in progress
+Status: complete
 
 Marcela approved the original contract on 2026-07-12 and approved continuing the reviewed
 Security-amended contract on 2026-07-13. T-018 is integrated and verified. T-017A and T-017B are
@@ -106,11 +106,11 @@ complete and merged through PR #24 (`02b0bc8`) and PR #25 (`af592ec`).
 
 ## 6. T-017D combined validation and deployment
 
-- [ ] Run migration up/down on a disposable database.
-- [ ] Run full backend and frontend checks.
-- [ ] Run two-user local end-to-end smoke testing.
-- [ ] Confirm all required 401/403 cases.
-- [ ] Integrate branches in declared order and confirm CI.
-- [ ] Apply the production migration and deploy.
-- [ ] Run public GM/player party smoke testing, including refresh and invalid invite behavior.
-- [ ] Update orchestrator-owned checklists, notes, worklog, current state, and GitHub planning.
+- [x] Run migration up/down on a disposable database.
+- [x] Run full backend and frontend checks.
+- [x] Run two-user local end-to-end smoke testing.
+- [x] Confirm all required 401/403 cases.
+- [x] Integrate branches in declared order and confirm CI.
+- [x] Apply the production migration and deploy.
+- [x] Run public GM/player party smoke testing, including refresh and invalid invite behavior.
+- [x] Update orchestrator-owned checklists, notes, worklog, current state, and GitHub planning.

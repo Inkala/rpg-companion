@@ -1,6 +1,6 @@
 # T-017 Design: Party MVP vertical slice
 
-Status: approved and in progress
+Status: complete
 
 Dependency: satisfied. T-018 is integrated and verified, and both Party branches contain the
 verified orchestration checkpoint `a82bb34`.

@@ -76,3 +76,22 @@ approved, and both Party branches are rebased onto `a82bb34`, validated, pushed,
 - Security requirements: `docs/course-rubric.md` section 4
 - GitHub party issue: `https://github.com/Inkala/rpg-companion/issues/9`
 - GitHub authorization issue: `https://github.com/Inkala/rpg-companion/issues/10`
+
+## 2026-07-14 completion
+
+- Certain: PR #26 merged T-017C as `4f7116f0febe020438e37687b03de0756ef5d98c`.
+- Certain: main CI run `29279508474` passed Frontend, Backend, and Secret history.
+- Certain: disposable PostgreSQL migration up/down/up validation passed at version 3 without
+  damaging baseline user or character data.
+- Certain: production was backed up, restored into disposable PostgreSQL, and verified before
+  applying exactly migration `000003`.
+- Certain: production is at migration version 3 with `dirty=false`, and the three Party tables,
+  expected constraints, and indexes are present.
+- Certain: Railway deployment `687f8c8c-c186-4a21-b1cf-06edf58c9692` and Cloudflare deployment
+  `06f55411` serve the exact merge SHA.
+- Certain: the public two-account GM/Player smoke test passed creation, invitation, fragment
+  scrubbing, authentication return, join, roster, read-only GM reference, refresh, regeneration,
+  invalid invite privacy, authorization, and 320px/390px/720px layout checks.
+- Certain: automatic Railway and Cloudflare production deployments were restored after validation.
+- Certain: no confirmed T-017 application defect remains. A naturally time-expired production
+  invite was not manufactured; expiry remains covered by automated and disposable-database tests.

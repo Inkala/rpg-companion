@@ -416,3 +416,30 @@ base.
   intentionally unavailable; reopening the original link restarts the flow.
 - Kept T-017D deployment gated on PR CI, disposable-database validation, a local two-user smoke
   test, and confirmation of Railway and Cloudflare Pages deployment triggers.
+
+## 2026-07-14: Completed and deployed the Party MVP
+
+- Merged T-017C through PR #26 as `4f7116f` after the mounted invite-fragment correction and 436
+  frontend tests passed.
+- Validated migration up/down/up, complete backend/frontend gates, authorization, two-account local
+  flow, and responsive Party screens.
+- Verified a protected production backup and applied exactly migration `000003`, leaving production
+  at version 3 with `dirty=false` and existing user/character/session counts unchanged.
+- Deployed the exact merge SHA to Railway and Cloudflare, then passed the public GM/Player Party
+  flow, privacy-safe invalid/revoked invites, authorization, refresh, and narrow-width checks.
+- Restored automatic production deployments after validation.
+- Next action: let Marcela test the deployed MVP and triage selected post-MVP improvements.
+
+## 2026-07-14: Planned T-019 account and character UX polish
+
+- Captured Marcela's first production-review findings for registration confirmation, required form
+  fields, post-save navigation, saved-character card consistency, and full-width My characters
+  layout.
+- Selected Sonner `2.0.7` for one accessible registration success toast and documented the required
+  backend no-session registration change.
+- Split the Red task into three sequential review checkpoints and prohibited all Party implementation.
+- Recorded automatic linking after invite-launched character creation as a separate future Party
+  requirement.
+- Marcela approved the exact three-slice checklist and requested a separate implementation session.
+- Next action: commit the planning checkpoint, then create the dedicated T-019 worktree and start
+  Slice 1 only.

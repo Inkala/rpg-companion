@@ -1,6 +1,6 @@
 # T-017: Party MVP vertical slice
 
-Status: approved and in progress
+Status: complete
 
 Dependency: satisfied. T-018 is integrated and verified. T-017A backend and T-017B isolated frontend
 are merged through PR #24 (`02b0bc8`) and PR #25 (`af592ec`).
@@ -64,7 +64,7 @@ features.
 - Implementation: child-task validation plus combined local, CI, migration, deployment, and public
   two-account smoke tests.
 
-## Next Action
+## Completion
 
-Commit the reconciled integration checkpoint. Then create one dedicated T-017C worktree and begin
-the route parser, serializer, and secure pre-React invite-fragment bootstrap slice.
+T-017 merged through PRs #24, #25, and #26, deployed at `4f7116f`, and passed migration,
+authorization, local two-user, public GM/Player, refresh, invalid-invite, and responsive checks.

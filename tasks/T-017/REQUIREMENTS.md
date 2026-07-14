@@ -1,6 +1,6 @@
 # T-017 Requirements: Party creation, invitation, joining, roster, and GM access
 
-Status: approved and in progress
+Status: complete
 
 Dependency: satisfied. T-018 is integrated and verified, and both Party branches are rebased onto
 the verified baseline.

@@ -369,3 +369,64 @@ Consequences:
 Public and local smoke tests must expect scrubbed invite reload to become unavailable and must verify
 that reopening the original link works. No additional backend session, cookie, or token-exchange
 mechanism is added before submission.
+
+## 2026-07-14: Registration creates an account but does not authenticate
+
+Context:
+The deployed registration endpoint currently creates both a user and a session. Marcela's production
+review found that successful registration has no clear confirmation and should instead lead to an
+explicit Sign in step.
+
+Decision:
+Change registration so it creates the user but no session row or cookie. After success, the frontend
+shows Sign in and the fixed message `Account created. Sign in to continue.` Existing validation,
+password hashing, throttling, collision privacy, and typed authentication destinations remain.
+
+Reason:
+The resulting authentication state is explicit and refresh-safe. It avoids creating and immediately
+revoking a session only to support the requested interface.
+
+Consequences:
+T-019 Slice 1 changes the backend and frontend auth contract and must reference Security rubric
+section 4. Existing accounts are unaffected. Registration and sign-in remain separate rate-limited
+operations.
+
+## 2026-07-14: Use Sonner for accessible transient notifications
+
+Context:
+The frontend has no toast primitive. T-019 needs one success notification and should not invent a
+large custom notification subsystem.
+
+Decision:
+Use Sonner `2.0.7`, mounted once and styled with Hunin's existing design tokens. Configure a
+dismissible success toast with accessible labels and fixed public copy.
+
+Reason:
+Sonner explicitly supports React 19, includes TypeScript declarations, has no runtime dependencies,
+and permits scoped visual customization.
+
+Consequences:
+T-019 updates `package.json` and the authoritative pnpm lockfile, runs dependency audit and the full
+frontend gate, and does not introduce a second toast library.
+
+## 2026-07-14: Character cards share one summary contract and component
+
+Context:
+The deployed Mara sample card establishes the intended character-card design, while account-owned
+characters use a separate sparse card. CharacterSheetV1 already stores validated landing concept,
+featured abilities, and optional portrait metadata, but the owner-scoped list response omits them.
+
+Decision:
+Extend only the owner-scoped character summary response with the four presentation values required
+by the shared card. Render Mara and saved characters through one component. Unknown or absent
+portraits use the existing generic avatar. Keep full payloads, owner identifiers, and Party data out
+of the response.
+
+Reason:
+This produces the requested consistent visual without inventing abilities for saved characters or
+fetching every complete character separately.
+
+Consequences:
+T-019 Slice 3 requires backend exact-key privacy tests, frontend DTO/API tests, and responsive card
+validation. Party code remains excluded. Automatic linking after creating from an invite is a
+separate Party follow-up.
