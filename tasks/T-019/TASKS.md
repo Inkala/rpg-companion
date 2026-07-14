@@ -1,6 +1,6 @@
 # T-019 Tasks: Account and character UX polish
 
-Status: approved
+Status: complete
 
 Marcela approved the three-slice checklist on 2026-07-14. Implement only one slice at a time and
 stop for review before commit or continuation.
@@ -17,15 +17,17 @@ stop for review before commit or continuation.
 
 ## Slice 1: Registration success and toast
 
-- [ ] Add backend tests proving successful registration creates a user but no session row or cookie.
-- [ ] Preserve registration validation, collision privacy, throttling, hashing, and error statuses.
-- [ ] Remove automatic session creation from registration only.
-- [ ] Add Sonner `2.0.7` with pnpm and update only the authoritative lockfile.
-- [ ] Add frontend tests for Sign in navigation and the exact accessible success toast.
-- [ ] Separate registration success from authentication success without accepting return URLs.
-- [ ] Preserve typed authentication destinations without editing Party code.
-- [ ] Run focused auth tests plus full backend/frontend validation.
-- [ ] Stop for review before commit or Slice 2.
+- [x] Add backend tests proving successful registration creates a user but no session row or cookie.
+- [x] Preserve registration validation, collision privacy, throttling, hashing, and error statuses.
+- [x] Remove automatic session creation from registration only.
+- [x] Add Sonner `2.0.7` with pnpm and update only the authoritative lockfile.
+- [x] Add frontend tests for Sign in navigation and the exact accessible success toast.
+- [x] Separate registration success from authentication success without accepting return URLs.
+- [x] Preserve typed authentication destinations without editing Party code.
+- [x] Run focused auth tests plus full backend/frontend validation.
+- [x] Stop for review before commit or Slice 2.
+
+Completed in commit `cf79f919f3ef56b77f6e1779606c3bc7aa94e77d`.
 
 Expected files:
 
@@ -42,15 +44,17 @@ Expected files:
 
 ## Slice 2: Required fields and ordinary post-save navigation
 
-- [ ] Add failing tests for required markers and optional-field exclusions.
-- [ ] Add failing tests for summary alert, first-invalid focus, and scroll behavior.
-- [ ] Add visible and accessible required semantics without changing validation rules.
-- [ ] Focus and scroll to the first invalid field after Review character.
-- [ ] Add failing guided and manual tests for immediate navigation after ordinary save.
-- [ ] Remove the extra ordinary `Open Character Reference` action.
-- [ ] Preserve save failure/retry and the existing custom Party-return behavior.
-- [ ] Run focused creation/App tests plus full frontend validation.
-- [ ] Stop for review before commit or Slice 3.
+- [x] Add failing tests for required markers and optional-field exclusions.
+- [x] Add failing tests for summary alert, first-invalid focus, and scroll behavior.
+- [x] Add visible and accessible required semantics without changing validation rules.
+- [x] Focus and scroll to the first invalid field after Review character.
+- [x] Add failing guided and manual tests for immediate navigation after ordinary save.
+- [x] Remove the extra ordinary `Open Character Reference` action.
+- [x] Preserve save failure/retry and the existing custom Party-return behavior.
+- [x] Run focused creation/App tests plus full frontend validation.
+- [x] Stop for review before commit or Slice 3.
+
+Completed in commit `c53de604388ff89d2750bc4b757155db7b6d0143`.
 
 Expected files:
 
@@ -62,18 +66,20 @@ Expected files:
 
 ## Slice 3: Shared character card and Home layout
 
-- [ ] Add failing backend exact-contract tests for the four approved summary presentation values.
-- [ ] Extend the owner-scoped summary query/model/response without exposing full payload or owner ID.
-- [ ] Add failing frontend API tests for the extended summary DTO.
-- [ ] Add a tested shared character-card component used by Mara and saved characters.
-- [ ] Normalize Mara to the shared DTO and preserve its portrait and audited preview content.
-- [ ] Use the generic avatar for absent or unknown user-character portraits.
-- [ ] Change every card action to `Expand`.
-- [ ] Move Create character into the full-width My characters header.
-- [ ] Render full-width cards below the header in every loaded state.
-- [ ] Verify wrapping, 44px controls, keyboard behavior, and no overflow at 320px, 390px, and 720px.
-- [ ] Run disposable-PostgreSQL backend tests and complete backend/frontend gates.
-- [ ] Stop for final review before commit, push, PR, or deployment.
+- [x] Add failing backend exact-contract tests for the four approved summary presentation values.
+- [x] Extend the owner-scoped summary query/model/response without exposing full payload or owner ID.
+- [x] Add failing frontend API tests for the extended summary DTO.
+- [x] Add a tested shared character-card component used by Mara and saved characters.
+- [x] Normalize Mara to the shared DTO and preserve its portrait and audited preview content.
+- [x] Use the generic avatar for absent or unknown user-character portraits.
+- [x] Change every card action to `Expand`.
+- [x] Move Create character into the full-width My characters header.
+- [x] Render full-width cards below the header in every loaded state.
+- [x] Verify wrapping, 44px controls, keyboard behavior, and no overflow at 320px, 390px, and 720px.
+- [x] Run disposable-PostgreSQL backend tests and complete backend/frontend gates.
+- [x] Stop for final review before commit, push, PR, or deployment.
+
+Completed in commit `b6ce49b457aa1225a505aa3be6ded8ef2a693f98`.
 
 Expected files:
 
@@ -94,16 +100,16 @@ Expected files:
 
 ## Prohibited files and behavior
 
-- [ ] Do not edit `frontend/src/parties/`.
-- [ ] Do not edit `backend/internal/parties/`.
-- [ ] Do not edit Party migrations, routes, DTOs, invite state, join logic, authorization, or tests.
-- [ ] Do not implement automatic Party linking after character creation in T-019.
-- [ ] Do not change CI, deployment, providers, or infrastructure.
+- [x] Do not edit `frontend/src/parties/`.
+- [x] Do not edit `backend/internal/parties/`.
+- [x] Do not edit Party migrations, routes, DTOs, invite state, join logic, authorization, or tests.
+- [x] Do not implement automatic Party linking after character creation in T-019.
+- [x] Do not change CI, deployment, providers, or infrastructure.
 
 ## Proposed commit messages
 
 ```text
 fix(accounts): require sign in after registration
-fix(characters): improve required fields and save navigation
-feat(characters): unify home character cards
+fix(characters): polish required fields and save navigation
+feat(characters): share character summary cards
 ```
