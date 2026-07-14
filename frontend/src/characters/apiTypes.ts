@@ -55,6 +55,10 @@ export type CharacterSummaryDTO = {
   hitPoints: HitPointsDTO;
   armorClass: number;
   speedFt: number;
+  portraitAssetId?: string | null;
+  portraitAlt?: string | null;
+  featuredAbilities?: string[];
+  landingConcept?: string;
   updatedAt: string;
 };
 

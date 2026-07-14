@@ -13,6 +13,11 @@ const maraCharacterSummary = {
   hitPoints: { current: 26, max: 26 },
   armorClass: 14,
   speedFt: 30,
+  portraitAssetId: 'mara-vale-portrait',
+  portraitAlt: 'Portrait of Mara Velard',
+  featuredAbilities: ['Longbow', 'Colossus Slayer'],
+  landingConcept:
+    'A steady wilderness scout with a clear attack, useful spells, and quick rules reminders.',
   updatedAt: '2026-07-05T10:00:00Z',
 };
 
@@ -116,6 +121,12 @@ describe('HomePage', () => {
     const { onCreateCharacter } = renderHomePage(true);
 
     expect(await screen.findByRole('heading', { name: 'No saved characters yet' })).toBeInTheDocument();
+    const myCharacters = screen.getByRole('region', { name: 'My characters' });
+    expect(myCharacters).toHaveClass('home-panel--characters');
+    expect(
+      within(myCharacters).getByRole('heading', { name: 'No saved characters yet' })
+        .parentElement?.parentElement,
+    ).toHaveClass('home-panel__header-row');
     expect(
       screen.getByText('Start with a guided character or fill in your sheet manually.'),
     ).toBeInTheDocument();
@@ -211,13 +222,21 @@ describe('HomePage', () => {
     renderHomePage(true);
 
     expect(await screen.findByRole('heading', { name: 'Saved characters' })).toBeInTheDocument();
-    const card = screen.getByRole('article', { name: 'Mara Velard' });
+    const savedCharacters = screen.getByRole('list', { name: 'Your saved characters' });
+    const card = within(savedCharacters).getByRole('article', { name: 'Mara Velard' });
     expect(within(card).getByRole('heading', { name: 'Mara Velard' })).toBeInTheDocument();
-    expect(within(card).getByText('Ranger - Hunter - Level 3')).toBeInTheDocument();
-    expect(within(card).getByText('Human - Outlander')).toBeInTheDocument();
-    expect(within(card).getByText('26/26')).toBeInTheDocument();
+    expect(within(card).getByRole('img', { name: 'Portrait of Mara Velard' })).toBeInTheDocument();
+    expect(within(card).getByText('Ranger reference')).toBeInTheDocument();
+    expect(within(card).getByText('Human Ranger - Level 3')).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Expand' })).toBeInTheDocument();
+    expect(within(card).queryByRole('button', { name: 'Open Character Reference' })).not.toBeInTheDocument();
+    expect(within(card).getByText('26')).toBeInTheDocument();
     expect(within(card).getByText('14')).toBeInTheDocument();
     expect(within(card).getByText('30 ft.')).toBeInTheDocument();
+    expect(within(card).getByText('Longbow')).toBeInTheDocument();
+    expect(within(card).getByText('Colossus Slayer')).toBeInTheDocument();
+    expect(within(card).getByText(/A steady wilderness scout/)).toBeInTheDocument();
+    expect(savedCharacters).toHaveClass('character-summary-list');
     expect(screen.queryByRole('link', { name: /Mara Velard/ })).not.toBeInTheDocument();
   });
 

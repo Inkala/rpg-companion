@@ -18,6 +18,11 @@ const maraSummary: CharacterSummaryDTO = {
   hitPoints: { current: 26, max: 26 },
   armorClass: 14,
   speedFt: 30,
+  portraitAssetId: 'mara-vale-portrait',
+  portraitAlt: 'Portrait of Mara Velard',
+  featuredAbilities: ['Longbow', 'Colossus Slayer'],
+  landingConcept:
+    'A steady wilderness scout with a clear attack, useful spells, and quick rules reminders.',
   updatedAt: '2026-07-05T10:00:00Z',
 };
 
@@ -92,6 +97,10 @@ describe('characters API', () => {
       },
       armorClass: expect.any(Number),
       speedFt: expect.any(Number),
+      portraitAssetId: expect.any(String),
+      portraitAlt: expect.any(String),
+      featuredAbilities: expect.arrayContaining([expect.any(String)]),
+      landingConcept: expect.any(String),
       updatedAt: expect.any(String),
     });
   });

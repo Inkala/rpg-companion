@@ -20,6 +20,10 @@ const fighterCharacterSummary = {
   hitPoints: { current: 12, max: 12 },
   armorClass: 19,
   speedFt: 30,
+  portraitAssetId: null,
+  portraitAlt: null,
+  featuredAbilities: ['Longsword', 'Second Wind'],
+  landingConcept: 'A sturdy beginner Fighter built to protect allies.',
   updatedAt: '2026-07-07T10:00:00Z',
 };
 
@@ -1509,7 +1513,8 @@ describe('App', () => {
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: 'Saved characters' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Open Character Reference' }));
+    const savedCharacters = screen.getByRole('list', { name: 'Your saved characters' });
+    fireEvent.click(within(savedCharacters).getByRole('button', { name: 'Expand' }));
 
     expect(window.location.pathname).toBe('/characters/22222222-2222-2222-2222-222222222222');
     expect(await screen.findByRole('heading', { name: 'Branna Shieldhand' })).toBeInTheDocument();

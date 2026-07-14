@@ -1,5 +1,5 @@
-import { HitPointStat, Stat } from './CharacterStats';
-import { maraLandingPreview } from './maraReference';
+import { CharacterSummaryCard } from './CharacterSummaryCard';
+import { maraSummaryCharacter } from './maraReference';
 import './characters.css';
 
 interface SampleCharacterCardProps {
@@ -9,45 +9,12 @@ interface SampleCharacterCardProps {
 export const SampleCharacterCard = ({ onExploreCharacter }: SampleCharacterCardProps) => {
   return (
     <section className="demo-section" aria-labelledby="sample-character-title">
-      <p className="eyebrow">Sample character</p>
+      <p className="eyebrow" id="sample-character-title">Sample character</p>
 
-      <section className="sample-card" aria-labelledby="sample-character-title">
-        <header className="sample-card__identity">
-          <div className="sample-card__summary">
-            <img
-              className="portrait portrait--landing"
-              src={maraLandingPreview.portrait.src}
-              alt={maraLandingPreview.portrait.alt}
-            />
-            <div>
-              <p className="eyebrow">Ranger reference</p>
-              <h3 id="sample-character-title" className="character-name">
-                {maraLandingPreview.name}
-              </h3>
-              <p className="identity-line">{maraLandingPreview.identity}</p>
-            </div>
-          </div>
-          <button className="button button--primary sample-card__action" onClick={onExploreCharacter}>
-            Expand
-          </button>
-        </header>
-
-        <dl className="landing-stat-strip" aria-label="Mara Velard quick stats">
-          <HitPointStat hitPoints={maraLandingPreview.stats.hitPoints} />
-          <Stat label="AC" value={maraLandingPreview.stats.armorClass} />
-          <Stat label="Speed" value={maraLandingPreview.stats.speed} />
-        </dl>
-
-        <ul className="badge-row" aria-label="Featured abilities">
-          {maraLandingPreview.featuredAbilities.map((ability) => (
-            <li key={ability}>
-              <span className="badge badge--neutral">{ability}</span>
-            </li>
-          ))}
-        </ul>
-
-        <p className="preview-note">{maraLandingPreview.concept}</p>
-      </section>
+      <CharacterSummaryCard
+        character={maraSummaryCharacter}
+        onExpand={onExploreCharacter}
+      />
     </section>
   );
 };

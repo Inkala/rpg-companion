@@ -160,6 +160,48 @@ func TestRepositoryCreateMapsOnlyKnownDatabaseFailures(t *testing.T) {
 	}
 }
 
+func TestListSummariesForOwnerExtractsPresentationFields(t *testing.T) {
+	pool := setupIntegrationDatabase(t)
+	repository := NewRepository(pool)
+	ownerID := uuid.New()
+	insertTestUser(t, pool, ownerID, "summary-owner")
+	character := validRepositoryCharacter(ownerID)
+	character.ReferencePayload = json.RawMessage(`{
+		"schemaVersion":"CharacterSheetV1",
+		"summary":{
+			"landingConcept":"A sturdy beginner Fighter built to protect allies.",
+			"portraitAssetId":"hero-portrait",
+			"portraitAlt":"Portrait of a shield-bearing Fighter",
+			"featuredAbilities":["Longsword","Second Wind"]
+		}
+	}`)
+
+	if _, err := repository.Create(context.Background(), character); err != nil {
+		t.Fatalf("create character with summary presentation fields: %v", err)
+	}
+
+	summaries, err := repository.ListSummariesForOwner(context.Background(), ownerID)
+	if err != nil {
+		t.Fatalf("list summaries: %v", err)
+	}
+	if len(summaries) != 1 {
+		t.Fatalf("expected one summary, got %d", len(summaries))
+	}
+	summary := summaries[0]
+	if summary.PortraitAssetID == nil || *summary.PortraitAssetID != "hero-portrait" {
+		t.Fatalf("expected portrait asset ID, got %v", summary.PortraitAssetID)
+	}
+	if summary.PortraitAlt == nil || *summary.PortraitAlt != "Portrait of a shield-bearing Fighter" {
+		t.Fatalf("expected portrait alt text, got %v", summary.PortraitAlt)
+	}
+	if !reflect.DeepEqual(summary.FeaturedAbilities, []string{"Longsword", "Second Wind"}) {
+		t.Fatalf("expected featured abilities, got %v", summary.FeaturedAbilities)
+	}
+	if summary.LandingConcept != "A sturdy beginner Fighter built to protect allies." {
+		t.Fatalf("expected landing concept, got %q", summary.LandingConcept)
+	}
+}
+
 func validRepositoryCharacter(ownerID uuid.UUID) Character {
 	now := time.Date(2026, 7, 13, 12, 0, 0, 0, time.UTC)
 	return Character{

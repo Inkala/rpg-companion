@@ -249,6 +249,10 @@ SELECT
   hp_max,
   armor_class,
   speed_ft,
+  reference_payload #>> '{summary,portraitAssetId}',
+  reference_payload #>> '{summary,portraitAlt}',
+  COALESCE(reference_payload #> '{summary,featuredAbilities}', '[]'::jsonb),
+  COALESCE(reference_payload #>> '{summary,landingConcept}', ''),
   updated_at
 FROM characters
 WHERE owner_subject_id = $1::uuid
@@ -338,6 +342,7 @@ func scanCharacter(row rowScanner) (Character, error) {
 func scanCharacterSummary(row rowScanner) (CharacterSummary, error) {
 	var id string
 	var summary CharacterSummary
+	var featuredAbilities []byte
 
 	err := row.Scan(
 		&id,
@@ -351,10 +356,23 @@ func scanCharacterSummary(row rowScanner) (CharacterSummary, error) {
 		&summary.HitPoints.Max,
 		&summary.ArmorClass,
 		&summary.SpeedFt,
+		&summary.PortraitAssetID,
+		&summary.PortraitAlt,
+		&featuredAbilities,
+		&summary.LandingConcept,
 		&summary.UpdatedAt,
 	)
 	if err != nil {
 		return CharacterSummary{}, err
+	}
+
+	if len(featuredAbilities) > 0 {
+		if err := json.Unmarshal(featuredAbilities, &summary.FeaturedAbilities); err != nil {
+			return CharacterSummary{}, err
+		}
+	}
+	if summary.FeaturedAbilities == nil {
+		summary.FeaturedAbilities = []string{}
 	}
 
 	parsedID, err := uuid.Parse(id)

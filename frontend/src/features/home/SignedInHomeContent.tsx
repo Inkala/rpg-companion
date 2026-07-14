@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { listCharacterSummaries } from '../../characters/api';
 import type { CharacterSummaryDTO } from '../../characters/apiTypes';
+import { CharacterSummaryCard } from '../../characters/CharacterSummaryCard';
 import { SampleCharacterCard } from '../../characters/SampleCharacterCard';
 import { PartyList } from '../../parties/PartyList';
 import type { PartySummaryDTO } from '../../parties/apiTypes';
@@ -60,17 +61,20 @@ export const SignedInHomeContent = (
   return (
     <>
       <section className="home-stack" aria-label="Your Hunin home">
-        <section className="home-panel" aria-labelledby="my-characters-title">
+        <section className="home-panel home-panel--characters" aria-label="My characters">
+          <header className="home-panel__header-row">
+            <CharacterSummaryHeading state={characterState} />
+            <button
+              type="button"
+              className="button button--primary"
+              onClick={onCreateCharacter}
+            >
+              Create character
+            </button>
+          </header>
           <CharacterSummaryContent
             state={characterState}
           />
-          <button
-            type="button"
-            className="button button--primary"
-            onClick={onCreateCharacter}
-          >
-            Create character
-          </button>
         </section>
 
         <section className="home-panel home-panel--parties">
@@ -90,25 +94,25 @@ export const SignedInHomeContent = (
   );
 };
 
-const CharacterSummaryContent = ({
+const CharacterSummaryHeading = ({
   state,
 }: {
   state: CharacterSummaryState;
 }) => {
   if (state.status === 'loading') {
     return (
-      <header>
+      <div>
         <p className="eyebrow">My characters</p>
         <h2 id="my-characters-title" className="home-panel__title">
           Loading your characters...
         </h2>
-      </header>
+      </div>
     );
   }
 
   if (state.status === 'error') {
     return (
-      <header>
+      <div>
         <p className="eyebrow">My characters</p>
         <h2 id="my-characters-title" className="home-panel__title">
           Couldn’t load characters
@@ -116,31 +120,23 @@ const CharacterSummaryContent = ({
         <p className="home-panel__copy">
           Try refreshing the page. Mara is still available below.
         </p>
-      </header>
+      </div>
     );
   }
 
   if (state.status === 'loaded') {
     return (
-      <section className="character-summary-list" aria-labelledby="my-characters-title">
-        <header>
-          <p className="eyebrow">My characters</p>
-          <h2 id="my-characters-title" className="home-panel__title">
-            Saved characters
-          </h2>
-        </header>
-        {state.characters.map((character) => (
-          <CharacterSummaryCard
-            character={character}
-            key={character.id}
-          />
-        ))}
-      </section>
+      <div>
+        <p className="eyebrow">My characters</p>
+        <h2 id="my-characters-title" className="home-panel__title">
+          Saved characters
+        </h2>
+      </div>
     );
   }
 
   return (
-    <header>
+    <div>
       <p className="eyebrow">My characters</p>
       <h2 id="my-characters-title" className="home-panel__title">
         No saved characters yet
@@ -148,54 +144,30 @@ const CharacterSummaryContent = ({
       <p className="home-panel__copy">
         Start with a guided character or fill in your sheet manually.
       </p>
-    </header>
+    </div>
   );
 };
 
-const CharacterSummaryCard = ({
-  character,
+const CharacterSummaryContent = ({
+  state,
 }: {
-  character: CharacterSummaryDTO;
+  state: CharacterSummaryState;
 }) => {
-  const classLine = [
-    character.className,
-    character.subclassName,
-    `Level ${character.level}`,
-  ].filter(Boolean).join(' - ');
+  if (state.status !== 'loaded') {
+    return null;
+  }
 
   return (
-    <article className="character-summary-card" aria-labelledby={`character-${character.id}`}>
-      <header>
-        <h2 id={`character-${character.id}`} className="character-summary-card__title">
-          {character.name}
-        </h2>
-        <p className="character-summary-card__meta">{classLine}</p>
-        <p className="character-summary-card__meta">
-          {character.ancestry} - {character.background}
-        </p>
-        <button
-          type="button"
-          className="character-summary-card__open"
-          onClick={() => openSavedCharacter(character.id)}
-        >
-          Open Character Reference
-        </button>
-      </header>
-      <dl className="character-summary-stats" aria-label={`${character.name} summary stats`}>
-        <div>
-          <dt>HP</dt>
-          <dd>{character.hitPoints.current}/{character.hitPoints.max}</dd>
-        </div>
-        <div>
-          <dt>AC</dt>
-          <dd>{character.armorClass}</dd>
-        </div>
-        <div>
-          <dt>Speed</dt>
-          <dd>{character.speedFt} ft.</dd>
-        </div>
-      </dl>
-    </article>
+    <ul className="character-summary-list" aria-label="Your saved characters">
+      {state.characters.map((character) => (
+        <li key={character.id}>
+          <CharacterSummaryCard
+            character={character}
+            onExpand={() => openSavedCharacter(character.id)}
+          />
+        </li>
+      ))}
+    </ul>
   );
 };
 
