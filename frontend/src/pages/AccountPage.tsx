@@ -9,6 +9,7 @@ interface AccountPageProps {
   onBack: () => void;
   onAuthenticated: (user: AuthUser) => void;
   onModeChange: (mode: AccountMode) => void;
+  onRegistrationSuccess: () => void;
   onSignOut: () => void;
 }
 
@@ -19,6 +20,7 @@ export const AccountPage = ({
   onBack,
   onAuthenticated,
   onModeChange,
+  onRegistrationSuccess,
   onSignOut,
 }: AccountPageProps) => {
   return (
@@ -35,6 +37,7 @@ export const AccountPage = ({
         initialMode={initialMode}
         onAuthenticated={onAuthenticated}
         onModeChange={onModeChange}
+        onRegistrationSuccess={onRegistrationSuccess}
         onSignOut={onSignOut}
       />
     </main>

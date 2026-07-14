@@ -16,12 +16,14 @@ interface AuthFormProps {
   initialMode: AccountMode;
   onAuthenticated: (user: AuthUser) => void;
   onModeChange: (mode: AccountMode) => void;
+  onRegistrationSuccess: () => void;
 }
 
 export const AuthForm = ({
   initialMode,
   onAuthenticated,
   onModeChange,
+  onRegistrationSuccess,
 }: AuthFormProps) => {
   const [mode, setMode] = useState<AccountMode>(initialMode);
   const [username, setUsername] = useState('');
@@ -61,10 +63,19 @@ export const AuthForm = ({
     setIsSubmitting(true);
 
     try {
-      const user =
-        mode === 'register'
-          ? await registerAccount({ username, email, password })
-          : await signIn({ usernameOrEmail, password });
+      if (mode === 'register') {
+        await registerAccount({ username, email, password });
+        setUsername('');
+        setEmail('');
+        setPassword('');
+        setUsernameOrEmail('');
+        setMode('sign-in');
+        onModeChange('sign-in');
+        onRegistrationSuccess();
+        return;
+      }
+
+      const user = await signIn({ usernameOrEmail, password });
       onAuthenticated(user);
     } catch (submitError) {
       const message =

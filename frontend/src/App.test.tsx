@@ -20,6 +20,10 @@ const fighterCharacterSummary = {
   hitPoints: { current: 12, max: 12 },
   armorClass: 19,
   speedFt: 30,
+  portraitAssetId: null,
+  portraitAlt: null,
+  featuredAbilities: ['Longsword', 'Second Wind'],
+  landingConcept: 'A sturdy beginner Fighter built to protect allies.',
   updatedAt: '2026-07-07T10:00:00Z',
 };
 
@@ -39,6 +43,33 @@ const fighterCharacter = {
     'Branna Shieldhand',
   ),
   createdAt: '2026-07-07T10:00:00Z',
+};
+
+const manualCharacter = {
+  ...fighterCharacter,
+  id: '44444444-4444-4444-4444-444444444444',
+  name: 'Seren Ashfall',
+  className: 'Ranger',
+  subclassName: null,
+  level: 3,
+  ancestry: 'Human',
+  background: 'Outlander',
+  abilityScores: {
+    strength: 12,
+    dexterity: 16,
+    constitution: 14,
+    intelligence: 10,
+    wisdom: 15,
+    charisma: 8,
+  },
+  hitPoints: { current: 26, max: 28 },
+  armorClass: 15,
+  referencePayload: buildGeneratedFighterCharacterSheet(
+    'dexterity-archer-fighter',
+    'Seren Ashfall',
+  ),
+  createdAt: '2026-07-11T10:00:00Z',
+  updatedAt: '2026-07-11T10:00:00Z',
 };
 
 const inviteToken = 'i'.repeat(43);
@@ -163,7 +194,7 @@ describe('App', () => {
   });
 
   it.each(['sign-in', 'register'] as const)(
-    'returns %s success to the typed create Party destination',
+    'preserves %s flow for the typed create Party destination',
     async (accountMode) => {
       const fetchMock = partyFetchMock();
       vi.stubGlobal('fetch', fetchMock);
@@ -177,6 +208,12 @@ describe('App', () => {
         );
         completeRegistrationForm();
         fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+        expect(
+          await screen.findByRole('heading', { name: 'Sign in' }),
+        ).toBeInTheDocument();
+        expect(window.location.pathname).toBe('/login');
+        completeSignInForm();
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
       } else {
         completeSignInForm();
         fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -522,6 +559,11 @@ describe('App', () => {
     expect(window.location.pathname).toBe('/sign-up');
     completeRegistrationForm();
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/login');
+    completeSignInForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
     expect(
       await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
@@ -935,7 +977,7 @@ describe('App', () => {
   });
 
   it.each(['sign-in', 'register'] as const)(
-    'returns Party Character %s to the exact typed identifiers',
+    'preserves Party Character %s for the exact typed identifiers',
     async (accountMode) => {
       const fetchMock = partyFetchMock();
       vi.stubGlobal('fetch', fetchMock);
@@ -953,6 +995,12 @@ describe('App', () => {
         );
         completeRegistrationForm();
         fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+        expect(
+          await screen.findByRole('heading', { name: 'Sign in' }),
+        ).toBeInTheDocument();
+        expect(window.location.pathname).toBe('/login');
+        completeSignInForm();
+        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
       } else {
         completeSignInForm();
         fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -1370,8 +1418,13 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
   });
 
-  it('registers and returns to the signed-in home', async () => {
+  it('registers, stays signed out, shows a dismissible success toast, and opens sign-in', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const submittedValues = {
+      username: 'Mara',
+      email: 'mara@example.com',
+      password: 'Correct-horse-battery-staple1',
+    };
     const fetchMock = vi.fn((url: string) => {
       const path = new URL(url).pathname;
       if (path === '/auth/session') {
@@ -1396,26 +1449,31 @@ describe('App', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Create account' })[0]);
     fireEvent.change(screen.getByLabelText('Username'), {
-      target: { value: 'Mara' },
+      target: { value: submittedValues.username },
     });
     fireEvent.change(screen.getByLabelText('Email'), {
-      target: { value: 'mara@example.com' },
+      target: { value: submittedValues.email },
     });
     fireEvent.change(screen.getByLabelText('Password'), {
-      target: { value: 'Correct-horse-battery-staple1' },
+      target: { value: submittedValues.password },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByRole('button', { name: 'Mara account menu' })).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: 'No saved characters yet' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mara account menu' })).not.toBeInTheDocument();
+    const toast = await screen.findByText('Account created. Sign in to continue.');
+    expect(toast).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dismiss notification' })).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(submittedValues.email);
+    expect(document.body).not.toHaveTextContent(submittedValues.password);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss notification' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Account created. Sign in to continue.')).not.toBeInTheDocument();
+    });
     expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:8080/auth/register',
       expect.objectContaining({
-        body: JSON.stringify({
-          username: 'Mara',
-          email: 'mara@example.com',
-          password: 'Correct-horse-battery-staple1',
-        }),
+        body: JSON.stringify(submittedValues),
         credentials: 'include',
         method: 'POST',
       }),
@@ -1455,13 +1513,14 @@ describe('App', () => {
     render(<App />);
 
     expect(await screen.findByRole('heading', { name: 'Saved characters' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Open Character Reference' }));
+    const savedCharacters = screen.getByRole('list', { name: 'Your saved characters' });
+    fireEvent.click(within(savedCharacters).getByRole('button', { name: 'Expand' }));
 
     expect(window.location.pathname).toBe('/characters/22222222-2222-2222-2222-222222222222');
     expect(await screen.findByRole('heading', { name: 'Branna Shieldhand' })).toBeInTheDocument();
   });
 
-  it('opens saved Character Reference from generated save success', async () => {
+  it('opens saved Character Reference immediately after generated save success', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
     const fetchMock = vi.fn((url: string, init?: RequestInit) => {
       if (url.endsWith('/auth/session')) {
@@ -1496,11 +1555,50 @@ describe('App', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
 
-    expect(await screen.findByText(/Branna Shieldhand is saved/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Open Character Reference' }));
-
-    expect(window.location.pathname).toBe('/characters/22222222-2222-2222-2222-222222222222');
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/characters/22222222-2222-2222-2222-222222222222');
+    });
+    expect(screen.queryByRole('button', { name: 'Open Character Reference' })).not.toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Branna Shieldhand' })).toBeInTheDocument();
+  });
+
+  it('opens saved Character Reference immediately after manual save success', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.endsWith('/auth/session')) {
+        return Promise.resolve(jsonResponse({ user: maraUser }));
+      }
+
+      if (url.endsWith('/characters') && init?.method === 'POST') {
+        return Promise.resolve(jsonResponse(manualCharacter, 201));
+      }
+
+      if (url.endsWith('/characters')) {
+        return Promise.resolve(jsonResponse({ characters: [] }));
+      }
+
+      if (url.includes('/characters/')) {
+        return Promise.resolve(jsonResponse(manualCharacter));
+      }
+
+      return Promise.resolve(jsonResponse({ error: 'not found' }, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/characters/new');
+
+    render(<App />);
+
+    expect(await screen.findByRole('button', { name: 'Mara account menu' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Fill the sheet myself/ }));
+    fillValidMinimumManualCharacter();
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/characters/44444444-4444-4444-4444-444444444444');
+    });
+    expect(screen.queryByRole('button', { name: 'Open Character Reference' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Seren Ashfall' })).toBeInTheDocument();
   });
 
   it('supports browser Back and Forward between routes', async () => {
@@ -1761,6 +1859,57 @@ const finishStrengthQuiz = () => {
         name: index === 4 ? 'See recommendation' : 'Next',
       }),
     );
+  });
+};
+
+const fillValidMinimumManualCharacter = () => {
+  fireEvent.change(screen.getByLabelText('Name'), {
+    target: { value: 'Seren Ashfall' },
+  });
+  fireEvent.change(screen.getByLabelText('Class'), {
+    target: { value: 'Ranger' },
+  });
+  fireEvent.change(screen.getByLabelText('Level'), {
+    target: { value: '3' },
+  });
+  fireEvent.change(screen.getByLabelText('Ancestry'), {
+    target: { value: 'Human' },
+  });
+  fireEvent.change(screen.getByLabelText('Background'), {
+    target: { value: 'Outlander' },
+  });
+  fireEvent.change(screen.getByLabelText('Strength'), {
+    target: { value: '12' },
+  });
+  fireEvent.change(screen.getByLabelText('Dexterity'), {
+    target: { value: '16' },
+  });
+  fireEvent.change(screen.getByLabelText('Constitution'), {
+    target: { value: '14' },
+  });
+  fireEvent.change(screen.getByLabelText('Intelligence'), {
+    target: { value: '10' },
+  });
+  fireEvent.change(screen.getByLabelText('Wisdom'), {
+    target: { value: '15' },
+  });
+  fireEvent.change(screen.getByLabelText('Charisma'), {
+    target: { value: '8' },
+  });
+  fireEvent.change(screen.getByLabelText('Current HP'), {
+    target: { value: '26' },
+  });
+  fireEvent.change(screen.getByLabelText('Maximum HP'), {
+    target: { value: '28' },
+  });
+  fireEvent.change(screen.getByLabelText('Armor Class'), {
+    target: { value: '15' },
+  });
+  fireEvent.change(screen.getByLabelText('Speed'), {
+    target: { value: '30' },
+  });
+  fireEvent.change(screen.getByLabelText('Proficiency bonus'), {
+    target: { value: '2' },
   });
 };
 

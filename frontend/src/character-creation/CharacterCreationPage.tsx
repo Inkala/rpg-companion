@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createCharacter, CharactersApiError } from '../characters/api';
 import {
   initialFantasyBucketScores,
@@ -36,6 +36,27 @@ type SaveState =
   | { status: 'saving' }
   | { status: 'error'; message: string }
   | { status: 'success'; characterId: string; characterName: string };
+
+const ordinarySavedCharacterActionLabel = 'Open Character Reference';
+
+const requiredManualFields = new Set([
+  'name',
+  'className',
+  'level',
+  'ancestry',
+  'background',
+  'hitPoints.current',
+  'hitPoints.max',
+  'armorClass',
+  'speedFt',
+  'proficiencyBonus',
+  'abilityScores.strength',
+  'abilityScores.dexterity',
+  'abilityScores.constitution',
+  'abilityScores.intelligence',
+  'abilityScores.wisdom',
+  'abilityScores.charisma',
+]);
 
 const modeChoices: {
   mode: Exclude<CharacterCreationMode, null>;
@@ -412,7 +433,7 @@ export const CharacterCreationPage = ({
   onSignIn,
   onCreateAccount,
   onOpenCharacterReference,
-  savedCharacterActionLabel = 'Open Character Reference',
+  savedCharacterActionLabel,
 }: CharacterCreationPageProps) => {
   const [draft, setDraft] = useState<CharacterCreationDraft>(
     initialCharacterCreationDraft,
@@ -427,6 +448,27 @@ export const CharacterCreationPage = ({
   const [manualErrors, setManualErrors] = useState<ManualCharacterEntryValidationError[]>([]);
   const [manualReviewRequest, setManualReviewRequest] =
     useState<ManualCharacterCreateRequest | null>(null);
+  const manualEntryRef = useRef<HTMLElement | null>(null);
+  const hasCustomSavedCharacterAction = savedCharacterActionLabel !== undefined;
+  const resolvedSavedCharacterActionLabel =
+    savedCharacterActionLabel ?? ordinarySavedCharacterActionLabel;
+
+  useEffect(() => {
+    if (manualErrors.length === 0 || manualReviewRequest !== null) {
+      return;
+    }
+
+    const firstInvalidField = manualEntryRef.current?.querySelector<HTMLInputElement>(
+      '.manual-entry-field input[aria-invalid="true"]',
+    );
+
+    if (!firstInvalidField) {
+      return;
+    }
+
+    firstInvalidField.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    firstInvalidField.focus({ preventScroll: true });
+  }, [manualErrors, manualReviewRequest]);
 
   const chooseMode = (mode: Exclude<CharacterCreationMode, null>) => {
     setDraft((currentDraft) => ({
@@ -661,6 +703,9 @@ export const CharacterCreationPage = ({
         characterId: character.id,
         characterName: character.name,
       });
+      if (onOpenCharacterReference && !hasCustomSavedCharacterAction) {
+        onOpenCharacterReference(character.id);
+      }
     } catch (error) {
       const message =
         error instanceof CharactersApiError
@@ -684,6 +729,9 @@ export const CharacterCreationPage = ({
         characterId: character.id,
         characterName: character.name,
       });
+      if (onOpenCharacterReference && !hasCustomSavedCharacterAction) {
+        onOpenCharacterReference(character.id);
+      }
     } catch (error) {
       const message =
         error instanceof CharactersApiError
@@ -707,14 +755,24 @@ export const CharacterCreationPage = ({
     inputMode?: 'numeric';
   }) => {
     const error = getManualError(field);
+    const isRequired = requiredManualFields.has(field);
 
     return (
       <label key={field} className="manual-entry-field">
-        <span>{label}</span>
+        <span>
+          {label}
+          {isRequired ? (
+            <span className="manual-entry-field__required" aria-hidden="true">
+              {' '}*
+            </span>
+          ) : null}
+        </span>
         <input
           type="text"
+          aria-label={label}
           inputMode={inputMode}
           value={value}
+          required={isRequired}
           aria-invalid={error ? 'true' : undefined}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -725,7 +783,11 @@ export const CharacterCreationPage = ({
 
   const renderManualForm = () => {
     return (
-      <section className="manual-entry" aria-labelledby="manual-entry-title">
+      <section
+        ref={manualEntryRef}
+        className="manual-entry"
+        aria-labelledby="manual-entry-title"
+      >
         <div className="creation-review__header">
           <p className="eyebrow">Fill the sheet myself</p>
           <h2 id="manual-entry-title" className="creation-recommendation__title">
@@ -735,6 +797,7 @@ export const CharacterCreationPage = ({
             Transfer the core facts from an existing sheet. Hunin checks form
             shape only, not full D&D legality.
           </p>
+          <p className="manual-entry__required-note">* Required</p>
         </div>
 
         {manualErrors.length > 0 ? (
@@ -1082,13 +1145,15 @@ export const CharacterCreationPage = ({
               >
                 {isSaving ? 'Saving character...' : 'Save character'}
               </button>
-              {saveState.status === 'success' && onOpenCharacterReference ? (
+              {saveState.status === 'success' &&
+              onOpenCharacterReference &&
+              hasCustomSavedCharacterAction ? (
                 <button
                   type="button"
                   className="button button--secondary"
                   onClick={() => onOpenCharacterReference(saveState.characterId)}
                 >
-                  {savedCharacterActionLabel}
+                  {resolvedSavedCharacterActionLabel}
                 </button>
               ) : null}
             </div>
@@ -1391,13 +1456,15 @@ export const CharacterCreationPage = ({
               >
                 {isSaving ? 'Saving character...' : 'Save character'}
               </button>
-              {saveState.status === 'success' && onOpenCharacterReference ? (
+              {saveState.status === 'success' &&
+              onOpenCharacterReference &&
+              hasCustomSavedCharacterAction ? (
                 <button
                   type="button"
                   className="button button--secondary"
                   onClick={() => onOpenCharacterReference(saveState.characterId)}
                 >
-                  {savedCharacterActionLabel}
+                  {resolvedSavedCharacterActionLabel}
                 </button>
               ) : null}
             </div>

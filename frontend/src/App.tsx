@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Toaster, toast } from 'sonner';
 import type { AccountMode, AppRoute } from './app/appTypes';
 import {
   parseAppRoute,
@@ -325,6 +326,16 @@ export const App = ({
     restoreAuthenticationDestination(destination);
   };
 
+  const handleRegistrationSuccess = () => {
+    const toastId = toast.success('Account created. Sign in to continue.', {
+      action: {
+        label: 'Dismiss notification',
+        onClick: () => toast.dismiss(toastId),
+      },
+      duration: 8000,
+    });
+  };
+
   const handleInviteSignIn = () => {
     if (inviteToken === null) {
       showAccount('sign-in');
@@ -392,6 +403,20 @@ export const App = ({
       onSignOut={handleSignOut}
       showAccountActions={route.name !== 'account' && route.name !== 'profile'}
     >
+      <Toaster
+        className="hunin-toaster"
+        closeButton
+        position="top-center"
+        toastOptions={{
+          classNames: {
+            actionButton: 'hunin-toast__action',
+            closeButton: 'hunin-toast__close',
+            description: 'hunin-toast__description',
+            toast: 'hunin-toast',
+            title: 'hunin-toast__title',
+          },
+        }}
+      />
       {route.name === 'home' ? (
         <HomePage
           isSignedIn={currentUser !== null}
@@ -411,6 +436,7 @@ export const App = ({
           onBack={handleAccountBack}
           onAuthenticated={handleAuthenticated}
           onModeChange={showAccountMode}
+          onRegistrationSuccess={handleRegistrationSuccess}
           onSignOut={handleSignOut}
         />
       ) : route.name === 'profile' ? (

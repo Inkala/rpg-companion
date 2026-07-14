@@ -17,16 +17,18 @@ const maraUser = {
 const renderAuthForm = (mode: 'sign-in' | 'register' = 'register') => {
   const onAuthenticated = vi.fn();
   const onModeChange = vi.fn();
+  const onRegistrationSuccess = vi.fn();
 
   const result = render(
     <AuthForm
       initialMode={mode}
       onAuthenticated={onAuthenticated}
       onModeChange={onModeChange}
+      onRegistrationSuccess={onRegistrationSuccess}
     />,
   );
 
-  return { ...result, onAuthenticated, onModeChange };
+  return { ...result, onAuthenticated, onModeChange, onRegistrationSuccess };
 };
 
 beforeEach(() => {
@@ -50,16 +52,18 @@ describe('AuthForm', () => {
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
   });
 
-  it('registers through the configured backend', async () => {
+  it('registers through the configured backend and switches to sign-in without authenticating', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ user: maraUser }));
     vi.stubGlobal('fetch', fetchMock);
-    const { onAuthenticated } = renderAuthForm();
+    const { onAuthenticated, onModeChange, onRegistrationSuccess } = renderAuthForm();
 
     fillRegistrationForm();
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    expect(await screen.findByRole('button', { name: 'Create account' })).not.toBeDisabled();
-    expect(onAuthenticated).toHaveBeenCalledWith(maraUser);
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(onAuthenticated).not.toHaveBeenCalled();
+    expect(onModeChange).toHaveBeenCalledWith('sign-in');
+    expect(onRegistrationSuccess).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:8080/auth/register',
       expect.objectContaining({
@@ -110,8 +114,8 @@ describe('AuthForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    await screen.findByRole('button', { name: 'Create account' });
-    expect(onAuthenticated).toHaveBeenCalledWith(maraUser);
+    await screen.findByRole('heading', { name: 'Sign in' });
+    expect(onAuthenticated).not.toHaveBeenCalled();
   });
 
   it('shows invalid email after blur and clears it when corrected', () => {

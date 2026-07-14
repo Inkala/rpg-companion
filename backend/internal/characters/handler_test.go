@@ -380,6 +380,18 @@ func TestCharacterHTTPListSummaries(t *testing.T) {
 	if response.Characters[0].SpeedFt != 30 {
 		t.Fatalf("expected speed 30, got %d", response.Characters[0].SpeedFt)
 	}
+	if response.Characters[0].PortraitAssetID == nil || *response.Characters[0].PortraitAssetID != "older-ranger-portrait" {
+		t.Fatalf("expected portrait asset ID, got %v", response.Characters[0].PortraitAssetID)
+	}
+	if response.Characters[0].PortraitAlt == nil || *response.Characters[0].PortraitAlt != "Portrait of Older Ranger" {
+		t.Fatalf("expected portrait alt text, got %v", response.Characters[0].PortraitAlt)
+	}
+	if !reflect.DeepEqual(response.Characters[0].FeaturedAbilities, []string{"Longbow", "Colossus Slayer"}) {
+		t.Fatalf("expected featured abilities, got %v", response.Characters[0].FeaturedAbilities)
+	}
+	if response.Characters[0].LandingConcept != "A steady wilderness scout." {
+		t.Fatalf("expected landing concept, got %q", response.Characters[0].LandingConcept)
+	}
 	if response.Characters[0].UpdatedAt != updatedAt.UTC().Format(time.RFC3339) {
 		t.Fatalf("expected updatedAt %q, got %q", updatedAt.UTC().Format(time.RFC3339), response.Characters[0].UpdatedAt)
 	}
@@ -389,7 +401,36 @@ func TestCharacterHTTPListSummaries(t *testing.T) {
 		t.Fatalf("decode raw list response: %v", err)
 	}
 	firstRawCharacter := rawResponse["characters"][0]
-	for _, excludedField := range []string{"ownerSubjectId", "abilityScores", "createdAt", "referencePayload"} {
+	assertExactJSONKeys(t, firstRawCharacter,
+		"id",
+		"name",
+		"className",
+		"subclassName",
+		"level",
+		"ancestry",
+		"background",
+		"hitPoints",
+		"armorClass",
+		"speedFt",
+		"portraitAssetId",
+		"portraitAlt",
+		"featuredAbilities",
+		"landingConcept",
+		"updatedAt",
+	)
+	for _, excludedField := range []string{
+		"ownerSubjectId",
+		"ownerId",
+		"email",
+		"abilityScores",
+		"createdAt",
+		"referencePayload",
+		"party",
+		"partyId",
+		"partyName",
+		"partyRole",
+		"membershipId",
+	} {
 		if _, ok := firstRawCharacter[excludedField]; ok {
 			t.Fatalf("list response must not include %s: %v", excludedField, firstRawCharacter)
 		}
@@ -886,11 +927,12 @@ func withAuthenticatedUser(request *http.Request, userID uuid.UUID) *http.Reques
 }
 
 type testCharacterInput struct {
-	ID        uuid.UUID
-	OwnerID   uuid.UUID
-	Name      string
-	Subclass  *string
-	UpdatedAt time.Time
+	ID               uuid.UUID
+	OwnerID          uuid.UUID
+	Name             string
+	Subclass         *string
+	UpdatedAt        time.Time
+	ReferencePayload json.RawMessage
 }
 
 func createTestCharacter(t *testing.T, repository *Repository, input testCharacterInput) {
@@ -920,12 +962,41 @@ func createTestCharacter(t *testing.T, repository *Repository, input testCharact
 		},
 		ArmorClass:       14,
 		SpeedFt:          30,
-		ReferencePayload: json.RawMessage(`{"secret":"do not return from list"}`),
+		ReferencePayload: testCharacterReferencePayload(input),
 		CreatedAt:        input.UpdatedAt.Add(-time.Hour),
 		UpdatedAt:        input.UpdatedAt,
 	})
 	if err != nil {
 		t.Fatalf("create test character %s: %v", input.Name, err)
+	}
+}
+
+func testCharacterReferencePayload(input testCharacterInput) json.RawMessage {
+	if len(input.ReferencePayload) > 0 {
+		return input.ReferencePayload
+	}
+
+	return json.RawMessage(`{
+		"schemaVersion":"CharacterSheetV1",
+		"summary":{
+			"landingConcept":"A steady wilderness scout.",
+			"portraitAssetId":"older-ranger-portrait",
+			"portraitAlt":"Portrait of Older Ranger",
+			"featuredAbilities":["Longbow","Colossus Slayer"]
+		},
+		"secret":"do not return from list"
+	}`)
+}
+
+func assertExactJSONKeys(t *testing.T, object map[string]any, keys ...string) {
+	t.Helper()
+	if len(object) != len(keys) {
+		t.Fatalf("expected exact keys %v, got %v", keys, object)
+	}
+	for _, key := range keys {
+		if _, ok := object[key]; !ok {
+			t.Fatalf("expected key %q in %v", key, object)
+		}
 	}
 }
 

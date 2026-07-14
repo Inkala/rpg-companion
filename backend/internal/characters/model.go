@@ -26,17 +26,21 @@ type Character struct {
 }
 
 type CharacterSummary struct {
-	ID           uuid.UUID
-	Name         string
-	ClassName    string
-	SubclassName *string
-	Level        int
-	Ancestry     string
-	Background   string
-	HitPoints    HitPoints
-	ArmorClass   int
-	SpeedFt      int
-	UpdatedAt    time.Time
+	ID                uuid.UUID
+	Name              string
+	ClassName         string
+	SubclassName      *string
+	Level             int
+	Ancestry          string
+	Background        string
+	HitPoints         HitPoints
+	ArmorClass        int
+	SpeedFt           int
+	PortraitAssetID   *string
+	PortraitAlt       *string
+	FeaturedAbilities []string
+	LandingConcept    string
+	UpdatedAt         time.Time
 }
 
 type AbilityScores struct {
@@ -105,17 +109,21 @@ type characterListResponse struct {
 }
 
 type characterSummaryResponse struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	ClassName    string    `json:"className"`
-	SubclassName *string   `json:"subclassName"`
-	Level        int       `json:"level"`
-	Ancestry     string    `json:"ancestry"`
-	Background   string    `json:"background"`
-	HitPoints    HitPoints `json:"hitPoints"`
-	ArmorClass   int       `json:"armorClass"`
-	SpeedFt      int       `json:"speedFt"`
-	UpdatedAt    string    `json:"updatedAt"`
+	ID                string    `json:"id"`
+	Name              string    `json:"name"`
+	ClassName         string    `json:"className"`
+	SubclassName      *string   `json:"subclassName"`
+	Level             int       `json:"level"`
+	Ancestry          string    `json:"ancestry"`
+	Background        string    `json:"background"`
+	HitPoints         HitPoints `json:"hitPoints"`
+	ArmorClass        int       `json:"armorClass"`
+	SpeedFt           int       `json:"speedFt"`
+	PortraitAssetID   *string   `json:"portraitAssetId"`
+	PortraitAlt       *string   `json:"portraitAlt"`
+	FeaturedAbilities []string  `json:"featuredAbilities"`
+	LandingConcept    string    `json:"landingConcept"`
+	UpdatedAt         string    `json:"updatedAt"`
 }
 
 func responseFromCharacter(character Character) characterResponse {
@@ -155,16 +163,20 @@ func listResponseFromCharacterSummaries(summaries []CharacterSummary) characterL
 
 func responseFromCharacterSummary(summary CharacterSummary) characterSummaryResponse {
 	return characterSummaryResponse{
-		ID:           summary.ID.String(),
-		Name:         summary.Name,
-		ClassName:    summary.ClassName,
-		SubclassName: summary.SubclassName,
-		Level:        summary.Level,
-		Ancestry:     summary.Ancestry,
-		Background:   summary.Background,
-		HitPoints:    summary.HitPoints,
-		ArmorClass:   summary.ArmorClass,
-		SpeedFt:      summary.SpeedFt,
-		UpdatedAt:    summary.UpdatedAt.UTC().Format(time.RFC3339),
+		ID:                summary.ID.String(),
+		Name:              summary.Name,
+		ClassName:         summary.ClassName,
+		SubclassName:      summary.SubclassName,
+		Level:             summary.Level,
+		Ancestry:          summary.Ancestry,
+		Background:        summary.Background,
+		HitPoints:         summary.HitPoints,
+		ArmorClass:        summary.ArmorClass,
+		SpeedFt:           summary.SpeedFt,
+		PortraitAssetID:   summary.PortraitAssetID,
+		PortraitAlt:       summary.PortraitAlt,
+		FeaturedAbilities: summary.FeaturedAbilities,
+		LandingConcept:    summary.LandingConcept,
+		UpdatedAt:         summary.UpdatedAt.UTC().Format(time.RFC3339),
 	}
 }
