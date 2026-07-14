@@ -19,3 +19,8 @@
 976bb8546d57ac75636b2ee25a9f10d3b968acc8:contenido/7. Desarrollo potenciado por IA/1. Proyecto front _ Web ecommerce con React y Vite/slides/18-env-secrets.md:generic-api-key:200
 976bb8546d57ac75636b2ee25a9f10d3b968acc8:contenido/7. Desarrollo potenciado por IA/1. Proyecto front _ Web ecommerce con React y Vite/slides/18-env-secrets.md:generic-api-key:232
 976bb8546d57ac75636b2ee25a9f10d3b968acc8:contenido/7. Desarrollo potenciado por IA/1. Proyecto front _ Web ecommerce con React y Vite/slides/18-env-secrets.md:generic-api-key:242
+
+# T-019 approved exact test-fixture fingerprints. Do not broaden these suppressions.
+cf79f919f3ef56b77f6e1779606c3bc7aa94e77d:backend/internal/server/server_test.go:generic-api-key:311
+cf79f919f3ef56b77f6e1779606c3bc7aa94e77d:backend/internal/server/server_test.go:generic-api-key:347
+cf79f919f3ef56b77f6e1779606c3bc7aa94e77d:frontend/src/App.test.tsx:generic-api-key:1395
