@@ -22,8 +22,23 @@ const maraCharacterSummary = {
 };
 
 const parties = [
-  { id: 'party-1', name: 'The Lantern Guard', role: 'gm' as const },
-  { id: 'party-2', name: 'The Silver Company', role: 'player' as const },
+  {
+    id: 'party-1',
+    name: 'The Lantern Guard',
+    role: 'gm' as const,
+    gm: { username: 'lantern-gm' },
+    linkedCharacters: [
+      { characterName: 'Mara Vale', username: 'mara-player' },
+      { characterName: 'Keth', username: 'keth-player' },
+    ],
+  },
+  {
+    id: 'party-2',
+    name: 'The Silver Company',
+    role: 'player' as const,
+    gm: { username: 'silver-gm' },
+    linkedCharacters: [],
+  },
 ];
 
 const renderHomePage = (
@@ -36,6 +51,7 @@ const renderHomePage = (
   const onJoinParty = vi.fn();
   const onOpenParty = vi.fn();
   const onSignIn = vi.fn();
+  const getPartyHref = vi.fn((partyId: string) => `/parties/${encodeURIComponent(partyId)}`);
   const loadParties = vi.fn().mockResolvedValue([]);
   const props: React.ComponentProps<typeof HomePage> = {
     isSignedIn,
@@ -45,6 +61,7 @@ const renderHomePage = (
     onJoinParty,
     onOpenParty,
     onSignIn,
+    getPartyHref,
     loadParties,
     ...overrides,
   };
@@ -60,6 +77,7 @@ const renderHomePage = (
     onJoinParty,
     onOpenParty,
     onSignIn,
+    getPartyHref,
     loadParties,
   };
 };
@@ -122,7 +140,7 @@ describe('HomePage', () => {
 
     expect(await screen.findByRole('heading', { name: 'No saved characters yet' })).toBeInTheDocument();
     const myCharacters = screen.getByRole('region', { name: 'My characters' });
-    expect(myCharacters).toHaveClass('home-panel--characters');
+    expect(myCharacters).toHaveClass('home-panel--characters', 'home-panel--muted');
     expect(
       within(myCharacters).getByRole('heading', { name: 'No saved characters yet' })
         .parentElement?.parentElement,
@@ -138,6 +156,12 @@ describe('HomePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create character' }));
 
     expect(onCreateCharacter).toHaveBeenCalledOnce();
+
+    await screen.findByText('You have not joined a party yet.');
+    expect(screen.getByRole('region', { name: 'My parties' }).parentElement).toHaveClass(
+      'home-panel--parties',
+      'home-panel--muted',
+    );
   });
 
   it('loads signed-in Parties through one stable supplied loader', async () => {
@@ -147,7 +171,7 @@ describe('HomePage', () => {
     const { rerender, props } = renderHomePage(true, { loadParties });
 
     expect(
-      await screen.findByRole('heading', { name: 'No parties yet' }),
+      await screen.findByText('You have not joined a party yet.'),
     ).toBeInTheDocument();
     expect(loadParties).toHaveBeenCalledOnce();
 
@@ -166,7 +190,9 @@ describe('HomePage', () => {
       onJoinParty,
     });
 
-    await screen.findByRole('heading', { name: 'No parties yet' });
+    const emptyMessage = await screen.findByText('You have not joined a party yet.');
+    expect(emptyMessage.closest('.party-list__empty')).not.toBeNull();
+    expect(screen.queryByRole('heading', { name: 'No parties yet' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Create party' }));
     fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
 
@@ -174,27 +200,31 @@ describe('HomePage', () => {
     expect(onJoinParty).toHaveBeenCalledOnce();
   });
 
-  it('renders loaded GM and Player Party cards and opens their exact IDs', async () => {
+  it('renders loaded Party links and opens their exact IDs without displaying role', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse({ characters: [] })));
     const onOpenParty = vi.fn();
+    const getPartyHref = vi.fn((partyId: string) => `/parties/${partyId}`);
     renderHomePage(true, {
       loadParties: vi.fn().mockResolvedValue(parties),
+      getPartyHref,
       onOpenParty,
     });
 
     const partyList = await screen.findByRole('list', { name: 'Your parties' });
-    expect(within(partyList).getByText('GM')).toBeInTheDocument();
-    expect(within(partyList).getByText('Player')).toBeInTheDocument();
-    fireEvent.click(
-      within(partyList).getByRole('button', { name: 'Open The Lantern Guard' }),
-    );
-    fireEvent.click(
-      within(partyList).getByRole('button', { name: 'Open The Silver Company' }),
-    );
+    expect(within(partyList).getByText('lantern-gm')).toBeInTheDocument();
+    expect(within(partyList).getByText('Mara Vale:')).toBeInTheDocument();
+    expect(within(partyList).getByText('No linked characters yet.')).toBeInTheDocument();
+    expect(within(partyList).queryByText('Player')).not.toBeInTheDocument();
+    expect(within(partyList).queryByText(/Role:/)).not.toBeInTheDocument();
+    const links = within(partyList).getAllByRole('link');
+    fireEvent.click(links[0]);
+    fireEvent.click(links[1]);
 
     expect(onOpenParty).toHaveBeenNthCalledWith(1, 'party-1');
     expect(onOpenParty).toHaveBeenNthCalledWith(2, 'party-2');
+    expect(getPartyHref).toHaveBeenNthCalledWith(1, 'party-1');
+    expect(getPartyHref).toHaveBeenNthCalledWith(2, 'party-2');
   });
 
   it('shows a safe Party error and retries through the same loader', async () => {

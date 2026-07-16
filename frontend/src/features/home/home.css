@@ -148,6 +148,10 @@
   box-shadow: var(--shadow-card);
 }
 
+.home-panel--muted {
+  background: var(--color-bg-surface-muted);
+}
+
 .home-panel--parties {
   display: grid;
   gap: var(--space-3);

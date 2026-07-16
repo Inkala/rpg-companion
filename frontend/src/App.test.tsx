@@ -1368,14 +1368,20 @@ describe('App', () => {
   it('opens the exact Party route from a signed-in Home Party card', async () => {
     const fetchMock = partyFetchMock({
       restoredUser: true,
-      parties: [{ id: 'party-1', name: 'The Lantern Guard', role: 'player' }],
+      parties: [{
+        id: 'party-1',
+        name: 'The Lantern Guard',
+        role: 'player',
+        gm: { username: 'lantern-gm' },
+        linkedCharacters: [],
+      }],
     });
     vi.stubGlobal('fetch', fetchMock);
     render(<App />);
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: 'Open The Lantern Guard' }),
-    );
+    const partyLink = await screen.findByRole('link', { name: 'The Lantern Guard' });
+    expect(partyLink).toHaveAttribute('href', '/parties/party-1');
+    fireEvent.click(partyLink);
 
     expect(screen.getByRole('heading', { name: 'Party' })).toHaveFocus();
     expect(window.location.pathname).toBe('/parties/party-1');

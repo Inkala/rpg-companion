@@ -18,6 +18,7 @@ export const SignedInHomeContent = (
     loadParties,
     onCreateParty,
     onExploreCharacter,
+    getPartyHref,
     onJoinParty,
     onOpenParty,
     onSignIn,
@@ -26,6 +27,7 @@ export const SignedInHomeContent = (
     loadParties: () => Promise<PartySummaryDTO[]>;
     onCreateParty: () => void;
     onExploreCharacter: () => void;
+    getPartyHref: (partyId: string) => string;
     onJoinParty: () => void;
     onOpenParty: (partyId: string) => void;
     onSignIn: () => void;
@@ -61,7 +63,10 @@ export const SignedInHomeContent = (
   return (
     <>
       <section className="home-stack" aria-label="Your Hunin home">
-        <section className="home-panel home-panel--characters" aria-label="My characters">
+        <section
+          className="home-panel home-panel--characters home-panel--muted"
+          aria-label="My characters"
+        >
           <header className="home-panel__header-row">
             <CharacterSummaryHeading state={characterState} />
             <button
@@ -77,11 +82,12 @@ export const SignedInHomeContent = (
           />
         </section>
 
-        <section className="home-panel home-panel--parties">
+        <section className="home-panel home-panel--parties home-panel--muted">
           <PartyList
             isSignedIn
             loadParties={loadParties}
             onCreateParty={onCreateParty}
+            getPartyHref={getPartyHref}
             onJoinParty={onJoinParty}
             onOpenParty={onOpenParty}
             onSignIn={onSignIn}
