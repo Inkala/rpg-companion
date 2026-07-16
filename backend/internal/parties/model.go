@@ -20,11 +20,22 @@ type Party struct {
 }
 
 type PartySummary struct {
-	ID        uuid.UUID
-	Name      string
-	Role      string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID               uuid.UUID
+	Name             string
+	Role             string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	GM               PartySummaryPerson
+	LinkedCharacters []PartySummaryLinkedCharacter
+}
+
+type PartySummaryPerson struct {
+	Username string
+}
+
+type PartySummaryLinkedCharacter struct {
+	CharacterName string
+	Username      string
 }
 
 type PartyDetail struct {
