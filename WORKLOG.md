@@ -443,3 +443,20 @@ base.
 - Marcela approved the exact three-slice checklist and requested a separate implementation session.
 - Next action: commit the planning checkpoint, then create the dedicated T-019 worktree and start
   Slice 1 only.
+
+## 2026-07-14: Completed T-019 and planned T-020 Party card polish
+
+- Merged T-019 through PR #27 as `66a17402aba74e80eb4f921f258390d66b66e89b` after Frontend,
+  Backend, Secret history, and Cloudflare Pages passed.
+- Verified automatic production rollout: Railway and Cloudflare Pages deployed the same merge SHA,
+  the public frontend returned HTTP 200, and backend health returned
+  `{"status":"ok","service":"hunin-backend"}`.
+- Investigated the reported registration problem against current production from a fresh signed-out
+  browser. It was not reproducible: registration returned no `Set-Cookie`, immediate session check
+  remained 401, the browser showed `/login`, and the exact success toast appeared.
+- Created the proposed T-020 planning checkpoint for Party quest-board cards and Home section
+  contrast. Marcela approved the exact two-slice checklist on 2026-07-16. The task is Yellow, uses
+  one future dedicated worktree, and has two sequential slices: backend Party-list contract, then
+  frontend Party/Home presentation.
+- Next action: commit this approved planning checkpoint, create the dedicated T-020 implementation
+  worktree, and start Slice 1 only.

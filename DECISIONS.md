@@ -430,3 +430,25 @@ Consequences:
 T-019 Slice 3 requires backend exact-key privacy tests, frontend DTO/API tests, and responsive card
 validation. Party code remains excluded. Automatic linking after creating from an invite is a
 separate Party follow-up.
+
+## 2026-07-16: Party list cards use bounded summaries and link semantics
+
+Context:
+T-020 redesigns the signed-in Party list as quest-board cards and needs GM and linked-character
+summary data without fetching every Party detail from the frontend.
+
+Decision:
+The authenticated Party-list response exposes only Party id/name/current-user role, GM username,
+and linked Player character-name/username summaries. Party visibility remains membership-scoped in
+PostgreSQL. One bounded repository query avoids frontend Party-detail N+1 requests. Display name
+remains deferred until a real Profile contract exists. No migration is required. Loaded Party cards
+use real anchor navigation rather than a separate Open button.
+
+Reason:
+The card gets the data it needs while preserving Party privacy, authorization boundaries, and normal
+browser navigation behavior.
+
+Consequences:
+T-020 Slice 1 must add exact-key privacy tests and PostgreSQL membership-scoping tests. Slice 2 must
+preserve modified-click link behavior, avoid nested interactive elements, and keep Party detail,
+invite, join, and Character Reference behavior unchanged.
