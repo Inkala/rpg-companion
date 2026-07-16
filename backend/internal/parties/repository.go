@@ -3,6 +3,7 @@ package parties
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -102,43 +103,98 @@ func (repository *Repository) ListPartiesForUser(ctx context.Context, userID uui
 SELECT
   p.id::text,
   p.name,
-  m.role,
+  requester.role,
   p.created_at,
-  p.updated_at
-FROM party_memberships m
-JOIN parties p ON p.id = m.party_id
-WHERE m.user_id = $1::uuid
-ORDER BY p.created_at DESC, p.id DESC`
+  p.updated_at,
+  gm_user.username,
+  player_membership.id::text,
+  linked_character.name,
+  player_user.username
+FROM party_memberships requester
+JOIN parties p ON p.id = requester.party_id
+JOIN party_memberships gm_membership
+  ON gm_membership.party_id = p.id
+ AND gm_membership.role = 'gm'
+JOIN users gm_user ON gm_user.id = gm_membership.user_id
+LEFT JOIN party_memberships player_membership
+  ON player_membership.party_id = p.id
+ AND player_membership.role = 'player'
+ AND player_membership.character_id IS NOT NULL
+LEFT JOIN characters linked_character ON linked_character.id = player_membership.character_id
+LEFT JOIN users player_user ON player_user.id = player_membership.user_id
+WHERE requester.user_id = $1::uuid
+ORDER BY
+  p.created_at DESC,
+  p.id DESC,
+  player_membership.joined_at ASC,
+  player_membership.id ASC`
 
 	rows, err := repository.pool.Query(ctx, query, userID.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("query Party summaries: %w", err)
 	}
 	defer rows.Close()
 
 	summaries := make([]PartySummary, 0)
+	summaryIndexes := make(map[uuid.UUID]int)
 	for rows.Next() {
 		var id string
-		var summary PartySummary
+		var name string
+		var role string
+		var createdAt time.Time
+		var updatedAt time.Time
+		var gmUsername string
+		var playerMembershipID *string
+		var characterName *string
+		var playerUsername *string
 		if err := rows.Scan(
 			&id,
-			&summary.Name,
-			&summary.Role,
-			&summary.CreatedAt,
-			&summary.UpdatedAt,
+			&name,
+			&role,
+			&createdAt,
+			&updatedAt,
+			&gmUsername,
+			&playerMembershipID,
+			&characterName,
+			&playerUsername,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scan Party summary: %w", err)
 		}
 
 		parsedID, err := uuid.Parse(id)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parse Party summary ID: %w", err)
 		}
-		summary.ID = parsedID
-		summaries = append(summaries, summary)
+		summaryIndex, exists := summaryIndexes[parsedID]
+		if !exists {
+			summaries = append(summaries, PartySummary{
+				ID:               parsedID,
+				Name:             name,
+				Role:             role,
+				CreatedAt:        createdAt,
+				UpdatedAt:        updatedAt,
+				GM:               PartySummaryPerson{Username: gmUsername},
+				LinkedCharacters: make([]PartySummaryLinkedCharacter, 0),
+			})
+			summaryIndex = len(summaries) - 1
+			summaryIndexes[parsedID] = summaryIndex
+		}
+
+		if playerMembershipID != nil {
+			if characterName == nil || playerUsername == nil {
+				return nil, errors.New("linked Party character summary is incomplete")
+			}
+			summaries[summaryIndex].LinkedCharacters = append(
+				summaries[summaryIndex].LinkedCharacters,
+				PartySummaryLinkedCharacter{
+					CharacterName: *characterName,
+					Username:      *playerUsername,
+				},
+			)
+		}
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("iterate Party summaries: %w", err)
 	}
 
 	return summaries, nil

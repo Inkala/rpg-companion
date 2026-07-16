@@ -3,6 +3,23 @@ package parties
 import "time"
 
 type partySummaryResponse struct {
+	ID               string                                `json:"id"`
+	Name             string                                `json:"name"`
+	Role             string                                `json:"role"`
+	GM               partySummaryPersonResponse            `json:"gm"`
+	LinkedCharacters []partySummaryLinkedCharacterResponse `json:"linkedCharacters"`
+}
+
+type partySummaryPersonResponse struct {
+	Username string `json:"username"`
+}
+
+type partySummaryLinkedCharacterResponse struct {
+	CharacterName string `json:"characterName"`
+	Username      string `json:"username"`
+}
+
+type partyCreateResponse struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 	Role string `json:"role"`
@@ -55,10 +72,22 @@ type joinPartyResponse struct {
 }
 
 func responseFromPartySummary(summary PartySummary) partySummaryResponse {
+	linkedCharacters := make([]partySummaryLinkedCharacterResponse, 0, len(summary.LinkedCharacters))
+	for _, linkedCharacter := range summary.LinkedCharacters {
+		linkedCharacters = append(linkedCharacters, partySummaryLinkedCharacterResponse{
+			CharacterName: linkedCharacter.CharacterName,
+			Username:      linkedCharacter.Username,
+		})
+	}
+
 	return partySummaryResponse{
 		ID:   summary.ID.String(),
 		Name: summary.Name,
 		Role: summary.Role,
+		GM: partySummaryPersonResponse{
+			Username: summary.GM.Username,
+		},
+		LinkedCharacters: linkedCharacters,
 	}
 }
 
@@ -70,8 +99,8 @@ func listResponseFromPartySummaries(summaries []PartySummary) partyListResponse 
 	return partyListResponse{Parties: parties}
 }
 
-func createResponseFromParty(party Party) partySummaryResponse {
-	return partySummaryResponse{
+func createResponseFromParty(party Party) partyCreateResponse {
+	return partyCreateResponse{
 		ID:   party.ID.String(),
 		Name: party.Name,
 		Role: RoleGM,

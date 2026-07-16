@@ -171,6 +171,110 @@ func TestRepositoryListPartiesForUserIsOwnerScopedAndDeterministic(t *testing.T)
 	}
 }
 
+func TestRepositoryListPartiesForUserReturnsApprovedSummariesWithoutUnrelatedRosterData(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	seedPartyMigrationUsers(t, pool)
+	seedPartyMigrationCharacters(t, pool)
+
+	const (
+		thirdPlayerUserID      = "10000000-0000-0000-0000-000000000005"
+		otherGMCharacterID     = "20000000-0000-0000-0000-000000000004"
+		thirdPlayerCharacterID = "20000000-0000-0000-0000-000000000005"
+	)
+	insertRepositoryTestUser(t, pool, thirdPlayerUserID, "player-three")
+	insertRepositoryTestCharacter(t, pool, otherGMCharacterID, testOtherGMUserID, "First Scout")
+	insertRepositoryTestCharacter(t, pool, thirdPlayerCharacterID, thirdPlayerUserID, "Second Scout")
+
+	rosterPartyID := "32000000-0000-0000-0000-000000000201"
+	newerLowPartyID := "32000000-0000-0000-0000-000000000204"
+	newerHighPartyID := "32000000-0000-0000-0000-000000000205"
+	unrelatedPartyID := "32000000-0000-0000-0000-000000000299"
+	rosterCreatedAt := time.Date(2026, 7, 13, 8, 0, 0, 0, time.UTC)
+	newerCreatedAt := rosterCreatedAt.Add(time.Hour)
+	unrelatedCreatedAt := newerCreatedAt.Add(time.Hour)
+
+	insertRepositoryTestPartyAt(t, pool, rosterPartyID, "Ash & Ivy Pact", testGMUserID, rosterCreatedAt)
+	insertRepositoryTestPartyAt(t, pool, newerLowPartyID, "Newer Low ID", testPlayerUserID, newerCreatedAt)
+	insertRepositoryTestPartyAt(t, pool, newerHighPartyID, "Newer High ID", testPlayerUserID, newerCreatedAt)
+	insertRepositoryTestPartyAt(t, pool, unrelatedPartyID, "Invisible Party", testOtherGMUserID, unrelatedCreatedAt)
+
+	insertRosterMembership(t, pool, "42000000-0000-0000-0000-000000000201", rosterPartyID, testGMUserID, RoleGM, nil, rosterCreatedAt)
+	insertRosterMembership(t, pool, "42000000-0000-0000-0000-000000000204", newerLowPartyID, testPlayerUserID, RoleGM, nil, newerCreatedAt)
+	insertRosterMembership(t, pool, "42000000-0000-0000-0000-000000000205", newerHighPartyID, testPlayerUserID, RoleGM, nil, newerCreatedAt)
+	insertRosterMembership(t, pool, "42000000-0000-0000-0000-000000000299", unrelatedPartyID, testOtherGMUserID, RoleGM, nil, unrelatedCreatedAt)
+
+	firstScoutID := otherGMCharacterID
+	secondScoutID := thirdPlayerCharacterID
+	requesterCharacterID := testCharacterID
+	unrelatedCharacterID := testThirdCharacterID
+	firstJoinedAt := rosterCreatedAt.Add(10 * time.Minute)
+	sharedJoinedAt := rosterCreatedAt.Add(20 * time.Minute)
+	insertRosterMembership(t, pool, "42000000-0000-0000-0000-000000000212", rosterPartyID, testOtherGMUserID, RolePlayer, &firstScoutID, firstJoinedAt)
+	insertRosterMembership(t, pool, "42000000-0000-0000-0000-000000000210", rosterPartyID, testPlayerUserID, RolePlayer, &requesterCharacterID, sharedJoinedAt)
+	insertRosterMembership(t, pool, "42000000-0000-0000-0000-000000000209", rosterPartyID, thirdPlayerUserID, RolePlayer, &secondScoutID, sharedJoinedAt)
+	insertRosterMembership(t, pool, "42000000-0000-0000-0000-000000000298", unrelatedPartyID, testOtherUserID, RolePlayer, &unrelatedCharacterID, unrelatedCreatedAt.Add(time.Minute))
+
+	summaries, err := NewRepository(pool).ListPartiesForUser(context.Background(), uuid.MustParse(testPlayerUserID))
+	if err != nil {
+		t.Fatalf("list approved Party summaries: %v", err)
+	}
+	if len(summaries) != 3 {
+		t.Fatalf("expected three membership-scoped Parties, got %d", len(summaries))
+	}
+
+	if summaries[0].ID.String() != newerHighPartyID || summaries[1].ID.String() != newerLowPartyID || summaries[2].ID.String() != rosterPartyID {
+		t.Fatalf("Parties were not ordered by created_at DESC, id DESC: %+v", summaries)
+	}
+	for index, expectedName := range []string{"Newer High ID", "Newer Low ID"} {
+		summary := summaries[index]
+		if summary.Name != expectedName || summary.Role != RoleGM || summary.GM.Username != "player-one" {
+			t.Fatalf("unexpected characterless Party summary: %+v", summary)
+		}
+		if summary.LinkedCharacters == nil || len(summary.LinkedCharacters) != 0 {
+			t.Fatal("Party without linked Player characters must return an initialized empty slice")
+		}
+	}
+
+	rosterSummary := summaries[2]
+	if rosterSummary.Name != "Ash & Ivy Pact" || rosterSummary.Role != RolePlayer || rosterSummary.GM.Username != "gm-one" {
+		t.Fatalf("unexpected roster Party summary: %+v", rosterSummary)
+	}
+	wantLinkedCharacters := []PartySummaryLinkedCharacter{
+		{CharacterName: "First Scout", Username: "gm-two"},
+		{CharacterName: "Second Scout", Username: "player-three"},
+		{CharacterName: "Linked Hero", Username: "player-one"},
+	}
+	if !reflect.DeepEqual(rosterSummary.LinkedCharacters, wantLinkedCharacters) {
+		t.Fatalf("linked characters were not ordered by joined_at ASC, membership id ASC: got %+v", rosterSummary.LinkedCharacters)
+	}
+
+	for _, summary := range summaries {
+		if summary.ID.String() == unrelatedPartyID || summary.Name == "Invisible Party" {
+			t.Fatal("list included an unrelated Party")
+		}
+		for _, linkedCharacter := range summary.LinkedCharacters {
+			if linkedCharacter.CharacterName == "Third Hero" || linkedCharacter.Username == "player-two" {
+				t.Fatal("list exposed unrelated roster information")
+			}
+		}
+	}
+}
+
+func TestRepositoryListPartiesForUserPreservesDatabaseErrors(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	repository := NewRepository(pool)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := repository.ListPartiesForUser(ctx, uuid.New())
+	if err == nil {
+		t.Fatal("expected canceled list query to fail")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected wrapped database error to preserve context cancellation, got %v", err)
+	}
+}
+
 func TestPartyDetailModelsExposeOnlyBasicRosterFields(t *testing.T) {
 	requireStructFields(t, PartyDetail{}, []string{"ID", "Name", "Role", "CreatedAt", "UpdatedAt", "Members"})
 	requireStructFields(t, PartyMember{}, []string{"Username", "Role", "JoinedAt", "Character"})
@@ -970,6 +1074,44 @@ INSERT INTO party_memberships (id, party_id, user_id, role, character_id, joined
 VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::uuid, $6)`, id, partyID, userID, role, characterID, joinedAt)
 	if err != nil {
 		t.Fatalf("insert roster membership: %v", err)
+	}
+}
+
+func insertRepositoryTestUser(t *testing.T, pool *pgxpool.Pool, id string, username string) {
+	t.Helper()
+	_, err := pool.Exec(context.Background(), `
+INSERT INTO users (
+  id, username, username_canonical, email_canonical, password_hash, password_hash_algorithm, created_at, updated_at
+) VALUES ($1::uuid, $2, $2, $2 || '@example.com', 'test-password-hash', 'argon2id', $3, $3)`,
+		id, username, migrationTestNow)
+	if err != nil {
+		t.Fatalf("insert repository test user: %v", err)
+	}
+}
+
+func insertRepositoryTestCharacter(t *testing.T, pool *pgxpool.Pool, id string, ownerID string, name string) {
+	t.Helper()
+	_, err := pool.Exec(context.Background(), `
+INSERT INTO characters (
+  id, owner_subject_id, name, class_name, subclass_name, level, ancestry, background,
+  strength_score, dexterity_score, constitution_score, intelligence_score, wisdom_score, charisma_score,
+  hp_current, hp_max, armor_class, speed_ft, reference_payload, created_at, updated_at
+) VALUES (
+  $1::uuid, $2::uuid, $3, 'Fighter', NULL, 1, 'Human', 'Soldier',
+  10, 10, 10, 10, 10, 10, 10, 10, 10, 30, '{}'::jsonb, $4, $4
+)`, id, ownerID, name, migrationTestNow)
+	if err != nil {
+		t.Fatalf("insert repository test character: %v", err)
+	}
+}
+
+func insertRepositoryTestPartyAt(t *testing.T, pool *pgxpool.Pool, id string, name string, creatorID string, createdAt time.Time) {
+	t.Helper()
+	_, err := pool.Exec(context.Background(), `
+INSERT INTO parties (id, name, created_by_user_id, created_at, updated_at)
+VALUES ($1::uuid, $2, $3::uuid, $4, $4)`, id, name, creatorID, createdAt)
+	if err != nil {
+		t.Fatalf("insert repository test Party: %v", err)
 	}
 }
 

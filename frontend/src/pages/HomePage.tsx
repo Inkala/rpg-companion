@@ -9,6 +9,7 @@ interface HomePageProps {
   onCreateCharacter: () => void;
   onCreateParty: () => void;
   onExploreCharacter: () => void;
+  getPartyHref: (partyId: string) => string;
   onJoinParty: () => void;
   onOpenParty: (partyId: string) => void;
   onSignIn: () => void;
@@ -20,6 +21,7 @@ export const HomePage = ({
   onCreateCharacter,
   onCreateParty,
   onExploreCharacter,
+  getPartyHref,
   onJoinParty,
   onOpenParty,
   onSignIn,
@@ -38,6 +40,7 @@ export const HomePage = ({
             onCreateCharacter={onCreateCharacter}
             onCreateParty={onCreateParty}
             onExploreCharacter={onExploreCharacter}
+            getPartyHref={getPartyHref}
             onJoinParty={onJoinParty}
             onOpenParty={onOpenParty}
             onSignIn={onSignIn}

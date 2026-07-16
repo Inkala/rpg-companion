@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState, type MouseEvent } from 'react';
 import type { PartySummaryDTO } from './apiTypes';
 import './parties.css';
 
@@ -8,6 +8,7 @@ type PartyListProps = {
   onSignIn: () => void;
   onCreateParty: () => void;
   onJoinParty: () => void;
+  getPartyHref: (partyId: string) => string;
   onOpenParty: (partyId: string) => void;
 };
 
@@ -23,6 +24,7 @@ export const PartyList = ({
   onSignIn,
   onCreateParty,
   onJoinParty,
+  getPartyHref,
   onOpenParty,
 }: PartyListProps) => {
   const [state, setState] = useState<PartyListState>({ status: 'loading' });
@@ -75,7 +77,11 @@ export const PartyList = ({
       ) : state.status === 'error' ? (
         <PartyListError onRetry={() => setLoadAttempt((current) => current + 1)} />
       ) : (
-        <LoadedPartyList parties={state.parties} onOpenParty={onOpenParty} />
+        <LoadedPartyList
+          parties={state.parties}
+          getPartyHref={getPartyHref}
+          onOpenParty={onOpenParty}
+        />
       )}
     </section>
   );
@@ -101,8 +107,7 @@ const EmptyPartyList = ({
   onJoinParty: () => void;
 }) => {
   return (
-    <section className="party-list__state" aria-labelledby="empty-parties-title">
-      <h3 id="empty-parties-title">No parties yet</h3>
+    <div className="party-list__empty">
       <p role="status">You have not joined a party yet.</p>
       <div className="party-actions">
         <button type="button" className="button button--primary" onClick={onCreateParty}>
@@ -112,7 +117,7 @@ const EmptyPartyList = ({
           Join party
         </button>
       </div>
-    </section>
+    </div>
   );
 };
 
@@ -130,36 +135,84 @@ const PartyListError = ({ onRetry }: { onRetry: () => void }) => {
 
 const LoadedPartyList = ({
   parties,
+  getPartyHref,
   onOpenParty,
 }: {
   parties: PartySummaryDTO[];
+  getPartyHref: (partyId: string) => string;
   onOpenParty: (partyId: string) => void;
 }) => {
   return (
     <ul className="party-list__items" aria-label="Your parties">
-      {parties.map((party, index) => {
-        const titleId = `party-list-title-${index}`;
-        const roleLabel = party.role === 'gm' ? 'GM' : 'Player';
-
-        return (
-          <li className="party-list__item" key={party.id}>
-            <article className="party-list-card" aria-labelledby={titleId}>
-              <h3 id={titleId} className="party-list-card__title">{party.name}</h3>
-              <p className="party-list-card__role">
-                Role: <strong>{roleLabel}</strong>
-              </p>
-              <button
-                type="button"
-                className="button button--secondary party-list-card__action"
-                onClick={() => onOpenParty(party.id)}
-                aria-label={`Open ${party.name}`}
-              >
-                Open party
-              </button>
-            </article>
-          </li>
-        );
-      })}
+      {parties.map((party) => (
+        <li className="party-list__item" key={party.id}>
+          <PartyListCard
+            party={party}
+            href={getPartyHref(party.id)}
+            onOpenParty={onOpenParty}
+          />
+        </li>
+      ))}
     </ul>
+  );
+};
+
+const PartyListCard = ({
+  party,
+  href,
+  onOpenParty,
+}: {
+  party: PartySummaryDTO;
+  href: string;
+  onOpenParty: (partyId: string) => void;
+}) => {
+  const titleId = useId();
+
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (
+      event.defaultPrevented
+      || event.button !== 0
+      || event.metaKey
+      || event.ctrlKey
+      || event.shiftKey
+      || event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    onOpenParty(party.id);
+  };
+
+  return (
+    <a
+      className="party-list-card"
+      href={href}
+      aria-labelledby={titleId}
+      onClick={handleClick}
+    >
+      <h3 id={titleId} className="party-list-card__title">
+        {party.name}
+      </h3>
+      <p className="party-list-card__gm">
+        <strong>GM:</strong> {party.gm.username}
+      </p>
+      <h4 className="party-list-card__linked-title">LINKED CHARACTERS</h4>
+      {party.linkedCharacters.length === 0 ? (
+        <p className="party-list-card__empty">No linked characters yet.</p>
+      ) : (
+        <ul className="party-list-card__characters">
+          {party.linkedCharacters.map((linkedCharacter) => (
+            <li
+              className="party-list-card__character"
+              key={`${linkedCharacter.characterName}:${linkedCharacter.username}`}
+            >
+              <strong>{linkedCharacter.characterName}:</strong>{' '}
+              <span>{linkedCharacter.username}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </a>
   );
 };

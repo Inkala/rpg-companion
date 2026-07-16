@@ -4,6 +4,13 @@ export type PartySummaryDTO = {
   id: string;
   name: string;
   role: PartyRoleDTO;
+  gm: {
+    username: string;
+  };
+  linkedCharacters: Array<{
+    characterName: string;
+    username: string;
+  }>;
 };
 
 export type PartyListResponseDTO = {
@@ -14,7 +21,11 @@ export type CreatePartyRequestDTO = {
   name: string;
 };
 
-export type CreatePartyResponseDTO = PartySummaryDTO;
+export type CreatePartyResponseDTO = {
+  id: string;
+  name: string;
+  role: 'gm';
+};
 
 export type PartyMemberDTO = {
   username: string;

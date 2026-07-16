@@ -100,6 +100,10 @@ func TestHandlerListReturnsFrozenResponsesAndEmptyArray(t *testing.T) {
 				return []PartySummary{{
 					ID: partyID, Name: "Moon Keep", Role: RoleGM,
 					CreatedAt: createdAt, UpdatedAt: createdAt,
+					GM: PartySummaryPerson{Username: "moon-gm"},
+					LinkedCharacters: []PartySummaryLinkedCharacter{
+						{CharacterName: "Mara Vale", Username: "mara-player"},
+					},
 				}}, nil
 			},
 		}
@@ -110,6 +114,10 @@ func TestHandlerListReturnsFrozenResponsesAndEmptyArray(t *testing.T) {
 		assertPartyJSONResponse(t, response, http.StatusOK, map[string]any{
 			"parties": []any{map[string]any{
 				"id": partyID.String(), "name": "Moon Keep", "role": RoleGM,
+				"gm": map[string]any{"username": "moon-gm"},
+				"linkedCharacters": []any{map[string]any{
+					"characterName": "Mara Vale", "username": "mara-player",
+				}},
 			}},
 		})
 	})

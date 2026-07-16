@@ -45,6 +45,10 @@ type AuthenticationDestination =
   | { name: 'party'; partyId: string }
   | { name: 'party-character'; partyId: string; characterId: string };
 
+const getPartyHref = (partyId: string) => {
+  return pathForRoute({ name: 'party', partyId });
+};
+
 export const App = ({
   initialRoute,
   initialInviteToken = null,
@@ -424,6 +428,7 @@ export const App = ({
           onCreateCharacter={showNewCharacter}
           onCreateParty={showNewParty}
           onExploreCharacter={showSampleCharacter}
+          getPartyHref={getPartyHref}
           onJoinParty={showJoinParty}
           onOpenParty={showParty}
           onSignIn={() => openAccount('sign-in')}

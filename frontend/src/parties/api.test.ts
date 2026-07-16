@@ -5,10 +5,22 @@ const partySummary = {
   id: 'party-1',
   name: 'The Lantern Guard',
   role: 'gm' as const,
+  gm: { username: 'lantern-gm' },
+  linkedCharacters: [
+    { characterName: 'Mara Vale', username: 'mara-player' },
+  ],
+};
+
+const createdPartySummary = {
+  id: 'party-1',
+  name: 'The Lantern Guard',
+  role: 'gm' as const,
 };
 
 const partyDetail = {
-  ...partySummary,
+  id: 'party-1',
+  name: 'The Lantern Guard',
+  role: 'gm' as const,
   members: [
     {
       username: 'Mara',
@@ -55,10 +67,14 @@ describe('parties API client', () => {
   });
 
   it('creates a party with JSON and credentials', async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(partySummary, 201));
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(createdPartySummary, 201),
+    );
     const client = createClient(fetchMock);
 
-    await expect(client.createParty({ name: 'The Lantern Guard' })).resolves.toEqual(partySummary);
+    await expect(client.createParty({ name: 'The Lantern Guard' })).resolves.toEqual(
+      createdPartySummary,
+    );
     expect(fetchMock).toHaveBeenCalledWith('https://api.hunin.test/parties', {
       method: 'POST',
       credentials: 'include',

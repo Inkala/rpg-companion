@@ -9,16 +9,51 @@ import (
 	"github.com/google/uuid"
 )
 
-func TestPartySummaryListAndCreateResponseMappings(t *testing.T) {
+func TestPartySummaryModelsExposeOnlyApprovedListFields(t *testing.T) {
+	requireStructFields(t, PartySummary{}, []string{
+		"ID", "Name", "Role", "CreatedAt", "UpdatedAt", "GM", "LinkedCharacters",
+	})
+	requireStructFields(t, PartySummaryPerson{}, []string{"Username"})
+	requireStructFields(t, PartySummaryLinkedCharacter{}, []string{"CharacterName", "Username"})
+}
+
+func TestPartySummaryListResponseMappingHasExactPrivacySafeKeys(t *testing.T) {
 	partyID := uuid.MustParse("71000000-0000-0000-0000-000000000001")
-	ownerID := uuid.MustParse("70000000-0000-0000-0000-000000000001")
-	summary := PartySummary{ID: partyID, Name: "Lantern Keep", Role: RolePlayer}
+	summary := PartySummary{
+		ID:   partyID,
+		Name: "Ash & Ivy Pact",
+		Role: RolePlayer,
+		GM:   PartySummaryPerson{Username: "nerea-sol"},
+		LinkedCharacters: []PartySummaryLinkedCharacter{
+			{CharacterName: "Nim", Username: "nim-player"},
+			{CharacterName: "Aster", Username: "aster-player"},
+		},
+	}
 
 	mappedSummary := responseFromPartySummary(summary)
 	summaryJSON := marshalResponseMap(t, mappedSummary)
-	requireJSONKeys(t, summaryJSON, "id", "name", "role")
-	if summaryJSON["id"] != partyID.String() || summaryJSON["name"] != "Lantern Keep" || summaryJSON["role"] != RolePlayer {
+	requireJSONKeys(t, summaryJSON, "id", "name", "role", "gm", "linkedCharacters")
+	if summaryJSON["id"] != partyID.String() || summaryJSON["name"] != "Ash & Ivy Pact" || summaryJSON["role"] != RolePlayer {
 		t.Fatal("Party summary response does not match the frontend contract")
+	}
+	gm := requireJSONObject(t, summaryJSON["gm"])
+	requireJSONKeys(t, gm, "username")
+	if gm["username"] != "nerea-sol" {
+		t.Fatal("Party summary response did not map the GM username")
+	}
+	linkedCharacters, ok := summaryJSON["linkedCharacters"].([]any)
+	if !ok || len(linkedCharacters) != 2 {
+		t.Fatal("Party summary response must contain the linked-character array")
+	}
+	firstLinkedCharacter := requireJSONObject(t, linkedCharacters[0])
+	requireJSONKeys(t, firstLinkedCharacter, "characterName", "username")
+	if firstLinkedCharacter["characterName"] != "Nim" || firstLinkedCharacter["username"] != "nim-player" {
+		t.Fatal("Party summary response did not map the linked-character summary")
+	}
+	secondLinkedCharacter := requireJSONObject(t, linkedCharacters[1])
+	requireJSONKeys(t, secondLinkedCharacter, "characterName", "username")
+	if secondLinkedCharacter["characterName"] != "Aster" || secondLinkedCharacter["username"] != "aster-player" {
+		t.Fatal("Party summary response changed linked-character order")
 	}
 
 	listJSON := marshalResponseMap(t, listResponseFromPartySummaries([]PartySummary{summary}))
@@ -27,6 +62,43 @@ func TestPartySummaryListAndCreateResponseMappings(t *testing.T) {
 	if !ok || len(parties) != 1 {
 		t.Fatal("Party list response must contain one parties array entry")
 	}
+	requireJSONKeys(t, requireJSONObject(t, parties[0]), "id", "name", "role", "gm", "linkedCharacters")
+
+	serialized := marshalResponseString(t, listResponseFromPartySummaries([]PartySummary{summary}))
+	for _, forbiddenKey := range []string{
+		"email", "userId", "characterId", "ownerId", "ownerSubjectId", "characterSheet",
+		"referencePayload", "invite", "inviteData", "token", "tokenHash", "members", "displayName",
+	} {
+		if strings.Contains(serialized, `"`+forbiddenKey+`"`) {
+			t.Fatalf("Party list response exposed forbidden field %q", forbiddenKey)
+		}
+	}
+}
+
+func TestPartySummaryListResponseUsesEmptyLinkedCharacterArrays(t *testing.T) {
+	summary := PartySummary{
+		ID:   uuid.MustParse("71000000-0000-0000-0000-000000000002"),
+		Name: "Quiet Hall",
+		Role: RoleGM,
+		GM:   PartySummaryPerson{Username: "quiet-gm"},
+	}
+
+	summaryJSON := marshalResponseMap(t, responseFromPartySummary(summary))
+	linkedCharacters, ok := summaryJSON["linkedCharacters"].([]any)
+	if !ok || len(linkedCharacters) != 0 {
+		t.Fatal("Party with no linked characters must serialize linkedCharacters as []")
+	}
+
+	listJSON := marshalResponseMap(t, listResponseFromPartySummaries(nil))
+	parties, ok := listJSON["parties"].([]any)
+	if !ok || len(parties) != 0 {
+		t.Fatal("empty Party list must serialize parties as []")
+	}
+}
+
+func TestPartyCreateResponseMappingRemainsUnchanged(t *testing.T) {
+	partyID := uuid.MustParse("71000000-0000-0000-0000-000000000003")
+	ownerID := uuid.MustParse("70000000-0000-0000-0000-000000000001")
 
 	createdParty := Party{ID: partyID, Name: "Lantern Keep", CreatedByUserID: ownerID}
 	createJSON := marshalResponseMap(t, createResponseFromParty(createdParty))
