@@ -38,6 +38,7 @@ describe('CharacterSummaryCard', () => {
     expect(within(card).getByText('26')).toBeInTheDocument();
     expect(within(card).getByText('14')).toBeInTheDocument();
     expect(within(card).getByText('30 ft.')).toBeInTheDocument();
+    expect(within(card).getByText('AC').closest('.stat')).toHaveClass('stat--ac');
     expect(within(card).getByText('Longbow')).toBeInTheDocument();
     expect(within(card).getByText('Colossus Slayer')).toBeInTheDocument();
     expect(within(card).getByText(/A steady wilderness scout/)).toBeInTheDocument();
