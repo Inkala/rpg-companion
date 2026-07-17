@@ -15,7 +15,6 @@ const renderProfile = (
     currentUser: maraUser,
     isSessionLoading: false,
     sessionError: null,
-    onBack: vi.fn(),
     onSignIn: vi.fn(),
     onSignOut: vi.fn(),
     ...options,
@@ -34,13 +33,12 @@ describe('ProfilePage', () => {
     expect(screen.queryByText(/@/)).not.toBeInTheDocument();
   });
 
-  it('provides signed-in home and sign-out actions', () => {
-    const { onBack, onSignOut } = renderProfile();
+  it('removes the redundant Home action and preserves sign-out', () => {
+    const { onSignOut } = renderProfile();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+    expect(screen.queryByRole('button', { name: 'Home' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
 
-    expect(onBack).toHaveBeenCalledOnce();
     expect(onSignOut).toHaveBeenCalledOnce();
   });
 

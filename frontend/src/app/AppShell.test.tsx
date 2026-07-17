@@ -44,12 +44,14 @@ describe('AppShell', () => {
   });
 
   it('opens account actions from the desktop header', () => {
-    const { onOpenAccount } = renderShell({ accountsAvailable: true });
+    const { onHome, onOpenAccount } = renderShell({ accountsAvailable: true });
 
     const accountActions = screen.getByLabelText('Account actions');
+    fireEvent.click(within(accountActions).getByRole('button', { name: 'Home' }));
     fireEvent.click(within(accountActions).getByRole('button', { name: 'Sign in' }));
     fireEvent.click(within(accountActions).getByRole('button', { name: 'Create account' }));
 
+    expect(onHome).toHaveBeenCalledOnce();
     expect(onOpenAccount).toHaveBeenNthCalledWith(1, 'sign-in');
     expect(onOpenAccount).toHaveBeenNthCalledWith(2, 'register');
   });
@@ -64,11 +66,19 @@ describe('AppShell', () => {
     ).toBeInTheDocument();
   });
 
-  it('hides desktop account actions on account pages while keeping the mobile menu trigger', () => {
-    renderShell({ accountsAvailable: true, showAccountActions: false });
+  it('keeps the complete guest navigation available in desktop and mobile menus', () => {
+    renderShell({ accountsAvailable: true });
 
-    expect(screen.queryByLabelText('Account actions')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Menu' })).toBeInTheDocument();
+    const desktop = screen.getByLabelText('Account actions');
+    expect(within(desktop).getByRole('button', { name: 'Home' })).toBeInTheDocument();
+    expect(within(desktop).getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+    expect(within(desktop).getByRole('button', { name: 'Create account' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    const mobile = screen.getByRole('menu');
+    expect(within(mobile).getByRole('menuitem', { name: 'Home' })).toBeInTheDocument();
+    expect(within(mobile).getByRole('menuitem', { name: 'Sign in' })).toBeInTheDocument();
+    expect(within(mobile).getByRole('menuitem', { name: 'Create account' })).toBeInTheDocument();
   });
 
   it('opens mobile account actions and closes them with Escape', () => {
@@ -86,6 +96,7 @@ describe('AppShell', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
 
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Menu' })).toHaveFocus();
   });
 
   it('uses the menu icon while signed out and the account icon while signed in', () => {
@@ -133,9 +144,21 @@ describe('AppShell', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Mara mobile account menu' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'My profile' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }));
 
     expect(onOpenProfile).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('opens Home from the signed-in mobile menu', () => {
+    const { onHome } = renderShell({ accountsAvailable: true, currentUser: maraUser });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mara mobile account menu' }));
+    const homeItem = screen.getByRole('menuitem', { name: 'Home' });
+    expect(homeItem.querySelector('.lucide-house')).toBeInTheDocument();
+    fireEvent.click(homeItem);
+
+    expect(onHome).toHaveBeenCalledOnce();
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });

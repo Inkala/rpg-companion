@@ -1,4 +1,4 @@
-import { LogOut, Menu, Sword, UserRound } from 'lucide-react';
+import { House, LogOut, Menu, Sword, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccountHeaderActions } from '../accounts/AccountHeaderActions';
 import huninLogo from '../assets/brand/hunin-logo.svg';
@@ -15,8 +15,7 @@ interface AppShellProps {
   onHome: () => void;
   onOpenAccount: (mode: AccountMode) => void;
   onOpenProfile: () => void;
-  onSignOut: () => void;
-  showAccountActions?: boolean;
+  onSignOut: (returnFocus?: HTMLElement) => void;
 }
 
 export const AppShell = ({
@@ -29,10 +28,10 @@ export const AppShell = ({
   onOpenAccount,
   onOpenProfile,
   onSignOut,
-  showAccountActions = true,
 }: AppShellProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!isMobileMenuOpen) {
@@ -51,6 +50,7 @@ export const AppShell = ({
     const closeMenuOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsMobileMenuOpen(false);
+        mobileMenuTriggerRef.current?.focus();
       }
     };
 
@@ -67,9 +67,14 @@ export const AppShell = ({
     onOpenAccount(mode);
   };
 
+  const openHomeFromMenu = () => {
+    setIsMobileMenuOpen(false);
+    onHome();
+  };
+
   const signOutFromMenu = () => {
     setIsMobileMenuOpen(false);
-    onSignOut();
+    onSignOut(mobileMenuTriggerRef.current ?? undefined);
   };
 
   const openProfileFromMenu = () => {
@@ -98,23 +103,23 @@ export const AppShell = ({
         </section>
 
         <nav className="app-header__nav" aria-label="App navigation">
-          {showAccountActions ? (
-            <div className="app-header__account">
-              <AccountHeaderActions
-                accountsAvailable={accountsAvailable}
-                currentUser={currentUser}
-                isSessionLoading={isSessionLoading}
-                sessionError={sessionError}
-                onOpenAccount={onOpenAccount}
-                onOpenProfile={onOpenProfile}
-                onSignOut={onSignOut}
-              />
-            </div>
-          ) : null}
+          <div className="app-header__account">
+            <AccountHeaderActions
+              accountsAvailable={accountsAvailable}
+              currentUser={currentUser}
+              isSessionLoading={isSessionLoading}
+              sessionError={sessionError}
+              onHome={onHome}
+              onOpenAccount={onOpenAccount}
+              onOpenProfile={onOpenProfile}
+              onSignOut={onSignOut}
+            />
+          </div>
         </nav>
 
         <div className="app-mobile-menu" ref={mobileMenuRef}>
           <button
+            ref={mobileMenuTriggerRef}
             type="button"
             className="app-mobile-menu__trigger"
             aria-label={currentUser ? `${currentUser.username} mobile account menu` : 'Menu'}
@@ -131,16 +136,15 @@ export const AppShell = ({
 
           {isMobileMenuOpen ? (
             <div className="app-mobile-menu__content" role="menu">
-              {showAccountActions ? (
-                <MobileAccountActions
-                  accountsAvailable={accountsAvailable}
-                  currentUser={currentUser}
-                  sessionError={sessionError}
-                  onOpenAccount={openAccount}
-                  onOpenProfile={openProfileFromMenu}
-                  onSignOut={signOutFromMenu}
-                />
-              ) : null}
+              <MobileAccountActions
+                accountsAvailable={accountsAvailable}
+                currentUser={currentUser}
+                sessionError={sessionError}
+                onHome={openHomeFromMenu}
+                onOpenAccount={openAccount}
+                onOpenProfile={openProfileFromMenu}
+                onSignOut={signOutFromMenu}
+              />
             </div>
           ) : null}
         </div>
@@ -155,24 +159,29 @@ interface MobileAccountActionsProps {
   accountsAvailable: boolean;
   currentUser: AuthUser | null;
   sessionError: string | null;
+  onHome: () => void;
   onOpenAccount: (mode: AccountMode) => void;
   onOpenProfile: () => void;
-  onSignOut: () => void;
+  onSignOut: (returnFocus?: HTMLElement) => void;
 }
 
 const MobileAccountActions = ({
   accountsAvailable,
   currentUser,
   sessionError,
+  onHome,
   onOpenAccount,
   onOpenProfile,
   onSignOut,
 }: MobileAccountActionsProps) => {
   if (!accountsAvailable) {
     return (
-      <p className="app-mobile-menu__note" role="menuitem">
-        Accounts are unavailable in the public demo.
-      </p>
+      <>
+        <HomeMenuItem onHome={onHome} />
+        <p className="app-mobile-menu__note" role="menuitem">
+          Accounts are unavailable in the public demo.
+        </p>
+      </>
     );
   }
 
@@ -184,6 +193,7 @@ const MobileAccountActions = ({
             {sessionError}
           </p>
         ) : null}
+        <HomeMenuItem onHome={onHome} />
         <button
           type="button"
           className="app-mobile-menu__item"
@@ -191,13 +201,13 @@ const MobileAccountActions = ({
           onClick={onOpenProfile}
         >
           <Sword aria-hidden="true" size={18} strokeWidth={2.2} />
-          <span>My profile</span>
+          <span>Profile</span>
         </button>
         <button
           type="button"
           className="app-mobile-menu__item"
           role="menuitem"
-          onClick={onSignOut}
+          onClick={() => onSignOut()}
         >
           <LogOut aria-hidden="true" size={18} strokeWidth={2.2} />
           <span>Sign out</span>
@@ -213,6 +223,7 @@ const MobileAccountActions = ({
           {sessionError}
         </p>
       ) : null}
+      <HomeMenuItem onHome={onHome} />
       <button
         type="button"
         className="app-mobile-menu__item"
@@ -232,3 +243,15 @@ const MobileAccountActions = ({
     </>
   );
 };
+
+const HomeMenuItem = ({ onHome }: { onHome: () => void }) => (
+  <button
+    type="button"
+    className="app-mobile-menu__item"
+    role="menuitem"
+    onClick={onHome}
+  >
+    <House aria-hidden="true" size={18} strokeWidth={2.2} />
+    <span>Home</span>
+  </button>
+);

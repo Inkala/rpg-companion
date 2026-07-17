@@ -96,7 +96,8 @@ describe('CharacterReference', () => {
       'aria-expanded',
       'true',
     );
-    expect(screen.getByRole('button', { name: /Longsword/ })).toBeInTheDocument();
+    expect(screen.getByText('Longsword').closest('.ability-row')).toHaveProperty('tagName', 'DIV');
+    expect(screen.queryByRole('button', { name: /Longsword/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Features, 1 items/ })).toHaveAttribute(
       'aria-expanded',
       'false',
@@ -204,14 +205,12 @@ describe('CharacterReference', () => {
       within(sheet).getByText('Use a bonus action to regain a small amount of hit points.'),
     ).toBeInTheDocument();
 
-    fireEvent.click(
-      within(sheet).getByRole('button', {
-        name: 'Show more details',
-      }),
-    );
     expect(
       within(sheet).getByText('The exact healing amount comes from the character rules data.'),
     ).toBeInTheDocument();
+    expect(within(sheet).getByRole('heading', { name: 'Description' })).toBeInTheDocument();
+    expect(within(sheet).queryByText('Remember')).not.toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: 'Show more details' })).not.toBeInTheDocument();
 
     fireEvent.click(
       within(sheet).getByRole('button', {
@@ -252,19 +251,35 @@ describe('CharacterReference', () => {
     const closeButton = within(sheet).getByRole('button', {
       name: 'Close Second Wind quick reference',
     });
-    const detailsButton = within(sheet).getByRole('button', {
-      name: 'Show more details',
-    });
 
     expect(closeButton).toHaveFocus();
 
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
 
-    expect(detailsButton).toHaveFocus();
+    expect(closeButton).toHaveFocus();
 
     fireEvent.keyDown(document, { key: 'Tab' });
 
     expect(closeButton).toHaveFocus();
+  });
+
+  it('renders long structured detail immediately in the internally scrollable dialog', () => {
+    const longDetail = 'Keep this long rules explanation visible. '.repeat(40);
+    const longCharacter = structuredClone(testCharacter);
+    const quickReference = longCharacter.sections[1]?.items[0]?.quickReference;
+    if (!quickReference?.details) {
+      throw new Error('Expected the test fixture to include structured detail.');
+    }
+    quickReference.details.text = longDetail;
+
+    render(<CharacterReference character={longCharacter} onBack={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Features, 1 items/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Second Wind/ }));
+
+    const sheet = screen.getByRole('dialog', { name: 'Second Wind quick reference' });
+    expect(sheet).toHaveClass('bottom-sheet');
+    const detailsCopy = sheet.querySelector('.details-copy');
+    expect(detailsCopy).toHaveTextContent(longDetail.trim());
   });
 
   it('starts Mara spells collapsed', () => {
@@ -319,12 +334,18 @@ describe('CharacterReference', () => {
       'aria-expanded',
       'true',
     );
-    const longbow = screen.getByRole('button', { name: /Longbow/ });
+    const longbow = screen.getByText('Longbow').closest<HTMLElement>('.ability-row');
+    if (!longbow) {
+      throw new Error('Expected Longbow to render inside an ability row.');
+    }
     const actionsPanel = longbow.closest('.section-panel');
     expect(actionsPanel).toHaveAttribute('id', 'actions-section-panel');
     expect(actionsHeader).toHaveAttribute('aria-controls', 'actions-section-panel');
     expect(actionsPanel).toContainElement(longbow);
-    expect(actionsPanel).toContainElement(screen.getByRole('button', { name: /Shortsword/ }));
+    expect(longbow).toHaveClass('ability-row--static');
+    expect(actionsPanel).toContainElement(
+      screen.getByText('Shortsword').closest<HTMLElement>('.ability-row'),
+    );
   });
 
   it('expands Mara features on request', () => {
@@ -340,7 +361,9 @@ describe('CharacterReference', () => {
     fireEvent.click(featuresHeader);
 
     expect(featuresHeader).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('button', { name: /Archery/ })).toBeInTheDocument();
+    expect(screen.getByText('Archery').closest('.ability-row')).toHaveClass(
+      'ability-row--static',
+    );
     expect(screen.getByRole('button', { name: /Colossus Slayer/ })).toBeInTheDocument();
   });
 
@@ -362,6 +385,13 @@ describe('CharacterReference', () => {
     ).toBeInTheDocument();
     expect(within(sheet).getByText('Timing')).toBeInTheDocument();
     expect(within(sheet).getByText('Once per turn')).toBeInTheDocument();
+    expect(within(sheet).getByRole('heading', { name: 'Description' })).toBeInTheDocument();
+    expect(
+      within(sheet).getByText('The enemy must be below its hit point maximum before the hit.'),
+    ).toBeInTheDocument();
+    expect(
+      within(sheet).getByText('The bonus applies once per turn, not once per attack.'),
+    ).toBeInTheDocument();
   });
 
   it('closes the Mara sheet and returns focus to Colossus Slayer', async () => {
@@ -382,15 +412,17 @@ describe('CharacterReference', () => {
     });
   });
 
-  it('keeps rows without quick-reference content as planned details', () => {
+  it('renders rows without hidden structured detail as non-interactive content', () => {
     render(<CharacterReference character={testCharacter} onBack={vi.fn()} />);
 
-    const longswordRow = screen.getByRole('button', { name: /Longsword/ });
+    const longswordRow = screen.getByText('Longsword').closest('.ability-row');
 
-    expect(longswordRow).toHaveAttribute('aria-disabled', 'true');
-    expect(within(longswordRow).getByText('Details planned')).toBeInTheDocument();
+    expect(longswordRow).not.toBeNull();
+    expect(longswordRow).toHaveProperty('tagName', 'DIV');
+    expect(screen.queryByRole('button', { name: /Longsword/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Details planned')).not.toBeInTheDocument();
 
-    fireEvent.click(longswordRow);
+    fireEvent.click(longswordRow as HTMLElement);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });

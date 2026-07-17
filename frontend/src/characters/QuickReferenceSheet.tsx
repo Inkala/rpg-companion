@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import type { QuickReferenceSheetContent } from './types';
 
 interface QuickReferenceSheetProps {
@@ -10,13 +10,11 @@ export const QuickReferenceSheet = ({
   content,
   onClose,
 }: QuickReferenceSheetProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const titleId = `${content.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-sheet-title`;
   const summaryId = `${content.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-sheet-summary`;
-  const detailsId = `${content.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-more-details`;
-  const reminderId = `${content.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-remember-heading`;
+  const descriptionId = `${content.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-description-heading`;
 
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -103,29 +101,12 @@ export const QuickReferenceSheet = ({
           ))}
         </dl>
 
-        {content.reminder ? (
-          <section className="reminder-block" aria-labelledby={reminderId}>
-            <h3 id={reminderId}>{content.reminder.heading}</h3>
-            <p>{content.reminder.text}</p>
-          </section>
-        ) : null}
-
-        {content.details ? (
-          <section className="details-block" aria-label={`${content.title} additional details`}>
-            <button
-              type="button"
-              className="details-toggle"
-              aria-expanded={isExpanded}
-              aria-controls={detailsId}
-              onClick={() => setIsExpanded((current) => !current)}
-            >
-              {isExpanded ? content.details.expandedLabel : content.details.collapsedLabel}
-            </button>
-
-            {isExpanded ? (
-              <p id={detailsId} className="details-copy">
-                {content.details.text}
-              </p>
+        {content.reminder || content.details ? (
+          <section className="reminder-block" aria-labelledby={descriptionId}>
+            <h3 id={descriptionId}>Description</h3>
+            {content.reminder ? <p>{content.reminder.text}</p> : null}
+            {content.details ? (
+              <p className="details-copy">{content.details.text}</p>
             ) : null}
           </section>
         ) : null}

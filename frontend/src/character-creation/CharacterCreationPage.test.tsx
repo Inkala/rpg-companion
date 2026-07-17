@@ -95,7 +95,9 @@ const fillValidMinimumManualCharacter = () => {
 };
 
 const chooseAnswer = (name: RegExp | string) => {
-  fireEvent.click(screen.getByLabelText(name));
+  const answer = screen.getByLabelText<HTMLInputElement>(name);
+  fireEvent.click(answer);
+  return answer;
 };
 
 const goNext = () => {
@@ -540,9 +542,14 @@ describe('CharacterCreationPage', () => {
     const nextButton = screen.getByRole('button', { name: 'Next' });
     expect(nextButton).toBeDisabled();
 
-    chooseAnswer(/Stand in front and take the pressure/);
+    const selectedAnswer = chooseAnswer(/Stand in front and take the pressure/);
 
-    expect(screen.getByText('Selected')).toBeInTheDocument();
+    expect(selectedAnswer).toBeChecked();
+    expect(selectedAnswer.closest('.creation-answer-card')).toHaveAttribute(
+      'data-selected',
+      'true',
+    );
+    expect(screen.queryByText('Selected')).not.toBeInTheDocument();
     expect(nextButton).not.toBeDisabled();
   });
 

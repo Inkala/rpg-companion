@@ -50,7 +50,7 @@ describe('PartyPage', () => {
     expect(loadParty).toHaveBeenCalledWith('party-requested');
   });
 
-  it('shows the Party name, current GM role, and accessible roster', async () => {
+  it('shows the Party name, current GM role, and accessible members', async () => {
     const onOpenCharacter = vi.fn();
 
     renderPage({
@@ -60,24 +60,34 @@ describe('PartyPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'The Lantern Guard' })).toBeInTheDocument();
     expect(getCurrentRoleText('Your role: GM')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Members' })).toBeInTheDocument();
+    expect(screen.queryByText('Roster')).not.toBeInTheDocument();
 
-    const roster = screen.getByRole('list', { name: 'The Lantern Guard roster' });
-    const members = within(roster).getAllByRole('listitem');
+    const memberList = screen.getByRole('list', { name: 'The Lantern Guard members' });
+    const members = within(memberList).getAllByRole('listitem');
     expect(members).toHaveLength(2);
 
     expect(within(members[0]).getByRole('heading', { name: 'Mara' })).toBeInTheDocument();
     expect(within(members[0]).getByText('GM')).toBeInTheDocument();
+    expect(members[0].querySelector('.lucide-crown')).toBeInTheDocument();
+    expect(members[0].querySelector('article')).toHaveClass('party-member-card--gm');
     expect(within(members[0]).getByText('No character linked')).toBeInTheDocument();
 
     expect(within(members[1]).getByRole('heading', { name: 'Bran' })).toBeInTheDocument();
     expect(within(members[1]).getByText('Player')).toBeInTheDocument();
+    expect(members[1].querySelector('.lucide-crown')).not.toBeInTheDocument();
+    expect(members[1].querySelector('article')).toHaveClass('party-member-card--player');
     expect(within(members[1]).getByText('Branna Shieldhand')).toBeInTheDocument();
 
     fireEvent.click(
       within(members[1]).getByRole('button', {
-        name: 'Open Branna Shieldhand Character Reference',
+        name: 'View Branna Shieldhand',
       }),
     );
+    expect(
+      within(members[1]).getByRole('button', { name: 'View Branna Shieldhand' })
+        .querySelector('.lucide-eye'),
+    ).toBeInTheDocument();
     expect(onOpenCharacter).toHaveBeenCalledWith('character-1');
   });
 
@@ -90,11 +100,11 @@ describe('PartyPage', () => {
     expect(partyTitle).toHaveClass('party-detail__title');
     expect(getCurrentRoleText('Your role: GM')).toHaveClass('party-detail__role');
 
-    const roster = screen.getByRole('list', { name: 'The Lantern Guard roster' });
-    expect(roster).toHaveClass('party-roster__list');
-    expect(roster.closest('section')).toHaveClass('party-roster');
+    const memberList = screen.getByRole('list', { name: 'The Lantern Guard members' });
+    expect(memberList).toHaveClass('party-roster__list');
+    expect(memberList.closest('section')).toHaveClass('party-roster');
 
-    const members = within(roster).getAllByRole('listitem');
+    const members = within(memberList).getAllByRole('listitem');
     expect(members[0]).toHaveClass('party-roster__item');
     expect(members[0].querySelector('article')).toHaveClass('party-member-card');
     expect(members[0].querySelector('.party-member-card__content')).toBeInTheDocument();
@@ -105,7 +115,7 @@ describe('PartyPage', () => {
       loadParty: vi.fn().mockResolvedValue(gmParty),
     });
 
-    await screen.findByRole('list', { name: 'The Lantern Guard roster' });
+    await screen.findByRole('list', { name: 'The Lantern Guard members' });
 
     const avatars = container.querySelectorAll('img.party-member-avatar');
     expect(avatars).toHaveLength(gmParty.members.length);
@@ -225,7 +235,7 @@ describe('PartyPage', () => {
     await screen.findByRole('heading', { name: 'The Lantern Guard' });
     expect(getCurrentRoleText('Your role: Player')).toBeInTheDocument();
     expect(screen.getByText('Branna Shieldhand')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Character Reference/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /View Branna Shieldhand/ })).not.toBeInTheDocument();
     expect(onOpenCharacter).not.toHaveBeenCalled();
   });
 
@@ -303,7 +313,7 @@ describe('PartyPage', () => {
 
     const { rerender } = render(<PartyPageCommitObserver partyId="party-1" />);
     expect(await screen.findByRole('heading', { name: 'The Lantern Guard' })).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'The Lantern Guard roster' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'The Lantern Guard members' })).toBeInTheDocument();
 
     rerender(<PartyPageCommitObserver partyId="party-2" />);
 
@@ -312,7 +322,7 @@ describe('PartyPage', () => {
     expect(partyChangeCommit).not.toContain('The Lantern Guard');
     expect(partyChangeCommit).not.toContain('Branna Shieldhand');
     expect(screen.getByRole('status')).toHaveTextContent('Loading party...');
-    expect(screen.queryByRole('list', { name: 'The Lantern Guard roster' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'The Lantern Guard members' })).not.toBeInTheDocument();
   });
 
   it('ignores a late result after the loader is replaced', async () => {

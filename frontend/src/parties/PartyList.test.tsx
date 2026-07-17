@@ -56,16 +56,21 @@ describe('PartyList', () => {
       onJoinParty,
     });
 
-    const message = await screen.findByText('You have not joined a party yet.');
-    const emptyCard = message.closest('.party-list__empty');
+    const emptyHeading = await screen.findByRole('heading', {
+      name: 'There are no quests in sight',
+    });
+    const emptyCard = emptyHeading.closest('.party-list__empty');
     expect(emptyCard).not.toBeNull();
     expect(emptyCard).toHaveClass('party-list__empty');
-    expect(within(emptyCard as HTMLElement).queryByRole('heading')).not.toBeInTheDocument();
+    expect(within(emptyCard as HTMLElement).getByText(
+      'Create or join an adventure to satisfy your thirst for adventure.',
+    )).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'My parties' })).toHaveLength(1);
     expect(within(emptyCard as HTMLElement).getAllByRole('button')).toHaveLength(2);
     expect(container).not.toHaveTextContent('No parties yet');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create party' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
 
     expect(onCreateParty).toHaveBeenCalledOnce();
     expect(onJoinParty).toHaveBeenCalledOnce();
@@ -91,7 +96,7 @@ describe('PartyList', () => {
     expect(within(firstLink).getByRole('heading', { name: parties[0].name })).toHaveClass(
       'party-list-card__title',
     );
-    expect(within(firstLink).getByText('LINKED CHARACTERS')).toBeInTheDocument();
+    expect(within(firstLink).getByText('MEMBERS')).toBeInTheDocument();
     expect(firstLink.querySelector('.party-list-card__gm')).toHaveTextContent(
       'GM: nerea-sol-with-a-long-username',
     );
@@ -104,7 +109,7 @@ describe('PartyList', () => {
     );
 
     const secondLink = within(partyCards[1]).getByRole('link', { name: parties[1].name });
-    expect(within(secondLink).getByText('No linked characters yet.')).toBeInTheDocument();
+    expect(within(secondLink).getByText('No members yet.')).toBeInTheDocument();
     expect(within(secondLink).queryByText('Player')).not.toBeInTheDocument();
     expect(within(secondLink).queryByText(/Role:/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Open party/i })).not.toBeInTheDocument();
@@ -166,7 +171,7 @@ describe('PartyList', () => {
     });
 
     expect(container.querySelector('section')).toHaveClass('party-list');
-    expect(screen.getByRole('heading', { name: 'My parties' })).toHaveClass('party-list__title');
+    expect(screen.getByRole('heading', { name: 'My parties' })).toHaveClass('eyebrow');
 
     const partyList = await screen.findByRole('list', { name: 'Your parties' });
     expect(partyList).toHaveClass('party-list__items');

@@ -10,20 +10,8 @@ export const ReferenceItemRow = ({
   onOpenQuickReference,
 }: ReferenceItemRowProps) => {
   const canOpen = item.quickReference !== undefined;
-  const descriptionId = `${item.id}-detail-state`;
-
-  return (
-    <button
-      type="button"
-      className={canOpen ? 'ability-row' : 'ability-row ability-row--future'}
-      onClick={(event) => {
-        if (canOpen) {
-          onOpenQuickReference(item, event.currentTarget);
-        }
-      }}
-      aria-disabled={canOpen ? undefined : 'true'}
-      aria-describedby={canOpen ? undefined : descriptionId}
-    >
+  const content = (
+    <>
       <span className="ability-row__main">
         <span className="ability-row__title">{item.name}</span>
         <span className="ability-row__hint">{item.hint}</span>
@@ -35,16 +23,25 @@ export const ReferenceItemRow = ({
           </span>
         ))}
       </span>
-      <span className="ability-row__affordance">
-        {canOpen ? 'Quick explanation' : 'Details planned'}
-      </span>
-      {!canOpen ? (
-        <span id={descriptionId} className="sr-only">
-          Detail sheet planned for a later slice.
-        </span>
+      {canOpen ? (
+        <span className="ability-row__affordance">Quick explanation</span>
       ) : null}
-    </button>
+    </>
   );
+
+  if (canOpen) {
+    return (
+      <button
+        type="button"
+        className="ability-row"
+        onClick={(event) => onOpenQuickReference(item, event.currentTarget)}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className="ability-row ability-row--static">{content}</div>;
 };
 
 const badgeClassName = (label: string) => {

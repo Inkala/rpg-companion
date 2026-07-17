@@ -194,6 +194,12 @@
   font-weight: 800;
 }
 
+.inline-action--icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .inline-action {
   min-height: 40px;
   padding: 0;

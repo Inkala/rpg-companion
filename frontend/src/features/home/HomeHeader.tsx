@@ -10,7 +10,7 @@ interface HomeHeaderProps {
   sessionError: string | null;
   onHome: () => void;
   onOpenAccount: (mode: AccountMode) => void;
-  onSignOut: () => void;
+  onSignOut: (returnFocus?: HTMLElement) => void;
 }
 
 export const HomeHeader = ({
@@ -59,6 +59,7 @@ export const HomeHeader = ({
         currentUser={currentUser}
         isSessionLoading={isSessionLoading}
         sessionError={sessionError}
+        onHome={onHome}
         onOpenAccount={onOpenAccount}
         onSignOut={onSignOut}
       />

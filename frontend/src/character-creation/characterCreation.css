@@ -189,13 +189,6 @@
   line-height: 1.4;
 }
 
-.creation-answer-card__selected {
-  color: var(--color-accent-primary);
-  font-size: 0.92rem;
-  font-weight: 800;
-  line-height: 1.35;
-}
-
 .creation-quiz__actions {
   display: flex;
   flex-wrap: wrap;

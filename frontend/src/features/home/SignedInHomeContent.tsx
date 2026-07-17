@@ -74,7 +74,7 @@ export const SignedInHomeContent = (
               className="button button--primary"
               onClick={onCreateCharacter}
             >
-              Create character
+              {characterState.status === 'empty' ? 'New character' : 'Create character'}
             </button>
           </header>
           <CharacterSummaryContent
@@ -145,7 +145,7 @@ const CharacterSummaryHeading = ({
     <div>
       <p className="eyebrow">My characters</p>
       <h2 id="my-characters-title" className="home-panel__title">
-        No saved characters yet
+        No heroes have arrived yet
       </h2>
       <p className="home-panel__copy">
         Start with a guided character or fill in your sheet manually.

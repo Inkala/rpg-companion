@@ -369,8 +369,13 @@
   background: var(--color-accent-soft);
 }
 
-.ability-row--future {
+.ability-row--static {
   cursor: default;
+}
+
+.ability-row--static:hover {
+  border-color: var(--color-border-subtle);
+  background: var(--color-bg-surface);
 }
 
 .ability-row__main {
@@ -410,7 +415,7 @@
 .bottom-sheet {
   display: grid;
   width: min(100%, 560px);
-  max-height: 100%;
+  max-height: 75vh;
   gap: var(--space-3);
   overflow-y: auto;
   border: 1px solid var(--color-border-strong);
@@ -491,6 +496,10 @@
   margin: 0;
 }
 
+.details-copy {
+  margin-top: var(--space-2);
+}
+
 .reminder-block h3 {
   margin-bottom: var(--space-1);
   font-size: 0.95rem;
@@ -500,16 +509,6 @@
 .details-copy {
   color: var(--color-text-primary);
   line-height: 1.45;
-}
-
-.details-block {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-2);
-}
-
-.details-toggle {
-  min-width: 44px;
 }
 
 @media (min-width: 720px) {

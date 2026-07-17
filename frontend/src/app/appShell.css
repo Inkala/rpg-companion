@@ -122,6 +122,58 @@
   line-height: 1.35;
 }
 
+.confirmation-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(32, 27, 21, 0.48);
+  padding: var(--space-4);
+}
+
+.confirmation-dialog {
+  display: grid;
+  width: min(100%, 26rem);
+  gap: var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface-raised);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sheet);
+}
+
+.confirmation-dialog h2,
+.confirmation-dialog p {
+  margin: 0;
+}
+
+.confirmation-dialog h2 {
+  color: var(--color-text-primary);
+  font-family: Fraunces, Georgia, serif;
+  font-size: 1.6rem;
+}
+
+.confirmation-dialog p {
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.confirmation-dialog__actions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (min-width: 480px) {
+  .confirmation-dialog__actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .confirmation-dialog__actions .button {
+    width: 100%;
+  }
+}
+
 @media (min-width: 720px) {
   .app-header {
     grid-template-columns: minmax(0, 1fr) minmax(15rem, auto);
