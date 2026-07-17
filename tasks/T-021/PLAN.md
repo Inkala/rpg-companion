@@ -1,6 +1,6 @@
 # T-021 Plan: Save and Invite Reliability
 
-Status: approved
+Status: complete
 
 ## Scope
 

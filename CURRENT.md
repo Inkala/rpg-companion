@@ -2,16 +2,20 @@
 
 Submission deadline: 20 July 2026
 
-Active task: T-021/T-022 approved QA follow-up planning
+Active task: T-021/T-022 closure reconciled
 
-State: T-020 Party quest-board cards and Home section contrast is complete, merged, deployed, and
-validated. Final merge/deployment SHA:
+State: T-021 Save and invite reliability and T-022 Character Reference visual QA are complete,
+merged, deployed, and validated.
+
+T-020 is complete, merged, deployed, and validated at
 `e7053fb72f8b52e73e08dfdd8668b9a429abb803`.
 
-T-021 and T-022 are approved as two parallel implementation lanes. They may run in parallel only
-under their documented strict file boundaries. T-021 must merge first; T-022 must then rebase onto
-updated main and rerun its complete validation. No implementation worktree exists yet and no
-implementation has started.
+T-021 merged through PR #29 as `a5bef8c3f160e45a29db58979c32436f55a55af7`.
+
+T-022 merged through PR #30 as `ce57d79f3465df6ae166622521c1c26379cbd5f3`. Final main CI
+`https://github.com/Inkala/rpg-companion/actions/runs/29580552807` passed Frontend, Backend, and
+Secret history. Railway and Cloudflare deployed the exact final SHA successfully. Public visual
+smoke at `390px` passed and no runtime errors were found.
 
 ## Completed T-020 result
 
@@ -36,7 +40,8 @@ implementation has started.
   character fields and first-invalid focus are polished, ordinary saves navigate to Character
   Reference, and shared Mara/saved-character cards plus the full-width My characters layout are
   deployed.
-- Party behavior: unchanged. Automatic Party linking after character creation remains deferred.
+- Party behavior at T-019: unchanged. T-021 later implemented invite-launched automatic Party join;
+  existing-member linked-character replacement remains deferred.
 
 ## Registration production investigation
 
@@ -76,7 +81,7 @@ conditions.
 - Merge order: Slice 1 backend contract first, then Slice 2 frontend presentation on the same task
   branch.
 
-## Approved T-021 and T-022 work
+## Completed T-021 and T-022 work
 
 ### T-021: Save and invite reliability
 
@@ -91,6 +96,7 @@ conditions.
 - Scope: save lock, Save disabled after success, `Character saved.` toast, ordinary saved Character
   Reference navigation, invite-launched Party join with the returned character ID, failed-join retry
   without duplicate creation, invite-token privacy, and removal of the Draft state summary.
+- Status: complete. PR #29 merged as `a5bef8c3f160e45a29db58979c32436f55a55af7`.
 - Strict boundary: T-021 must not edit `frontend/src/characters/` or
   `frontend/src/features/home/home.css`.
 
@@ -107,6 +113,7 @@ conditions.
 - Scope: centered signed-out Home action text, normalized expanded stat tiles, AC blue on Home and
   expanded Character Reference, secondary stat tile visual consistency, and muted beige
   `.section-panel`.
+- Status: complete. PR #30 merged as `ce57d79f3465df6ae166622521c1c26379cbd5f3`.
 - Strict boundary: T-022 must not edit `frontend/src/App.tsx`, `frontend/src/App.test.tsx`,
   `frontend/src/character-creation/`, `frontend/src/parties/`, Party API files, or Party components.
 
@@ -182,6 +189,8 @@ conditions.
   deployed and publicly smoke-tested.
 - T-019 account and character UX polish is merged, deployed, and validated.
 - T-020 Party quest-board cards and Home section contrast is merged, deployed, and validated.
+- T-021 Save and invite reliability is merged, deployed, and validated.
+- T-022 Character Reference visual QA is merged, deployed, and validated.
 
 ## Final-week constraints
 
@@ -189,13 +198,11 @@ conditions.
 - No new coding task starts in the main checkout.
 - Parallel coding uses separate worktrees with disjoint ownership.
 - Worker sessions do not edit shared coordination records.
-- T-021/T-022 implementation may proceed only after this planning checkpoint is committed, pushed,
-  and separate implementation worktrees are created.
+- New implementation work must start from a fresh approved task and separate worktree.
 
 ## Single next action
 
-Commit and push the T-021/T-022 planning checkpoint on a non-main branch. After that, create
-dedicated worktrees and start T-021 first while T-022 remains allowed in parallel with strict file
-ownership.
+Review and carry the T-021/T-022 closure documentation commit into the next approved product PR,
+without pushing documentation-only changes directly to main while automatic deployments are enabled.
 
 Last updated: 2026-07-17

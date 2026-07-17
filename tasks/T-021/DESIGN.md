@@ -1,6 +1,6 @@
 # T-021 Design: Save and Invite Reliability
 
-Status: approved
+Status: complete
 
 ## Parallel-work assessment
 

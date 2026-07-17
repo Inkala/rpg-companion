@@ -1,6 +1,6 @@
 # T-021 Requirements: Save and Invite Reliability
 
-Status: approved
+Status: complete
 
 ## Goal
 

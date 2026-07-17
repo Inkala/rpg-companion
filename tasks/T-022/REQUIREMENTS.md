@@ -1,6 +1,6 @@
 # T-022 Requirements: Character Reference Visual QA
 
-Status: approved
+Status: complete
 
 ## Goal
 

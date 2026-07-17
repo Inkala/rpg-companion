@@ -1,6 +1,6 @@
 # T-022 Plan: Character Reference Visual QA
 
-Status: approved
+Status: complete
 
 ## Scope
 
