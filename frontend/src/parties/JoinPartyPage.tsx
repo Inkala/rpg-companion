@@ -26,6 +26,8 @@ type JoinPartyPageProps = {
   onJoined: (partyId: string) => void;
   onCancel: () => void;
   onInviteUnavailable: (token: string) => void;
+  savedCharacterJoinState?: 'joining' | 'error';
+  onRetrySavedCharacterJoin?: () => void;
 };
 
 type LoadKey = {
@@ -69,6 +71,8 @@ export const JoinPartyPage = ({
   onJoined,
   onCancel,
   onInviteUnavailable,
+  savedCharacterJoinState,
+  onRetrySavedCharacterJoin,
 }: JoinPartyPageProps) => {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const currentLoadKey: LoadKey = {
@@ -123,6 +127,12 @@ export const JoinPartyPage = ({
       requestedAttempt: loadAttempt,
     };
 
+    if (savedCharacterJoinState !== undefined) {
+      return () => {
+        isActive = false;
+      };
+    }
+
     if (!isSignedIn || token === null) {
       setLoadState({ status: 'loading', ...requestKey });
       return () => {
@@ -165,7 +175,15 @@ export const JoinPartyPage = ({
     return () => {
       isActive = false;
     };
-  }, [inspectInvite, isSignedIn, loadAttempt, loadCharacters, onInviteUnavailable, token]);
+  }, [
+    inspectInvite,
+    isSignedIn,
+    loadAttempt,
+    loadCharacters,
+    onInviteUnavailable,
+    savedCharacterJoinState,
+    token,
+  ]);
 
   const selectCharacter = (characterId: string) => {
     setInteractionState({
@@ -266,6 +284,11 @@ export const JoinPartyPage = ({
         <UnavailableInviteState />
       ) : !isSignedIn ? (
         <SignedOutJoinState onSignIn={onSignIn} />
+      ) : savedCharacterJoinState !== undefined ? (
+        <SavedCharacterJoinState
+          status={savedCharacterJoinState}
+          onRetry={onRetrySavedCharacterJoin}
+        />
       ) : visibleLoadState.status === 'loading' ? (
         <LoadingInviteState />
       ) : visibleLoadState.status === 'unavailable' ? (
@@ -304,6 +327,36 @@ const SignedOutJoinState = ({ onSignIn }: { onSignIn: () => void }) => (
     <button type="button" className="button button--primary" onClick={onSignIn}>
       Sign in
     </button>
+  </section>
+);
+
+const SavedCharacterJoinState = ({
+  status,
+  onRetry,
+}: {
+  status: 'joining' | 'error';
+  onRetry?: () => void;
+}) => (
+  <section
+    className="account-card party-state-card party-join-state"
+    aria-labelledby="saved-character-join-title"
+  >
+    <p className="eyebrow">Party invite</p>
+    <h1 id="saved-character-join-title" className="account-title">
+      {status === 'joining' ? 'Joining party' : 'Could not join party'}
+    </h1>
+    {status === 'joining' ? (
+      <p role="status">Joining with your saved character...</p>
+    ) : (
+      <>
+        <p role="alert">Your character is saved. Try joining the party again.</p>
+        {onRetry ? (
+          <button type="button" className="button button--secondary" onClick={onRetry}>
+            Retry
+          </button>
+        ) : null}
+      </>
+    )}
   </section>
 );
 

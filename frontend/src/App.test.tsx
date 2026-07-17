@@ -731,15 +731,17 @@ describe('App', () => {
     expect((document.body.textContent ?? '').includes(inviteToken)).toBe(false);
   });
 
-  it('returns a saved Character to the active invite and reloads invite data', async () => {
+  it('joins the active invite once from save success and ignores rerenders', async () => {
+    const pendingJoin = deferred<Response>();
+    const joinParty = vi.fn().mockReturnValue(pendingJoin.promise);
     const fetchMock = partyFetchMock({
       restoredUser: true,
       characters: [],
-      charactersAfterCreate: [fighterCharacterSummary],
+      joinParty,
     });
     vi.stubGlobal('fetch', fetchMock);
     window.history.replaceState(null, '', '/parties/join');
-    renderInviteApp();
+    const { rerender } = renderInviteApp();
 
     fireEvent.click(
       await screen.findByRole('button', { name: 'Create or transfer character' }),
@@ -752,19 +754,198 @@ describe('App', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
 
-    const returnButton = await screen.findByRole('button', {
-      name: 'Return to party invite',
+    await waitFor(() => {
+      expect(joinParty).toHaveBeenCalledWith({
+        token: inviteToken,
+        characterId: fighterCharacter.id,
+      });
     });
-    expect(screen.queryByRole('button', { name: 'Open Character Reference' })).not.toBeInTheDocument();
-    fireEvent.click(returnButton);
+    expect(joinParty).toHaveBeenCalledOnce();
+    expect(screen.getAllByText('Character saved.')).toHaveLength(1);
+    expect(inviteAppearsInBrowserSurface(inviteToken)).toBe(false);
+    expect(window.location.pathname).toBe('/parties/join');
+
+    rerender(
+      <App
+        initialRoute={{ name: 'join-party' }}
+        initialInviteToken={inviteToken}
+      />,
+    );
+    expect(joinParty).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      pendingJoin.resolve(jsonResponse(joinedParty, 201));
+      await pendingJoin.promise;
+    });
 
     expect(
-      await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
+      await screen.findByRole('heading', { name: 'The Lantern Guard' }),
     ).toBeInTheDocument();
-    expect(window.location.pathname).toBe('/parties/join');
-    expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(2);
-    expect(requestCountByMethod(fetchMock, '/characters', 'GET')).toBe(2);
+    expect(window.location.pathname).toBe('/parties/party-1');
+    expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(1);
     expect(requestCountByMethod(fetchMock, '/characters', 'POST')).toBe(1);
+
+    fireEvent.click(screen.getByRole('link', { name: 'Hunin' }));
+    await waitFor(() => {
+      expect(requestCountByMethod(fetchMock, '/parties', 'GET')).toBe(1);
+    });
+  });
+
+  it('retries only automatic Party joining after a recoverable failure', async () => {
+    const joinParty = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: 'private backend detail' }, 503))
+      .mockResolvedValueOnce(jsonResponse(joinedParty, 201));
+    const fetchMock = partyFetchMock({
+      restoredUser: true,
+      characters: [],
+      joinParty,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    await createStrengthCharacterFromInvite();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Could not join party' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Your character is saved. Try joining the party again.',
+    );
+    expect(screen.queryByText('private backend detail')).not.toBeInTheDocument();
+    expect(requestCountByMethod(fetchMock, '/characters', 'POST')).toBe(1);
+    expect(joinParty).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'The Lantern Guard' }),
+    ).toBeInTheDocument();
+    expect(joinParty).toHaveBeenCalledTimes(2);
+    expect(requestCountByMethod(fetchMock, '/characters', 'POST')).toBe(1);
+    expect(screen.getAllByText('Character saved.')).toHaveLength(1);
+  });
+
+  it('ignores stale automatic join success after invite cancellation', async () => {
+    const pendingJoin = deferred<Response>();
+    const fetchMock = partyFetchMock({
+      restoredUser: true,
+      characters: [],
+      joinParty: vi.fn().mockReturnValue(pendingJoin.promise),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    await createStrengthCharacterFromInvite();
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+    expect(window.location.pathname).toBe('/');
+
+    await act(async () => {
+      pendingJoin.resolve(jsonResponse(joinedParty, 201));
+      await pendingJoin.promise;
+    });
+
+    expect(window.location.pathname).toBe('/');
+    expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+  });
+
+  it('does not join or navigate when invite creation is cancelled before save returns', async () => {
+    const pendingSave = deferred<Response>();
+    const joinParty = vi.fn();
+    const fetchMock = partyFetchMock({
+      restoredUser: true,
+      characters: [],
+      createCharacter: vi.fn().mockReturnValue(pendingSave.promise),
+      joinParty,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    await createStrengthCharacterFromInvite();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Back' })[0]);
+    expect(window.location.pathname).toBe('/');
+
+    await act(async () => {
+      pendingSave.resolve(jsonResponse(fighterCharacter, 201));
+      await pendingSave.promise;
+    });
+
+    expect(joinParty).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe('/');
+    expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+    expect(screen.getAllByText('Character saved.')).toHaveLength(1);
+  });
+
+  it('ignores stale invite-unavailable failure after invite replacement', async () => {
+    const replacementToken = 'b'.repeat(43);
+    const pendingJoin = deferred<Response>();
+    const inspectInvite = vi.fn((requestedToken: string) =>
+      Promise.resolve(jsonResponse(
+        requestedToken === replacementToken
+          ? {
+            party: { id: 'party-2', name: 'The Silver Company' },
+            expiresAt: '2026-07-20T10:00:00Z',
+          }
+          : partyInspection,
+      )),
+    );
+    const fetchMock = partyFetchMock({
+      restoredUser: true,
+      characters: [],
+      inspectInvite,
+      joinParty: vi.fn().mockReturnValue(pendingJoin.promise),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    await createStrengthCharacterFromInvite();
+    await screen.findByRole('heading', { name: 'Joining party' });
+    dispatchFragmentNavigation(replacementToken);
+    expect(
+      await screen.findByRole('heading', { name: 'Create or transfer a character first' }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      pendingJoin.resolve(jsonResponse({
+        error: 'private backend detail',
+        code: 'invite_unavailable',
+      }, 400));
+      await pendingJoin.promise;
+    });
+
+    expect(screen.getByText('The Silver Company')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Could not join party' })).not.toBeInTheDocument();
+    expect(inviteAppearsInBrowserSurface(replacementToken)).toBe(false);
+  });
+
+  it('clears the matching invite after automatic join becomes unavailable', async () => {
+    const joinParty = vi.fn().mockResolvedValue(
+      jsonResponse(
+        { error: `private ${inviteToken}`, code: 'invite_unavailable' },
+        400,
+      ),
+    );
+    const fetchMock = partyFetchMock({
+      restoredUser: true,
+      characters: [],
+      joinParty,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    renderInviteApp();
+
+    await createStrengthCharacterFromInvite();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(`private ${inviteToken}`);
+    expect(inviteAppearsInBrowserSurface(inviteToken)).toBe(false);
   });
 
   it('clears the invite when Character creation Back cancels the flow', async () => {
@@ -1564,6 +1745,10 @@ describe('App', () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe('/characters/22222222-2222-2222-2222-222222222222');
     });
+    expect(screen.getAllByText('Character saved.')).toHaveLength(1);
+    const successToast = screen.getByText('Character saved.').closest('[data-sonner-toast]');
+    expect(successToast).not.toHaveTextContent('Branna Shieldhand');
+    expect(successToast).not.toHaveTextContent(fighterCharacter.id);
     expect(screen.queryByRole('button', { name: 'Open Character Reference' })).not.toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Branna Shieldhand' })).toBeInTheDocument();
   });
@@ -1652,6 +1837,19 @@ const renderInviteApp = () => {
   );
 };
 
+const createStrengthCharacterFromInvite = async () => {
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Create or transfer character' }),
+  );
+  fireEvent.click(screen.getByRole('button', { name: /Help me choose/ }));
+  finishStrengthQuiz();
+  fireEvent.click(screen.getByRole('button', { name: 'Use Strength melee Fighter' }));
+  fireEvent.change(screen.getByLabelText('Name'), {
+    target: { value: 'Branna Shieldhand' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+};
+
 const completeSignInForm = () => {
   fireEvent.change(screen.getByLabelText('Username or email'), {
     target: { value: 'Mara' },
@@ -1683,6 +1881,8 @@ const partyFetchMock = ({
   restoredUser = false,
   inspectionResponse,
   inspectInvite,
+  joinParty,
+  createCharacter,
   party = partyDetail,
   characters = [fighterCharacterSummary],
   charactersAfterCreate,
@@ -1693,6 +1893,8 @@ const partyFetchMock = ({
   restoredUser?: boolean;
   inspectionResponse?: Response;
   inspectInvite?: (token: string) => Promise<Response>;
+  joinParty?: (input: { token: string; characterId: string }) => Promise<Response>;
+  createCharacter?: () => Promise<Response>;
   party?: unknown;
   characters?: unknown[];
   charactersAfterCreate?: unknown[];
@@ -1733,11 +1935,23 @@ const partyFetchMock = ({
     }
 
     if (path === '/party-invites/join') {
+      if (joinParty) {
+        const body = typeof init?.body === 'string'
+          ? JSON.parse(init.body) as { token?: unknown; characterId?: unknown }
+          : {};
+        return joinParty({
+          token: typeof body.token === 'string' ? body.token : '',
+          characterId: typeof body.characterId === 'string' ? body.characterId : '',
+        });
+      }
       return Promise.resolve(jsonResponse(joinedParty, 201));
     }
 
     if (path === '/characters' && init?.method === 'POST') {
       characterWasCreated = true;
+      if (createCharacter) {
+        return createCharacter();
+      }
       return Promise.resolve(jsonResponse(fighterCharacter, 201));
     }
 

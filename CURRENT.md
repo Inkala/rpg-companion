@@ -2,13 +2,25 @@
 
 Submission deadline: 20 July 2026
 
-Active task: T-020 Party quest-board cards and Home section contrast
+Active task: T-021/T-022 approved QA follow-up planning
 
-State: T-019 account and character UX polish is complete, merged, deployed, and validated. PR #27
-merged as `66a17402aba74e80eb4f921f258390d66b66e89b`. Frontend, Backend, Secret history, Railway,
-Cloudflare Pages, public frontend availability, and backend health all passed for the merge SHA.
+State: T-020 Party quest-board cards and Home section contrast is complete, merged, deployed, and
+validated. Final merge/deployment SHA:
+`e7053fb72f8b52e73e08dfdd8668b9a429abb803`.
 
-T-020 is approved. No T-020 implementation worktree exists yet and no implementation has started.
+T-021 and T-022 are approved as two parallel implementation lanes. They may run in parallel only
+under their documented strict file boundaries. T-021 must merge first; T-022 must then rebase onto
+updated main and rerun its complete validation. No implementation worktree exists yet and no
+implementation has started.
+
+## Completed T-020 result
+
+- Merge/deployment SHA: `e7053fb72f8b52e73e08dfdd8668b9a429abb803`.
+- Controlled production rollout: passed.
+- Local reconciliation on 2026-07-17: checkout was clean, `git pull --ff-only` completed, and local
+  `main` plus `origin/main` both matched the final SHA exactly.
+- Status: complete. Party-list cards use the quest-board presentation, Home section contrast is
+  applied, and the approved backend Party-list privacy boundary is deployed.
 
 ## Completed T-019 result
 
@@ -40,7 +52,7 @@ browser after T-019 deployed:
 Do not reopen auth implementation without reproduction evidence from the original browser/session
 conditions.
 
-## Approved T-020 work
+## Completed T-020 work
 
 ### Scope
 
@@ -63,6 +75,47 @@ conditions.
 - Shared files or dependencies: Party API contract, Home integration, existing route serializer.
 - Merge order: Slice 1 backend contract first, then Slice 2 frontend presentation on the same task
   branch.
+
+## Approved T-021 and T-022 work
+
+### T-021: Save and invite reliability
+
+- Classification: Yellow.
+- Recommendation: separate worktree.
+- Expected owned files/folders: `frontend/src/character-creation/CharacterCreationPage.tsx`,
+  `frontend/src/character-creation/CharacterCreationPage.test.tsx`,
+  `frontend/src/character-creation/characterCreation.css`, `frontend/src/App.tsx`,
+  `frontend/src/App.test.tsx`, `frontend/src/parties/JoinPartyPage.tsx`,
+  `frontend/src/parties/JoinPartyPage.test.tsx`, `frontend/src/parties/api.ts`,
+  `frontend/src/parties/api.test.ts`, and `frontend/src/parties/apiTypes.ts`.
+- Scope: save lock, Save disabled after success, `Character saved.` toast, ordinary saved Character
+  Reference navigation, invite-launched Party join with the returned character ID, failed-join retry
+  without duplicate creation, invite-token privacy, and removal of the Draft state summary.
+- Strict boundary: T-021 must not edit `frontend/src/characters/` or
+  `frontend/src/features/home/home.css`.
+
+### T-022: Character Reference visual QA
+
+- Classification: Yellow.
+- Recommendation: separate worktree.
+- Expected owned files/folders: Character Reference components, `frontend/src/characters/types.ts`,
+  `frontend/src/characters/characterSheetToReference.ts`,
+  `frontend/src/characters/characterSheetToReference.test.ts`,
+  `frontend/src/characters/CharacterStats.tsx` only if implementation requires a change,
+  `frontend/src/characters/characters.css`, `frontend/src/characters/CharacterSummaryCard.tsx`, and
+  `frontend/src/features/home/home.css`.
+- Scope: centered signed-out Home action text, normalized expanded stat tiles, AC blue on Home and
+  expanded Character Reference, secondary stat tile visual consistency, and muted beige
+  `.section-panel`.
+- Strict boundary: T-022 must not edit `frontend/src/App.tsx`, `frontend/src/App.test.tsx`,
+  `frontend/src/character-creation/`, `frontend/src/parties/`, Party API files, or Party components.
+
+### Parallel merge order
+
+- Required order: merge T-021 first, then rebase T-022 onto current main and run focused plus
+  complete validation.
+- If T-022 merges first by exception, T-021 must rebase and rerun App, character-creation, and Party
+  route validations.
 
 ## Completed T-017 feature worktrees
 
@@ -128,6 +181,7 @@ conditions.
 - T-017 Party creation, secure invitation, atomic joining, roster, and GM read-only access are
   deployed and publicly smoke-tested.
 - T-019 account and character UX polish is merged, deployed, and validated.
+- T-020 Party quest-board cards and Home section contrast is merged, deployed, and validated.
 
 ## Final-week constraints
 
@@ -135,12 +189,13 @@ conditions.
 - No new coding task starts in the main checkout.
 - Parallel coding uses separate worktrees with disjoint ownership.
 - Worker sessions do not edit shared coordination records.
-- T-020 implementation may proceed only in the dedicated implementation worktree after this approved
-  planning checkpoint is committed and pushed.
+- T-021/T-022 implementation may proceed only after this planning checkpoint is committed, pushed,
+  and separate implementation worktrees are created.
 
 ## Single next action
 
-Commit this approved planning checkpoint, create one dedicated T-020 implementation worktree, and
-start Slice 1 only.
+Commit and push the T-021/T-022 planning checkpoint on a non-main branch. After that, create
+dedicated worktrees and start T-021 first while T-022 remains allowed in parallel with strict file
+ownership.
 
-Last updated: 2026-07-14
+Last updated: 2026-07-17

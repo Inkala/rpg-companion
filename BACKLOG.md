@@ -19,7 +19,10 @@ Task IDs reflect actual task folders and do not map reliably to the older GitHub
   in `7f5e787`; CI passed.
 - [x] T-018: whole-application security baseline integrated and deployed.
 - [x] T-017: Party MVP integrated, deployed, and publicly smoke-tested.
-- [ ] T-019: account and character UX polish planning pending approval.
+- [x] T-019: account and character UX polish integrated and deployed.
+- [x] T-020: Party quest-board cards and Home section contrast integrated and deployed.
+- [ ] T-021: Save and invite reliability approved, implementation not started.
+- [ ] T-022: Character Reference visual QA approved, implementation not started.
 
 ## P0: TFM submission package
 
@@ -53,6 +56,11 @@ Recommended parallel tasks after the current dirty-main integration is resolved:
   expanded Character Reference.
 - [ ] Profile editing, email verification, and password reset.
 - [ ] Account, character, and production test-data deletion.
+- [ ] Built-in portrait-bank integration.
+- [ ] Gender selector and data contract.
+- [ ] Character/profile/account editing and deletion.
+- [ ] Party editing/deletion, description, and member removal.
+- [ ] Existing-member linked-character replacement.
 - [ ] Attack reminder badges and calculation breakdowns.
 - [ ] HP/resource tracking and saved-character editing.
 - [ ] Character search, broader rules content, and additional classes.

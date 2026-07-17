@@ -28,16 +28,13 @@ type CharacterCreationPageProps = {
   onSignIn?: () => void;
   onCreateAccount?: () => void;
   onOpenCharacterReference?: (characterId: string) => void;
-  savedCharacterActionLabel?: string;
 };
 
 type SaveState =
   | { status: 'idle' }
   | { status: 'saving' }
   | { status: 'error'; message: string }
-  | { status: 'success'; characterId: string; characterName: string };
-
-const ordinarySavedCharacterActionLabel = 'Open Character Reference';
+  | { status: 'success' };
 
 const requiredManualFields = new Set([
   'name',
@@ -336,10 +333,6 @@ const quizQuestions: QuizQuestion[] = [
   },
 ];
 
-const getBuildLabel = (build: CharacterBuildId | null) => {
-  return build ? buildContent[build].label : 'Not chosen';
-};
-
 const formatSignedNumber = (value: number) => {
   return value >= 0 ? `+${value}` : String(value);
 };
@@ -433,7 +426,6 @@ export const CharacterCreationPage = ({
   onSignIn,
   onCreateAccount,
   onOpenCharacterReference,
-  savedCharacterActionLabel,
 }: CharacterCreationPageProps) => {
   const [draft, setDraft] = useState<CharacterCreationDraft>(
     initialCharacterCreationDraft,
@@ -449,9 +441,7 @@ export const CharacterCreationPage = ({
   const [manualReviewRequest, setManualReviewRequest] =
     useState<ManualCharacterCreateRequest | null>(null);
   const manualEntryRef = useRef<HTMLElement | null>(null);
-  const hasCustomSavedCharacterAction = savedCharacterActionLabel !== undefined;
-  const resolvedSavedCharacterActionLabel =
-    savedCharacterActionLabel ?? ordinarySavedCharacterActionLabel;
+  const saveLockRef = useRef(false);
 
   useEffect(() => {
     if (manualErrors.length === 0 || manualReviewRequest !== null) {
@@ -580,7 +570,7 @@ export const CharacterCreationPage = ({
       ...currentDraft,
       name,
     }));
-    if (saveState.status !== 'idle') {
+    if (saveState.status === 'error') {
       setSaveState({ status: 'idle' });
     }
   };
@@ -686,59 +676,57 @@ export const CharacterCreationPage = ({
   };
 
   const saveGeneratedCharacter = async () => {
-    if (!draft.selectedBuild || saveState.status === 'saving') {
+    if (!draft.selectedBuild || saveLockRef.current) {
       return;
     }
 
+    saveLockRef.current = true;
     setSaveState({ status: 'saving' });
 
+    let character;
     try {
       const request = buildGeneratedFighterCreateRequest(
         draft.selectedBuild,
         draft.name,
       );
-      const character = await createCharacter(request);
-      setSaveState({
-        status: 'success',
-        characterId: character.id,
-        characterName: character.name,
-      });
-      if (onOpenCharacterReference && !hasCustomSavedCharacterAction) {
-        onOpenCharacterReference(character.id);
-      }
+      character = await createCharacter(request);
     } catch (error) {
+      saveLockRef.current = false;
       const message =
         error instanceof CharactersApiError
           ? error.message
           : 'Could not save the character. Check your connection and try again.';
       setSaveState({ status: 'error', message });
-    }
-  };
-
-  const saveManualCharacter = async () => {
-    if (!manualReviewRequest || saveState.status === 'saving') {
       return;
     }
 
+    setSaveState({ status: 'success' });
+    onOpenCharacterReference?.(character.id);
+  };
+
+  const saveManualCharacter = async () => {
+    if (!manualReviewRequest || saveLockRef.current) {
+      return;
+    }
+
+    saveLockRef.current = true;
     setSaveState({ status: 'saving' });
 
+    let character;
     try {
-      const character = await createCharacter(manualReviewRequest);
-      setSaveState({
-        status: 'success',
-        characterId: character.id,
-        characterName: character.name,
-      });
-      if (onOpenCharacterReference && !hasCustomSavedCharacterAction) {
-        onOpenCharacterReference(character.id);
-      }
+      character = await createCharacter(manualReviewRequest);
     } catch (error) {
+      saveLockRef.current = false;
       const message =
         error instanceof CharactersApiError
           ? error.message
           : 'Could not save the character. Check your connection and try again.';
       setSaveState({ status: 'error', message });
+      return;
     }
+
+    setSaveState({ status: 'success' });
+    onOpenCharacterReference?.(character.id);
   };
 
   const renderManualTextField = ({
@@ -1122,8 +1110,7 @@ export const CharacterCreationPage = ({
             ) : null}
             {saveState.status === 'success' ? (
               <p className="creation-save-panel__success">
-                {saveState.characterName} is saved. You can return home to see
-                it in My characters.
+                Character saved.
               </p>
             ) : null}
             <div className="creation-quiz__actions">
@@ -1140,22 +1127,11 @@ export const CharacterCreationPage = ({
               <button
                 type="button"
                 className="button button--primary"
-                disabled={isSaving}
+                disabled={saveLockRef.current}
                 onClick={saveManualCharacter}
               >
                 {isSaving ? 'Saving character...' : 'Save character'}
               </button>
-              {saveState.status === 'success' &&
-              onOpenCharacterReference &&
-              hasCustomSavedCharacterAction ? (
-                <button
-                  type="button"
-                  className="button button--secondary"
-                  onClick={() => onOpenCharacterReference(saveState.characterId)}
-                >
-                  {resolvedSavedCharacterActionLabel}
-                </button>
-              ) : null}
             </div>
           </div>
         ) : (
@@ -1440,8 +1416,7 @@ export const CharacterCreationPage = ({
             ) : null}
             {saveState.status === 'success' ? (
               <p className="creation-save-panel__success">
-                {saveState.characterName} is saved. You can return home to see
-                it in My characters.
+                Character saved.
               </p>
             ) : null}
             <div className="creation-quiz__actions">
@@ -1451,22 +1426,11 @@ export const CharacterCreationPage = ({
               <button
                 type="button"
                 className="button button--primary"
-                disabled={isSaving}
+                disabled={saveLockRef.current}
                 onClick={saveGeneratedCharacter}
               >
                 {isSaving ? 'Saving character...' : 'Save character'}
               </button>
-              {saveState.status === 'success' &&
-              onOpenCharacterReference &&
-              hasCustomSavedCharacterAction ? (
-                <button
-                  type="button"
-                  className="button button--secondary"
-                  onClick={() => onOpenCharacterReference(saveState.characterId)}
-                >
-                  {resolvedSavedCharacterActionLabel}
-                </button>
-              ) : null}
             </div>
           </div>
         ) : (
@@ -1546,67 +1510,6 @@ export const CharacterCreationPage = ({
           </fieldset>
         )}
 
-        <section className="creation-draft-summary" aria-labelledby="draft-title">
-          <div>
-            <p className="eyebrow">Draft state</p>
-            <h2 id="draft-title" className="creation-draft-summary__title">
-              Not saving yet
-            </h2>
-            <p className="creation-shell__copy">
-              This draft is only the entry foundation. Save later will connect
-              this flow to character data once the creation steps are built.
-            </p>
-          </div>
-
-          <dl className="creation-draft-list" aria-label="Current draft fields">
-            <div>
-              <dt>Mode</dt>
-              <dd>
-                {draft.mode === 'guided'
-                  ? 'Help me choose'
-                  : draft.mode === 'manual'
-                    ? 'Fill the sheet myself'
-                    : 'Not chosen'}
-              </dd>
-            </div>
-            <div>
-              <dt>Name</dt>
-              <dd>
-                {draft.name ||
-                  (draft.selectedBuild
-                    ? generatedFighterBuilds[draft.selectedBuild].defaultName
-                    : 'Not added yet')}
-              </dd>
-            </div>
-            <div>
-              <dt>Concept</dt>
-              <dd>{draft.concept || 'Not added yet'}</dd>
-            </div>
-            <div>
-              <dt>Answers</dt>
-              <dd>
-                {Object.keys(draft.questionnaireAnswers).length} of{' '}
-                {quizQuestions.length}
-              </dd>
-            </div>
-            <div>
-              <dt>Recommended build</dt>
-              <dd>
-                {isShowingRecommendation
-                  ? getBuildLabel(draft.recommendedBuild)
-                  : 'Shown after the quiz'}
-              </dd>
-            </div>
-            <div>
-              <dt>Selected build</dt>
-              <dd>{getBuildLabel(draft.selectedBuild)}</dd>
-            </div>
-            <div>
-              <dt>Recommendation overridden</dt>
-              <dd>{draft.recommendationWasOverridden ? 'Yes' : 'No'}</dd>
-            </div>
-          </dl>
-        </section>
       </section>
     </main>
   );

@@ -1,6 +1,6 @@
 # T-020 Requirements: Party quest-board cards and Home section contrast
 
-Status: approved
+Status: complete
 
 ## Problem
 

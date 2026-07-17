@@ -460,3 +460,19 @@ base.
   frontend Party/Home presentation.
 - Next action: commit this approved planning checkpoint, create the dedicated T-020 implementation
   worktree, and start Slice 1 only.
+
+## 2026-07-17: Reconciled T-020 and approved T-021/T-022 QA lanes
+
+- Reconciled local `main` with `origin/main` by fast-forward pull. Both now match the final
+  T-020 merge/deployment SHA `e7053fb72f8b52e73e08dfdd8668b9a429abb803`.
+- Recorded T-020 as complete, deployed, and validated after the controlled production rollout passed.
+- Marcela approved two non-overlapping QA implementation lanes:
+  - T-021 Save and invite reliability owns character creation, App route orchestration, Join Party,
+    Party API helpers, and their focused tests.
+  - T-022 Character Reference visual QA owns Character Reference components, mappings/tests,
+    `characters.css`, `CharacterSummaryCard`, and `home.css`.
+- Recorded deferred backlog items outside both lanes: built-in portrait bank, gender selector/data
+  contract, character/profile/account editing and deletion, Party editing/deletion/description/member
+  removal, and existing-member linked-character replacement.
+- Next action: commit and push the planning checkpoint on a non-main branch before creating any
+  worktrees or implementing code.
