@@ -23,6 +23,10 @@ Task IDs reflect actual task folders and do not map reliably to the older GitHub
 - [x] T-020: Party quest-board cards and Home section contrast integrated and deployed.
 - [x] T-021: Save and invite reliability integrated and deployed.
 - [x] T-022: Character Reference visual QA integrated and deployed.
+- [ ] T-023: Final TFM submission documentation approved, waiting for feature freeze.
+- [ ] T-024: Quick QA consistency fixes approved, next implementation task.
+- [ ] T-025: Character-sheet fidelity, SRD data, and derived calculations deferred until
+  post-submission approval.
 
 ## P0: TFM submission package
 
@@ -57,6 +61,7 @@ Recommended parallel tasks after the current dirty-main integration is resolved:
 - [ ] Profile editing, email verification, and password reset.
 - [ ] Account, character, and production test-data deletion.
 - [ ] Built-in portrait-bank integration.
+- [ ] Portrait-bank application integration, possible future T-026.
 - [ ] Gender selector and data contract.
 - [ ] Character/profile/account editing and deletion.
 - [ ] Party editing/deletion, description, and member removal.

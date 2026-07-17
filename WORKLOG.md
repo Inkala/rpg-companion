@@ -495,3 +495,19 @@ base.
   and existing-member linked-character replacement.
 - Next action: carry this closure documentation commit through the next approved product PR rather
   than pushing documentation-only changes to main while automatic deployments are enabled.
+
+## 2026-07-17: Planned T-023, T-024, and T-025
+
+- Corrected task numbering:
+  - T-023 is Final TFM submission documentation.
+  - T-024 is Quick QA consistency fixes.
+  - T-025 is Character-sheet fidelity, SRD data, and derived calculations.
+- Approved T-024 as the next compact implementation task, covering navigation/menu, sign-out
+  confirmation, confirm password, toast variants, empty Home copy, guided selection state, Quick
+  Reference behavior, and Party presentation terminology/icons/GM badge.
+- Deferred T-025 implementation until Marcela explicitly approves it after the TFM submission.
+- Preserved T-023 final submission documentation scope and kept final slide/video production paused
+  until Marcela says the product feature set is frozen.
+- Recorded portrait-bank integration as separate future work that may later become T-026.
+- Next action: commit this planning checkpoint with the next approved product PR, then create a
+  dedicated T-024 implementation worktree.
