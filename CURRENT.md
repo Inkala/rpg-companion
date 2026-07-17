@@ -2,10 +2,12 @@
 
 Submission deadline: 20 July 2026
 
-Active task: T-021/T-022 closure reconciled
+Active task: T-024 Quick QA consistency fixes
 
 State: T-021 Save and invite reliability and T-022 Character Reference visual QA are complete,
-merged, deployed, and validated.
+merged, deployed, and validated. T-023 final submission documentation is approved but waits for
+feature freeze. T-024 is the next approved implementation task. T-025 is planned but implementation
+is deferred until Marcela explicitly approves it after the TFM submission.
 
 T-020 is complete, merged, deployed, and validated at
 `e7053fb72f8b52e73e08dfdd8668b9a429abb803`.
@@ -16,6 +18,40 @@ T-022 merged through PR #30 as `ce57d79f3465df6ae166622521c1c26379cbd5f3`. Final
 `https://github.com/Inkala/rpg-companion/actions/runs/29580552807` passed Frontend, Backend, and
 Secret history. Railway and Cloudflare deployed the exact final SHA successfully. Public visual
 smoke at `390px` passed and no runtime errors were found.
+
+## Approved T-023, T-024, and T-025 planning
+
+### T-023: Final TFM submission documentation
+
+- Status: approved.
+- Timing: wait until Marcela says the product feature set is frozen before restarting final slides
+  or narrated-video production.
+- Scope: evaluator-facing README, portrait attribution/provenance, teacher credentials, slides and
+  video URLs, final CI/release SHA, final smoke test, submission checklist, and submission form
+  evidence.
+
+### T-024: Quick QA consistency fixes
+
+- Status: approved and next for implementation.
+- Classification: Yellow.
+- Recommendation: separate implementation worktree.
+- Scope: global navigation/menu, sign-out confirmation, confirm password, toast polish, empty Home
+  sections, guided selection state, Quick Reference modal/detail contract, and Party presentation
+  terminology/icons/GM badge.
+- Excludes: full CharacterSheetV2, SRD import, derived calculations, edit/delete flows, Party
+  administration, portrait integration, migrations, deployment, and provider changes.
+
+### T-025: Character-sheet fidelity, SRD data, and derived calculations
+
+- Status: deferred.
+- Classification: Red.
+- Timing: implementation deferred until Marcela explicitly approves it after the TFM submission.
+- Scope: SRD 5.1/2014 development-time import, normalized local snapshot, CC-BY-4.0 attribution,
+  Gender selector, Race/Class/Subclass dropdowns, derived calculations with provenance, structured
+  attacks/spells/features/equipment/other entries, CharacterSheetV1 display compatibility, and Mara
+  compatibility tests.
+- Estimate: 4 to 7 focused implementation days. Full implementation is not responsible before the
+  20 July submission deadline.
 
 ## Completed T-020 result
 
@@ -202,7 +238,8 @@ conditions.
 
 ## Single next action
 
-Review and carry the T-021/T-022 closure documentation commit into the next approved product PR,
-without pushing documentation-only changes directly to main while automatic deployments are enabled.
+Carry the T-021/T-022 closure documentation commit and this planning checkpoint into the next
+approved product PR, then create a dedicated T-024 implementation worktree. Do not start T-025 or
+restart final slide/video production yet.
 
 Last updated: 2026-07-17
