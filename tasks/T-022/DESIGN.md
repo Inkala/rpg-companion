@@ -1,6 +1,6 @@
 # T-022 Design: Character Reference Visual QA
 
-Status: approved
+Status: complete
 
 ## Parallel-work assessment
 

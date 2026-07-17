@@ -21,8 +21,8 @@ Task IDs reflect actual task folders and do not map reliably to the older GitHub
 - [x] T-017: Party MVP integrated, deployed, and publicly smoke-tested.
 - [x] T-019: account and character UX polish integrated and deployed.
 - [x] T-020: Party quest-board cards and Home section contrast integrated and deployed.
-- [ ] T-021: Save and invite reliability approved, implementation not started.
-- [ ] T-022: Character Reference visual QA approved, implementation not started.
+- [x] T-021: Save and invite reliability integrated and deployed.
+- [x] T-022: Character Reference visual QA integrated and deployed.
 
 ## P0: TFM submission package
 
@@ -51,16 +51,15 @@ Recommended parallel tasks after the current dirty-main integration is resolved:
 - [x] GM roster and server-side party authorization.
 - [ ] Post-MVP Party follow-up: let a GM remove a Player membership without deleting or modifying
   the linked character. The removed character becomes available to join another party.
-- [ ] Post-MVP Party follow-up: character creation launched from an invite uses the ordinary
-  creation experience, automatically links the saved character to the pending Party, and opens the
-  expanded Character Reference.
+- [x] Character creation launched from an invite uses the ordinary creation experience and
+  automatically attempts to join the pending Party with the saved character.
+- [ ] Post-MVP Party follow-up: existing-member linked-character replacement remains deferred.
 - [ ] Profile editing, email verification, and password reset.
 - [ ] Account, character, and production test-data deletion.
 - [ ] Built-in portrait-bank integration.
 - [ ] Gender selector and data contract.
 - [ ] Character/profile/account editing and deletion.
 - [ ] Party editing/deletion, description, and member removal.
-- [ ] Existing-member linked-character replacement.
 - [ ] Attack reminder badges and calculation breakdowns.
 - [ ] HP/resource tracking and saved-character editing.
 - [ ] Character search, broader rules content, and additional classes.

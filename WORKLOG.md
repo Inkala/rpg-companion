@@ -476,3 +476,22 @@ base.
   removal, and existing-member linked-character replacement.
 - Next action: commit and push the planning checkpoint on a non-main branch before creating any
   worktrees or implementing code.
+
+## 2026-07-17: Closed T-021 and T-022 after production rollout
+
+- T-021 Save and invite reliability merged through PR #29 as
+  `a5bef8c3f160e45a29db58979c32436f55a55af7`.
+- T-021 completed the synchronous save lock, fixed `Character saved.` toast, ordinary saved Character
+  Reference navigation, automatic invite join, retry-only join, stale-result handling, invite-token
+  privacy, and Draft-summary removal.
+- T-022 Character Reference visual QA merged through PR #30 as
+  `ce57d79f3465df6ae166622521c1c26379cbd5f3`.
+- Final main CI run `https://github.com/Inkala/rpg-companion/actions/runs/29580552807` passed
+  Frontend, Backend, and Secret history.
+- Railway and Cloudflare deployed the exact final SHA successfully. Public visual smoke at `390px`
+  passed and no runtime errors were found.
+- Deferred work remains deferred: built-in portrait bank, gender selector/data contract,
+  character/profile/account editing and deletion, Party editing/deletion/description/member removal,
+  and existing-member linked-character replacement.
+- Next action: carry this closure documentation commit through the next approved product PR rather
+  than pushing documentation-only changes to main while automatic deployments are enabled.
