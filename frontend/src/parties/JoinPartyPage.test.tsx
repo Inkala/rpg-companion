@@ -177,6 +177,26 @@ describe('JoinPartyPage', () => {
     expect(onCreateCharacter).toHaveBeenCalledOnce();
   });
 
+  it('shows a privacy-safe saved-character retry without exposing join data', async () => {
+    const onRetrySavedCharacterJoin = vi.fn();
+    renderPage({
+      savedCharacterJoinState: 'error',
+      onRetrySavedCharacterJoin,
+    });
+
+    expect(
+      screen.getByRole('heading', { name: 'Could not join party' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Your character is saved. Try joining the party again.',
+    );
+    expect(document.body).not.toHaveTextContent(token);
+    expect(document.body).not.toHaveTextContent('character-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetrySavedCharacterJoin).toHaveBeenCalledOnce();
+  });
+
   it('prevents duplicate joins and reports the joined Party id', async () => {
     const pendingJoin = deferred<JoinPartyResponseDTO>();
     const joinParty = vi.fn().mockReturnValue(pendingJoin.promise);

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CharacterCreationPage } from './CharacterCreationPage';
 import { createCharacter } from '../characters/api';
@@ -111,16 +111,6 @@ const finishQuiz = (answers: (RegExp | string)[]) => {
       }),
     );
   });
-};
-
-const getDraftValue = (label: string) => {
-  const draftFields = screen.getByLabelText('Current draft fields');
-  const row = within(draftFields).getByText(label).closest('div');
-  if (!row) {
-    throw new Error(`Missing draft row for ${label}`);
-  }
-
-  return within(row).getByRole('definition');
 };
 
 describe('CharacterCreationPage', () => {
@@ -444,26 +434,33 @@ describe('CharacterCreationPage', () => {
     expect(screen.queryByRole('button', { name: 'Open Character Reference' })).not.toBeInTheDocument();
   });
 
-  it('shows a custom manual save action without auto-opening the reference', async () => {
+  it('engages a synchronous manual save lock and keeps it after success', async () => {
     const onOpenCharacterReference = vi.fn();
-    createCharacterMock.mockResolvedValue(createdManualCharacterResponse('Seren Ashfall'));
+    let resolveSave: (value: ReturnType<typeof createdManualCharacterResponse>) => void = () => {};
+    createCharacterMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSave = resolve;
+      }),
+    );
     reviewValidMinimumManualCharacter({
       isSignedIn: true,
       onOpenCharacterReference,
-      savedCharacterActionLabel: 'Return to party invite',
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
-    await screen.findByText(/Seren Ashfall is saved/);
-    expect(
-      screen.queryByRole('button', { name: 'Open Character Reference' }),
-    ).not.toBeInTheDocument();
-    expect(onOpenCharacterReference).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Return to party invite' }));
+    const saveButton = screen.getByRole('button', { name: 'Save character' });
+    act(() => {
+      saveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      saveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
 
-    expect(onOpenCharacterReference).toHaveBeenCalledWith(
-      '44444444-4444-4444-4444-444444444444',
-    );
+    expect(createCharacterMock).toHaveBeenCalledOnce();
+
+    resolveSave(createdManualCharacterResponse('Seren Ashfall'));
+
+    await waitFor(() => expect(onOpenCharacterReference).toHaveBeenCalledOnce());
+    expect(screen.getByRole('button', { name: 'Save character' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+    expect(createCharacterMock).toHaveBeenCalledOnce();
   });
 
   it('disables the manual save button while saving', async () => {
@@ -482,8 +479,9 @@ describe('CharacterCreationPage', () => {
     resolveSave(createdManualCharacterResponse('Seren Ashfall'));
 
     await waitFor(() => {
-      expect(screen.getByText(/Seren Ashfall is saved/)).toBeInTheDocument();
+      expect(screen.getByText('Character saved.')).toBeInTheDocument();
     });
+    expect(screen.getByRole('button', { name: 'Save character' })).toBeDisabled();
   });
 
   it('keeps manual review visible and shows a retryable error when save fails', async () => {
@@ -625,10 +623,8 @@ describe('CharacterCreationPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Human Fighter - Level 1')).toBeInTheDocument();
     expect(screen.getByText('Strength melee Fighter - Soldier')).toBeInTheDocument();
-    expect(getDraftValue('Selected build')).toHaveTextContent(
-      'Strength melee Fighter',
-    );
-    expect(getDraftValue('Recommendation overridden')).toHaveTextContent('No');
+    expect(screen.queryByLabelText('Current draft fields')).not.toBeInTheDocument();
+    expect(screen.queryByText('Draft state')).not.toBeInTheDocument();
   });
 
   it('lets the user choose the other Fighter build and opens review with override state', () => {
@@ -650,13 +646,7 @@ describe('CharacterCreationPage', () => {
       screen.getByRole('heading', { name: 'Review before saving.' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Strength melee Fighter - Soldier')).toBeInTheDocument();
-    expect(getDraftValue('Recommended build')).toHaveTextContent(
-      'Dexterity archer Fighter',
-    );
-    expect(getDraftValue('Selected build')).toHaveTextContent(
-      'Strength melee Fighter',
-    );
-    expect(getDraftValue('Recommendation overridden')).toHaveTextContent('Yes');
+    expect(screen.queryByLabelText('Current draft fields')).not.toBeInTheDocument();
   });
 
   it('shows generated character review details', () => {
@@ -701,7 +691,7 @@ describe('CharacterCreationPage', () => {
     fireEvent.change(nameInput, { target: { value: 'Nera Quickshot' } });
 
     expect(nameInput).toHaveValue('Nera Quickshot');
-    expect(getDraftValue('Name')).toHaveTextContent('Nera Quickshot');
+    expect(screen.queryByLabelText('Current draft fields')).not.toBeInTheDocument();
   });
 
   it('shows sign-in-required copy for signed-out review and does not save', () => {
@@ -799,12 +789,15 @@ describe('CharacterCreationPage', () => {
     resolveSave(createdCharacterResponse('Aldren Vale'));
 
     await waitFor(() => {
-      expect(screen.getByText(/Aldren Vale is saved/)).toBeInTheDocument();
+      expect(screen.getByText('Character saved.')).toBeInTheDocument();
     });
+    expect(screen.getByRole('button', { name: 'Save character' })).toBeDisabled();
   });
 
   it('keeps review visible and shows a retryable error when save fails', async () => {
-    createCharacterMock.mockRejectedValue(new Error('network down'));
+    createCharacterMock
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce(createdCharacterResponse('Aldren Vale'));
     renderCreationPage({ isSignedIn: true });
     fireEvent.click(screen.getByRole('button', { name: /Help me choose/ }));
 
@@ -823,6 +816,11 @@ describe('CharacterCreationPage', () => {
     );
     expect(screen.getByRole('heading', { name: 'Review before saving.' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save character' })).not.toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
+    await waitFor(() => expect(createCharacterMock).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('Character saved.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save character' })).toBeDisabled();
   });
 });
 
