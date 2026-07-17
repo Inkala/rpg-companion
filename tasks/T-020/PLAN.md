@@ -1,6 +1,6 @@
 # T-020: Party quest-board cards and Home section contrast
 
-Status: approved
+Status: complete
 
 ## Parallel-work assessment
 
@@ -77,3 +77,10 @@ original browser/session conditions. Registration is not an implementation slice
 - No migration.
 - No auth implementation changes.
 - No deployment, provider, CI, or infrastructure changes.
+
+## Completion evidence
+
+- T-020 merged and deployed as `e7053fb72f8b52e73e08dfdd8668b9a429abb803`.
+- Controlled production rollout passed for the same SHA.
+- Local `main` and `origin/main` were reconciled to the same SHA on 2026-07-17.
+- No T-020 follow-up implementation remains in scope for this task.

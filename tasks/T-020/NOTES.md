@@ -1,6 +1,6 @@
 # T-020 Notes
 
-Status: approved
+Status: complete
 
 ## Planning evidence
 
@@ -32,3 +32,11 @@ Status: approved
 Use `/Users/marce/Desktop/Screenshot 2026-07-14 at 19.24.46.png` as the visual reference for the
 individual loaded Party pamphlet card. Ignore darker-board proposals and preserve Hunin's global
 light page background.
+
+## Completion evidence
+
+- T-020 merged and deployed as `e7053fb72f8b52e73e08dfdd8668b9a429abb803`.
+- Marcela reported the controlled production rollout passed for the same SHA.
+- On 2026-07-17, the main checkout was clean, `git pull --ff-only` completed, and local `main` plus
+  `origin/main` both resolved exactly to `e7053fb72f8b52e73e08dfdd8668b9a429abb803`.
+- T-020 is complete. The next work is separate QA follow-up planning, not additional T-020 scope.
