@@ -21,9 +21,9 @@ describe('characterSheetToReference', () => {
     expect(reference.stats.speed).toBe('30 ft.');
     expect(reference.stats.concentration).toBeUndefined();
     expect(reference.stats.secondary).toEqual([
-      { label: 'Initiative', value: '+3' },
-      { label: 'Passive Perception', value: '14' },
-      { label: 'Proficiency', value: '+2' },
+      { label: 'Initiative', value: '+3', emphasis: 'initiative' },
+      { label: 'Passive Perception', value: '14', emphasis: 'perception' },
+      { label: 'Proficiency', value: '+2', emphasis: 'proficiency' },
     ]);
     expect(reference.sections.map((section) => section.id)).toEqual([
       'actions',

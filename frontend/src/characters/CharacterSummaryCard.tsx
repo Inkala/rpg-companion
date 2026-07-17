@@ -48,7 +48,7 @@ export const CharacterSummaryCard = ({
 
       <dl className="landing-stat-strip" aria-label={`${character.name} quick stats`}>
         <HitPointStat hitPoints={character.hitPoints} />
-        <Stat label="AC" value={String(character.armorClass)} />
+        <Stat label="AC" value={String(character.armorClass)} emphasis="ac" />
         <Stat label="Speed" value={`${character.speedFt} ft.`} />
       </dl>
 

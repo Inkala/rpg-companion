@@ -42,14 +42,17 @@ export const characterSheetToReference = (
         {
           label: 'Initiative',
           value: formatSignedNumber(sheet.combat.initiative),
+          emphasis: 'initiative',
         },
         {
           label: 'Passive Perception',
           value: formatAuditedNumber(sheet.combat.passivePerception.value),
+          emphasis: 'perception',
         },
         {
           label: 'Proficiency',
           value: formatSignedNumber(sheet.combat.proficiencyBonus),
+          emphasis: 'proficiency',
         },
       ],
     },

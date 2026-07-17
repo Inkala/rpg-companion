@@ -142,6 +142,7 @@ describe('CharacterReference', () => {
     expect(within(primaryStats).getByText('12').tagName).toBe('SPAN');
     expect(within(primaryStats).getByText('19').tagName).toBe('DD');
     expect(within(primaryStats).getByText('30 ft.').tagName).toBe('DD');
+    expect(within(primaryStats).getByText('AC').closest('.stat')).toHaveClass('stat--ac');
   });
 
   it('keeps semantic secondary stats available by accessible text', () => {
@@ -152,6 +153,18 @@ describe('CharacterReference', () => {
     expect(within(secondaryStats).getByText('Initiative').tagName).toBe('DT');
     expect(within(secondaryStats).getByText('Passive Perception').tagName).toBe('DT');
     expect(within(secondaryStats).getByText('Proficiency').tagName).toBe('DT');
+    expect(within(secondaryStats).getByText('+3').tagName).toBe('DD');
+    expect(within(secondaryStats).getByText('14').tagName).toBe('DD');
+    expect(within(secondaryStats).getByText('+2').tagName).toBe('DD');
+    expect(within(secondaryStats).getByText('Initiative').closest('.stat')).toHaveClass(
+      'stat--initiative',
+    );
+    expect(within(secondaryStats).getByText('Passive Perception').closest('.stat')).toHaveClass(
+      'stat--perception',
+    );
+    expect(within(secondaryStats).getByText('Proficiency').closest('.stat')).toHaveClass(
+      'stat--proficiency',
+    );
   });
 
   it('renders the generic avatar when a character has no portrait', () => {
@@ -301,12 +314,17 @@ describe('CharacterReference', () => {
   it('starts Mara actions expanded', () => {
     render(<CharacterReference character={maraReferenceCharacter} onBack={vi.fn()} />);
 
-    expect(screen.getByRole('button', { name: /Actions, 2 items/ })).toHaveAttribute(
+    const actionsHeader = screen.getByRole('button', { name: /Actions, 2 items/ });
+    expect(actionsHeader).toHaveAttribute(
       'aria-expanded',
       'true',
     );
-    expect(screen.getByRole('button', { name: /Longbow/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Shortsword/ })).toBeInTheDocument();
+    const longbow = screen.getByRole('button', { name: /Longbow/ });
+    const actionsPanel = longbow.closest('.section-panel');
+    expect(actionsPanel).toHaveAttribute('id', 'actions-section-panel');
+    expect(actionsHeader).toHaveAttribute('aria-controls', 'actions-section-panel');
+    expect(actionsPanel).toContainElement(longbow);
+    expect(actionsPanel).toContainElement(screen.getByRole('button', { name: /Shortsword/ }));
   });
 
   it('expands Mara features on request', () => {

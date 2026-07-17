@@ -6,7 +6,7 @@ export type HitPoints = {
 export type CharacterReferenceStat = {
   label: string;
   value: string;
-  emphasis?: 'ac';
+  emphasis?: 'ac' | 'initiative' | 'perception' | 'proficiency';
 };
 
 export type CharacterReferencePortrait = {
