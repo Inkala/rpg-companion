@@ -23,10 +23,14 @@ Task IDs reflect actual task folders and do not map reliably to the older GitHub
 - [x] T-020: Party quest-board cards and Home section contrast integrated and deployed.
 - [x] T-021: Save and invite reliability integrated and deployed.
 - [x] T-022: Character Reference visual QA integrated and deployed.
-- [ ] T-023: Final TFM submission documentation approved, waiting for feature freeze.
-- [ ] T-024: Quick QA consistency fixes approved, next implementation task.
+- [ ] T-023: Final TFM submission documentation approved for parallel drafting with T-026 evidence
+  placeholders; final reconciliation and merge follow T-026.
+- [x] T-024: Quick QA consistency fixes merged, deployed, and publicly validated at
+  `b942700a31af7efa22b0349018d692084b32965b`.
 - [ ] T-025: Character-sheet fidelity, SRD data, and derived calculations deferred until
   post-submission approval.
+- [ ] T-026: Bounded all-12-SRD-classes, levels-1-through-5 Level-up MVP approved. Implement,
+  validate, deploy, and smoke-test before T-023 final evidence reconciliation.
 
 ## P0: TFM submission package
 
@@ -61,14 +65,15 @@ Recommended parallel tasks after the current dirty-main integration is resolved:
 - [ ] Profile editing, email verification, and password reset.
 - [ ] Account, character, and production test-data deletion.
 - [ ] Built-in portrait-bank integration.
-- [ ] Portrait-bank application integration, possible future T-026.
+- [ ] Portrait-bank application integration, future task ID TBD.
 - [ ] Gender selector and data contract.
 - [ ] Character/profile/account editing and deletion.
 - [ ] Party editing/deletion, description, and member removal.
 - [ ] Attack reminder badges and calculation breakdowns.
 - [ ] HP/resource tracking and saved-character editing.
 - [ ] Character search, broader rules content, and additional classes.
-- [ ] Level-up guidance.
+- [ ] Broader level-up guidance beyond bounded T-026.
+- [ ] Multiclassing.
 - [ ] AI explanation or recommendation feature.
 
 ## Completed baseline

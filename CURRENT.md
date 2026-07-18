@@ -2,12 +2,17 @@
 
 Submission deadline: 20 July 2026
 
-Active task: T-024 Quick QA consistency fixes
+Active tasks: T-026 Bounded Level-up MVP implementation and T-023 Final TFM submission
+documentation drafting
 
-State: T-021 Save and invite reliability and T-022 Character Reference visual QA are complete,
-merged, deployed, and validated. T-023 final submission documentation is approved but waits for
-feature freeze. T-024 is the next approved implementation task. T-025 is planned but implementation
-is deferred until Marcela explicitly approves it after the TFM submission.
+State: T-021 Save and invite reliability, T-022 Character Reference visual QA, and T-024 Quick QA
+consistency fixes are complete, merged, deployed, and validated. T-024 is deployed at
+`b942700a31af7efa22b0349018d692084b32965b`, so its integration gate for T-026 is satisfied. T-026
+bounded Level-up MVP is approved, and Marcela explicitly accepts that implementation may miss the
+20 July deadline. T-023 may draft in parallel in a separate worktree with T-026 final-evidence
+placeholders, while final slide/video production still waits for feature freeze. T-026 must merge,
+deploy, and complete public smoke first; T-023 then rebases, replaces placeholders, reconciles final
+evidence, and merges last. T-025 remains deferred.
 
 T-020 is complete, merged, deployed, and validated at
 `e7053fb72f8b52e73e08dfdd8668b9a429abb803`.
@@ -32,7 +37,8 @@ smoke at `390px` passed and no runtime errors were found.
 
 ### T-024: Quick QA consistency fixes
 
-- Status: approved and next for implementation.
+- Status: complete, merged, deployed, and publicly validated.
+- Final SHA: `b942700a31af7efa22b0349018d692084b32965b`.
 - Classification: Yellow.
 - Recommendation: separate implementation worktree.
 - Scope: global navigation/menu, sign-out confirmation, confirm password, toast polish, empty Home
@@ -52,6 +58,34 @@ smoke at `390px` passed and no runtime errors were found.
   compatibility tests.
 - Estimate: 4 to 7 focused implementation days. Full implementation is not responsible before the
   20 July submission deadline.
+
+## Approved T-026 implementation
+
+### T-026: Bounded Level-up MVP
+
+- Status: approved.
+- Classification: Red.
+- Recommendation: dedicated implementation worktree with strict product/rules/test ownership.
+  Marcela explicitly accepts that implementation may miss the 20 July deadline.
+- Scope: owner-only level-up for saved single-class characters across all 12 SRD 5.1/2014 classes,
+  exactly one level at a time, supported transitions 1 to 2, 2 to 3, 3 to 4, and 4 to 5 only, SRD
+  content only, manual fallback for existing non-SRD content, optimistic concurrency, and complete
+  review before persistence.
+- Audit result: CharacterSheetV1 can carry the result without schema expansion only if T-026 uses
+  one canonical schema-validated SRD source, generated TypeScript/Go representations, exact
+  existing-field provenance, and server-authoritative reconstruction. Existing characters above
+  level 5 remain readable but cannot use Level up.
+- Excludes: level 5 to 6 and above, multiclassing, level reduction, character deletion,
+  general-purpose complete-sheet editing, Party/profile management, full T-025, portrait
+  integration, broad CRUD, Party administration, feats catalog, homebrew automation, paid-book
+  content, live runtime rules API, and non-SRD Player's Handbook content.
+- Estimate: 6 focused days minimum from the integrated T-024 baseline, more likely 8 to 10 focused
+  days with
+  canonical class/spell data, parity generation, PATCH CORS, prerequisite recovery,
+  server-authoritative validation, PostgreSQL tests, frontend tests, browser QA, CI, deployment, and
+  public smoke. Schedule risk before 20 July is critical. T-023 formal submission documentation
+  takes priority if T-026 cannot reach a tested, deployable state without threatening submission
+  completion.
 
 ## Completed T-020 result
 
@@ -238,8 +272,9 @@ conditions.
 
 ## Single next action
 
-Carry the T-021/T-022 closure documentation commit and this planning checkpoint into the next
-approved product PR, then create a dedicated T-024 implementation worktree. Do not start T-025 or
-restart final slide/video production yet.
+Integrate this planning checkpoint, then create separate T-026 and T-023 worktrees. T-026 owns
+product/rules/test implementation and merges first. T-023 may draft with placeholders, then rebases
+and merges final evidence after T-026 deployment and public smoke. Keep T-025 and portrait
+integration deferred, and do not restart final slide/video production until feature freeze.
 
-Last updated: 2026-07-17
+Last updated: 2026-07-18
