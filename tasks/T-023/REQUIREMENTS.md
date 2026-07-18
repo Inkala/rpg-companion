@@ -74,5 +74,24 @@ product feature set is frozen.
 
 ## Timing gate
 
-Do not restart final slide or narrated-video production until Marcela says the product feature set is
+T-023 documentation drafting may proceed in parallel with T-026 from a separate worktree. Final
+slide and narrated-video production remains paused until Marcela says the product feature set is
 frozen.
+
+Drafts must retain explicit placeholders for T-026 final SHA, CI, deployment, implemented
+functionality, screenshots, and public smoke evidence. T-023 must rebase onto final main after T-026
+integrates and replace every placeholder before final merge.
+
+## Parallel ownership and integration
+
+T-023 owns `README.md`, evaluator-facing submission documentation,
+`docs/submission-checklist.md`, `CURRENT.md`, `WORKLOG.md`, `BACKLOG.md`, and `tasks/T-023/`.
+
+T-023 must not edit product code, canonical/generated rules data, `docs/rules-data.md`, or
+`tasks/T-026/`.
+
+Required merge order:
+
+1. T-026 implementation, validation, deployment, and public smoke.
+2. T-023 rebases onto final main, replaces every T-026 placeholder, reconciles final evidence, and
+   merges last.

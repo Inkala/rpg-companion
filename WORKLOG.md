@@ -511,3 +511,91 @@ base.
 - Recorded portrait-bank integration as separate future work that may later become T-026.
 - Next action: commit this planning checkpoint with the next approved product PR, then create a
   dedicated T-024 implementation worktree.
+
+## 2026-07-17: Planned bounded T-026 Level-up MVP
+
+- Marcela approved planning a bounded Level-up MVP and changed the product priority:
+  1. finish T-024;
+  2. implement bounded T-026 if approved;
+  3. complete T-023 final submission documentation;
+  4. keep full T-025, portrait integration, broad CRUD, Party administration, and multiclassing
+     deferred.
+- Created T-026 planning with status `awaiting approval`.
+- Recorded that T-026 implementation must not begin until T-024 is committed and integrated, or the
+  implementation branches have been explicitly reconciled.
+- Feasibility verdict: bounded one-level owner-only Level-up is feasible with CharacterSheetV1, but
+  schedule risk before 20 July is high and implementation must stay narrow.
+- Next action remains T-024 implementation.
+
+## 2026-07-18: Audited T-026 before implementation
+
+- Re-read T-026 and inspected current CharacterSheetV1, frontend Character Reference, character API,
+  backend character handler/repository/validation, server routes, migrations, and tests.
+- Recorded a field-by-field CharacterSheetV1 level-up classification.
+- Confirmed current manual creation accepts arbitrary classes, so T-026 must support only classes
+  present in a local rules table and fail safely for unsupported classes.
+- Recommended Fighter-only as the smallest responsible release boundary because current guided
+  creation creates level-1 Fighters. Superseded later on 2026-07-18 by Marcela's all-12-SRD-classes,
+  levels-1-through-5 boundary.
+- Recorded the exact proposed backend route, DTO, optimistic-concurrency contract, public error
+  codes, frontend state machine, adversarial test matrix, SRD source URLs, and CC-BY-4.0 attribution
+  obligations.
+- Planning remains documentation-only. T-026 implementation still waits until T-024 is committed and
+  integrated or branches are explicitly reconciled.
+
+## 2026-07-18: Revised T-026 to all SRD classes through level 5
+
+- Marcela revised the T-026 Level-up MVP boundary from Fighter-first to all 12 SRD 5.1/2014 classes
+  through level 5.
+- Recorded supported transitions: 1 to 2, 2 to 3, 3 to 4, and 4 to 5 only.
+- Recorded the product rationale: Hunin focuses on levels 1 through 5 because new and occasional
+  players encounter class identity, subclass, first Ability Score Improvement, and major early
+  progression choices there.
+- Kept CharacterSheetV1, single-class-only, owner-only, SRD-only, no live runtime rules API, no
+  multiclassing, no feats catalog, no homebrew automation, no paid-book content, and Party-link
+  preservation.
+- Replaced the Fighter-specific matrix with a 12-class transition matrix and updated the slices,
+  test matrix, estimate, and go/no-go assessment.
+- Planning remains documentation-only and T-026 remains `awaiting approval`.
+
+## 2026-07-18: Closed final T-026 planning gaps
+
+- Added PATCH CORS ownership and focused security tests for approved-origin preflight,
+  credentialed-cookie behavior, unsafe origins, and missing Origin.
+- Replaced independent runtime rules tables with one schema-validated canonical SRD source,
+  deterministic TypeScript/Go generation, snapshot/checksum identity, and parity tests.
+- Fixed the spell boundary at all SRD 5.1 cantrips and spells through spell level 3, including
+  known/prepared/replacement rules, Wizard spellbook additions, Pact Magic, and half-caster
+  progression.
+- Added earlier-decision prerequisite recovery or safe blocking for all 12 classes.
+- Replaced the client-authored full-sheet update with a bounded decision command and
+  server-authoritative owner-scoped reconstruction.
+- Bound provenance to existing CharacterSheetV1 audit and audited-value fields only.
+- Revised the estimate to 6 focused days minimum and 8 to 10 likely. Recorded that T-023 formal
+  submission documentation takes priority if T-026 threatens submission completion.
+- T-026 remains `awaiting approval`; T-024 was not modified.
+
+## 2026-07-18: Recorded T-024 completion and updated the T-026 gate
+
+- T-024 is complete, merged, deployed, and publicly validated at
+  `b942700a31af7efa22b0349018d692084b32965b`.
+- The T-024 integration dependency for T-026 is satisfied.
+- T-026 remains `awaiting approval` until Marcela chooses post-submission implementation or
+  explicitly accepts missing the 20 July deadline.
+- The finalized T-026 product, security, data, accessibility, validation, and estimate contracts
+  remain unchanged.
+
+## 2026-07-18: Approved T-026 and parallel T-023 drafting
+
+- Marcela approved the finalized all-12-class, levels-1-through-5 T-026 contract and explicitly
+  accepted that implementation may miss the 20 July deadline.
+- Confirmed the exact success toast, PATCH endpoint, optimistic concurrency, server-authoritative
+  decision DTO, canonical generated rules strategy, SRD spell boundary, prerequisite blocking, and
+  existing-field provenance contract.
+- Approved T-023 and T-026 to proceed in parallel through separate worktrees with disjoint file
+  ownership.
+- Required T-026 to implement, validate, deploy, and complete public smoke first.
+- Required T-023 to retain T-026 evidence placeholders, then rebase onto final main, replace all
+  placeholders, reconcile final evidence, and merge last.
+- Kept T-025 deferred and preserved T-024 completion evidence at
+  `b942700a31af7efa22b0349018d692084b32965b`.
