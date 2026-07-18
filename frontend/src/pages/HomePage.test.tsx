@@ -195,10 +195,18 @@ describe('HomePage', () => {
     const emptyHeading = await screen.findByRole('heading', {
       name: 'There are no quests in sight',
     });
-    const emptyCard = emptyHeading.closest('.party-list__empty');
-    expect(emptyCard).not.toBeNull();
-    expect(within(emptyCard as HTMLElement).getByText(
-      'Create or join an adventure to satisfy your thirst for adventure.',
+    const emptyPanel = emptyHeading.closest('.party-list__empty');
+    expect(emptyPanel).not.toBeNull();
+    expect(emptyPanel).toBe(
+      screen.getByRole('region', { name: 'My parties' }).querySelector(
+        ':scope > .party-list__empty',
+      ),
+    );
+    expect(within(emptyPanel as HTMLElement).getByRole('heading', {
+      name: 'My parties',
+    })).toHaveClass('eyebrow');
+    expect(within(emptyPanel as HTMLElement).getByText(
+      'Create or join an adventure to satisfy your thirst for aventura.',
     )).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { name: 'My parties' })).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));

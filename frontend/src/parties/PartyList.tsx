@@ -65,22 +65,26 @@ export const PartyList = ({
 
   return (
     <section className="party-list" aria-label="My parties">
-      <h2 className="eyebrow">My parties</h2>
-
-      {!isSignedIn ? (
-        <SignedOutPartyList onSignIn={onSignIn} />
-      ) : state.status === 'loading' ? (
-        <p className="party-list__status" role="status">Loading your parties...</p>
-      ) : state.status === 'empty' ? (
+      {isSignedIn && state.status === 'empty' ? (
         <EmptyPartyList onCreateParty={onCreateParty} onJoinParty={onJoinParty} />
-      ) : state.status === 'error' ? (
-        <PartyListError onRetry={() => setLoadAttempt((current) => current + 1)} />
       ) : (
-        <LoadedPartyList
-          parties={state.parties}
-          getPartyHref={getPartyHref}
-          onOpenParty={onOpenParty}
-        />
+        <>
+          <h2 className="eyebrow">My parties</h2>
+
+          {!isSignedIn ? (
+            <SignedOutPartyList onSignIn={onSignIn} />
+          ) : state.status === 'loading' ? (
+            <p className="party-list__status" role="status">Loading your parties...</p>
+          ) : state.status === 'error' ? (
+            <PartyListError onRetry={() => setLoadAttempt((current) => current + 1)} />
+          ) : state.status === 'loaded' ? (
+            <LoadedPartyList
+              parties={state.parties}
+              getPartyHref={getPartyHref}
+              onOpenParty={onOpenParty}
+            />
+          ) : null}
+        </>
       )}
     </section>
   );
@@ -106,9 +110,12 @@ const EmptyPartyList = ({
   onJoinParty: () => void;
 }) => {
   return (
-    <div className="party-list__empty">
-      <h3>There are no quests in sight</h3>
-      <p>Create or join an adventure to satisfy your thirst for adventure.</p>
+    <header className="party-list__empty">
+      <div className="party-list__empty-copy">
+        <h2 className="eyebrow">My parties</h2>
+        <h3>There are no quests in sight</h3>
+        <p>Create or join an adventure to satisfy your thirst for aventura.</p>
+      </div>
       <div className="party-actions">
         <button type="button" className="button button--primary" onClick={onCreateParty}>
           Create
@@ -117,7 +124,7 @@ const EmptyPartyList = ({
           Join
         </button>
       </div>
-    </div>
+    </header>
   );
 };
 

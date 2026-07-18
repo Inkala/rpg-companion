@@ -428,6 +428,7 @@
 
 .party-list__title,
 .party-list__state h3,
+.party-list__empty h3,
 .party-list-card__title {
   margin: 0;
   color: var(--color-text-primary);
@@ -453,15 +454,21 @@
   display: grid;
   width: 100%;
   gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-surface);
-  box-shadow: var(--shadow-card);
+  min-width: 0;
+}
+
+.party-list__empty-copy {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.party-list__empty h3 {
+  font-size: 1.35rem;
 }
 
 .party-list__state > p,
-.party-list__empty > p,
+.party-list__empty-copy > p,
 .party-list__status {
   margin: 0;
   color: var(--color-text-secondary);
@@ -580,6 +587,12 @@
   .party-actions .button {
     width: auto;
   }
+
+  .party-list__empty {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-4);
+  }
 }
 
 @media (min-width: 1080px) {
@@ -601,7 +614,6 @@
 
   .party-state-card,
   .party-list__state,
-  .party-list__empty,
   .party-character-picker,
   .party-character-option {
     padding: var(--space-3);

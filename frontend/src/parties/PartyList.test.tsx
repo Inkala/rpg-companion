@@ -46,7 +46,7 @@ describe('PartyList', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Loading your parties...');
   });
 
-  it('shows the exact authenticated empty card with create and join actions', async () => {
+  it('shows the compact authenticated empty panel with create and join actions', async () => {
     const onCreateParty = vi.fn();
     const onJoinParty = vi.fn();
 
@@ -59,14 +59,18 @@ describe('PartyList', () => {
     const emptyHeading = await screen.findByRole('heading', {
       name: 'There are no quests in sight',
     });
-    const emptyCard = emptyHeading.closest('.party-list__empty');
-    expect(emptyCard).not.toBeNull();
-    expect(emptyCard).toHaveClass('party-list__empty');
-    expect(within(emptyCard as HTMLElement).getByText(
-      'Create or join an adventure to satisfy your thirst for adventure.',
+    const emptyPanel = emptyHeading.closest('.party-list__empty');
+    expect(emptyPanel).not.toBeNull();
+    expect(emptyPanel).toBe(container.querySelector('.party-list > .party-list__empty'));
+    expect(within(emptyPanel as HTMLElement).getByRole('heading', {
+      name: 'My parties',
+    })).toHaveClass('eyebrow');
+    expect(emptyPanel?.querySelector('.party-list__empty-copy')).not.toBeNull();
+    expect(within(emptyPanel as HTMLElement).getByText(
+      'Create or join an adventure to satisfy your thirst for aventura.',
     )).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { name: 'My parties' })).toHaveLength(1);
-    expect(within(emptyCard as HTMLElement).getAllByRole('button')).toHaveLength(2);
+    expect(within(emptyPanel as HTMLElement).getAllByRole('button')).toHaveLength(2);
     expect(container).not.toHaveTextContent('No parties yet');
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
