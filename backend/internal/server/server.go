@@ -33,6 +33,7 @@ func New(characterRepository *characters.Repository, partyRepository *parties.Re
 	mux.Handle("POST /characters", authenticator.RequireSession(http.HandlerFunc(characterHandler.Create)))
 	mux.Handle("GET /characters", authenticator.RequireSession(http.HandlerFunc(characterHandler.List)))
 	mux.Handle("GET /characters/{id}", authenticator.RequireSession(http.HandlerFunc(characterHandler.GetByID)))
+	mux.Handle("PATCH /characters/{id}/level-up", authenticator.RequireSession(http.HandlerFunc(characterHandler.LevelUp)))
 	mux.Handle("POST /parties", authenticator.RequireSession(http.HandlerFunc(partyHandler.Create)))
 	mux.Handle("GET /parties", authenticator.RequireSession(http.HandlerFunc(partyHandler.List)))
 	mux.Handle("GET /parties/{partyId}", authenticator.RequireSession(http.HandlerFunc(partyHandler.GetForMember)))

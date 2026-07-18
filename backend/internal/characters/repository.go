@@ -178,6 +178,103 @@ WHERE id = $1::uuid
 	return character, nil
 }
 
+func (repository *Repository) LevelUp(
+	ctx context.Context,
+	id uuid.UUID,
+	ownerID uuid.UUID,
+	expectedUpdatedAt time.Time,
+	request levelUpRequest,
+) (Character, error) {
+	tx, err := repository.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return Character{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	const selectForUpdate = `
+SELECT
+  id::text,
+  owner_subject_id::text,
+  name,
+  class_name,
+  subclass_name,
+  level,
+  ancestry,
+  background,
+  strength_score,
+  dexterity_score,
+  constitution_score,
+  intelligence_score,
+  wisdom_score,
+  charisma_score,
+  hp_current,
+  hp_max,
+  armor_class,
+  speed_ft,
+  reference_payload,
+  created_at,
+  updated_at
+FROM characters
+WHERE id = $1::uuid
+  AND owner_subject_id = $2::uuid
+FOR UPDATE`
+
+	persisted, err := scanCharacter(tx.QueryRow(ctx, selectForUpdate, id.String(), ownerID.String()))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Character{}, ErrNotFound
+	}
+	if err != nil {
+		return Character{}, err
+	}
+	if !persisted.UpdatedAt.UTC().Equal(expectedUpdatedAt.UTC()) {
+		return Character{}, ErrLevelUpConflict
+	}
+
+	updated, err := buildLeveledCharacter(persisted, request)
+	if err != nil {
+		return Character{}, err
+	}
+	updated.ID = persisted.ID
+	updated.OwnerSubjectID = persisted.OwnerSubjectID
+	updated.CreatedAt = persisted.CreatedAt
+	updated.UpdatedAt = time.Now().UTC()
+	if !updated.UpdatedAt.After(persisted.UpdatedAt) {
+		updated.UpdatedAt = persisted.UpdatedAt.Add(time.Microsecond)
+	}
+
+	const update = `
+UPDATE characters
+SET
+  class_name = $3,
+  subclass_name = $4,
+  level = $5,
+  strength_score = $6,
+  dexterity_score = $7,
+  constitution_score = $8,
+  intelligence_score = $9,
+  wisdom_score = $10,
+  charisma_score = $11,
+  hp_current = $12,
+  hp_max = $13,
+  reference_payload = $14::jsonb,
+  updated_at = $15
+WHERE id = $1::uuid
+  AND owner_subject_id = $2::uuid
+RETURNING updated_at`
+	if err := tx.QueryRow(ctx, update,
+		updated.ID.String(), ownerID.String(), updated.ClassName, updated.SubclassName, updated.Level,
+		updated.AbilityScores.Strength, updated.AbilityScores.Dexterity, updated.AbilityScores.Constitution,
+		updated.AbilityScores.Intelligence, updated.AbilityScores.Wisdom, updated.AbilityScores.Charisma,
+		updated.HitPoints.Current, updated.HitPoints.Max, []byte(updated.ReferencePayload), updated.UpdatedAt,
+	).Scan(&updated.UpdatedAt); err != nil {
+		return Character{}, mapCharacterCreateError(err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return Character{}, err
+	}
+	return updated, nil
+}
+
 func (repository *Repository) GetByIDForPartyGM(
 	ctx context.Context,
 	id uuid.UUID,
