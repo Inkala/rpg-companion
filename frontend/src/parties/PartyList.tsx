@@ -64,9 +64,8 @@ export const PartyList = ({
   }, [isSignedIn, loadAttempt, loadParties]);
 
   return (
-    <section className="party-list" aria-labelledby="my-parties-title">
-      <p className="eyebrow">Parties</p>
-      <h2 id="my-parties-title" className="party-list__title">My parties</h2>
+    <section className="party-list" aria-label="My parties">
+      <h2 className="eyebrow">My parties</h2>
 
       {!isSignedIn ? (
         <SignedOutPartyList onSignIn={onSignIn} />
@@ -108,13 +107,14 @@ const EmptyPartyList = ({
 }) => {
   return (
     <div className="party-list__empty">
-      <p role="status">You have not joined a party yet.</p>
+      <h3>There are no quests in sight</h3>
+      <p>Create or join an adventure to satisfy your thirst for adventure.</p>
       <div className="party-actions">
         <button type="button" className="button button--primary" onClick={onCreateParty}>
-          Create party
+          Create
         </button>
         <button type="button" className="button button--secondary" onClick={onJoinParty}>
-          Join party
+          Join
         </button>
       </div>
     </div>
@@ -197,9 +197,9 @@ const PartyListCard = ({
       <p className="party-list-card__gm">
         <strong>GM:</strong> {party.gm.username}
       </p>
-      <h4 className="party-list-card__linked-title">LINKED CHARACTERS</h4>
+      <h4 className="party-list-card__linked-title">MEMBERS</h4>
       {party.linkedCharacters.length === 0 ? (
-        <p className="party-list-card__empty">No linked characters yet.</p>
+        <p className="party-list-card__empty">No members yet.</p>
       ) : (
         <ul className="party-list-card__characters">
           {party.linkedCharacters.map((linkedCharacter) => (

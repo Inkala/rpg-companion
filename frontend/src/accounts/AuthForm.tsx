@@ -30,9 +30,11 @@ export const AuthForm = ({
   const [email, setEmail] = useState('');
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordConfirmationError, setPasswordConfirmationError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -42,6 +44,8 @@ export const AuthForm = ({
     setUsernameError(null);
     setEmailError(null);
     setPasswordError(null);
+    setPasswordConfirmation('');
+    setPasswordConfirmationError(null);
   }, [initialMode]);
 
   const submitAccountForm = async (event: FormEvent<HTMLFormElement>) => {
@@ -52,10 +56,20 @@ export const AuthForm = ({
       const nextUsernameError = validateRegistrationUsername(username);
       const nextEmailError = validateRegistrationEmail(email);
       const nextPasswordError = validateRegistrationPassword(password);
+      const nextPasswordConfirmationError = validatePasswordConfirmation(
+        password,
+        passwordConfirmation,
+      );
       setUsernameError(nextUsernameError);
       setEmailError(nextEmailError);
       setPasswordError(nextPasswordError);
-      if (nextUsernameError || nextEmailError || nextPasswordError) {
+      setPasswordConfirmationError(nextPasswordConfirmationError);
+      if (
+        nextUsernameError
+        || nextEmailError
+        || nextPasswordError
+        || nextPasswordConfirmationError
+      ) {
         return;
       }
     }
@@ -68,6 +82,7 @@ export const AuthForm = ({
         setUsername('');
         setEmail('');
         setPassword('');
+        setPasswordConfirmation('');
         setUsernameOrEmail('');
         setMode('sign-in');
         onModeChange('sign-in');
@@ -92,6 +107,7 @@ export const AuthForm = ({
   const usernameErrorId = 'account-username-error';
   const emailErrorId = 'account-email-error';
   const passwordErrorId = 'account-password-error';
+  const passwordConfirmationErrorId = 'account-password-confirmation-error';
 
   return (
     <>
@@ -176,6 +192,11 @@ export const AuthForm = ({
               if (passwordError) {
                 setPasswordError(validateRegistrationPassword(nextPassword));
               }
+              if (passwordConfirmationError) {
+                setPasswordConfirmationError(
+                  validatePasswordConfirmation(nextPassword, passwordConfirmation),
+                );
+              }
             }}
             onBlur={() => {
               if (isRegistering) {
@@ -190,6 +211,43 @@ export const AuthForm = ({
           <p id={passwordErrorId} className="form-error" role="alert">
             {passwordError}
           </p>
+        ) : null}
+
+        {isRegistering ? (
+          <>
+            <label className="form-field">
+              <span>Confirm password</span>
+              <input
+                type="password"
+                autoComplete="new-password"
+                value={passwordConfirmation}
+                required
+                onChange={(event) => {
+                  const nextConfirmation = event.target.value;
+                  setPasswordConfirmation(nextConfirmation);
+                  if (passwordConfirmationError) {
+                    setPasswordConfirmationError(
+                      validatePasswordConfirmation(password, nextConfirmation),
+                    );
+                  }
+                }}
+                onBlur={() => {
+                  setPasswordConfirmationError(
+                    validatePasswordConfirmation(password, passwordConfirmation),
+                  );
+                }}
+                aria-invalid={passwordConfirmationError ? 'true' : undefined}
+                aria-describedby={
+                  passwordConfirmationError ? passwordConfirmationErrorId : undefined
+                }
+              />
+            </label>
+            {passwordConfirmationError ? (
+              <p id={passwordConfirmationErrorId} className="form-error" role="alert">
+                {passwordConfirmationError}
+              </p>
+            ) : null}
+          </>
         ) : null}
 
         {error ? (
@@ -210,6 +268,8 @@ export const AuthForm = ({
           const nextMode = isRegistering ? 'sign-in' : 'register';
           setMode(nextMode);
           setError(null);
+          setPasswordConfirmation('');
+          setPasswordConfirmationError(null);
           onModeChange(nextMode);
         }}
       >
@@ -217,4 +277,12 @@ export const AuthForm = ({
       </button>
     </>
   );
+};
+
+const validatePasswordConfirmation = (password: string, confirmation: string) => {
+  if (confirmation.length === 0) {
+    return 'Confirm your password.';
+  }
+
+  return password === confirmation ? null : 'Passwords do not match.';
 };

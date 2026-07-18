@@ -7,6 +7,8 @@ const passwordPolicyMessage =
 const usernamePolicyMessage =
   'Username must be 3–32 characters and use only English letters, numbers, underscores, or hyphens.';
 const emailPolicyMessage = 'Enter a valid email address.';
+const confirmationRequiredMessage = 'Confirm your password.';
+const passwordMismatchMessage = 'Passwords do not match.';
 
 const maraUser = {
   id: '00000000-0000-0000-0000-000000000001',
@@ -99,6 +101,9 @@ describe('AuthForm', () => {
     fireEvent.change(passwordField, {
       target: { value: 'weakpass' },
     });
+    fireEvent.change(screen.getByLabelText('Confirm password'), {
+      target: { value: 'weakpass' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     const passwordError = await screen.findByRole('alert');
@@ -108,6 +113,9 @@ describe('AuthForm', () => {
     expect(fetchMock).not.toHaveBeenCalled();
 
     fireEvent.change(passwordField, {
+      target: { value: 'Correct-horse-battery-staple1' },
+    });
+    fireEvent.change(screen.getByLabelText('Confirm password'), {
       target: { value: 'Correct-horse-battery-staple1' },
     });
     expect(screen.queryByText(passwordPolicyMessage)).not.toBeInTheDocument();
@@ -199,10 +207,41 @@ describe('AuthForm', () => {
     expect(screen.getByText(usernamePolicyMessage)).toBeInTheDocument();
     expect(screen.getByText(emailPolicyMessage)).toBeInTheDocument();
     expect(screen.getByText(passwordPolicyMessage)).toBeInTheDocument();
+    expect(screen.getByText(confirmationRequiredMessage)).toBeInTheDocument();
     expect(screen.getByLabelText('Username')).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByLabelText('Password')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Confirm password')).toHaveAttribute('aria-invalid', 'true');
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('requires matching password confirmation without sending it to the API', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ user: maraUser }));
+    vi.stubGlobal('fetch', fetchMock);
+    renderAuthForm();
+
+    fillRegistrationForm('Different-password1!');
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    const confirmationField = screen.getByLabelText('Confirm password');
+    expect(screen.getByText(passwordMismatchMessage)).toBeInTheDocument();
+    expect(confirmationField).toHaveAttribute('required');
+    expect(confirmationField).toHaveAttribute('aria-invalid', 'true');
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    fireEvent.change(confirmationField, {
+      target: { value: 'Correct-horse-battery-staple1' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toEqual({
+      username: 'Mara',
+      email: 'mara@example.com',
+      password: 'Correct-horse-battery-staple1',
+    });
+    expect(String(request.body)).not.toContain('confirm');
   });
 
   it('shows invalid sign-in errors from the backend', async () => {
@@ -237,7 +276,7 @@ describe('AuthForm', () => {
   });
 });
 
-const fillRegistrationForm = () => {
+const fillRegistrationForm = (confirmation = 'Correct-horse-battery-staple1') => {
   fireEvent.change(screen.getByLabelText('Username'), {
     target: { value: 'Mara' },
   });
@@ -246,6 +285,9 @@ const fillRegistrationForm = () => {
   });
   fireEvent.change(screen.getByLabelText('Password'), {
     target: { value: 'Correct-horse-battery-staple1' },
+  });
+  fireEvent.change(screen.getByLabelText('Confirm password'), {
+    target: { value: confirmation },
   });
 };
 

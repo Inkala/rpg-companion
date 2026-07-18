@@ -86,6 +86,8 @@ export const App = ({
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(accountsAvailable);
   const [sessionError, setSessionError] = useState<string | null>(null);
+  const [isSignOutConfirmationOpen, setIsSignOutConfirmationOpen] = useState(false);
+  const signOutReturnFocusRef = useRef<HTMLElement | null>(null);
   const renderPartyTools = useCallback(
     (party: PartyDetailDTO) => (
       <PartyInvitePanel
@@ -378,11 +380,7 @@ export const App = ({
   };
 
   const handleRegistrationSuccess = () => {
-    const toastId = toast.success('Account created. Sign in to continue.', {
-      action: {
-        label: 'Dismiss notification',
-        onClick: () => toast.dismiss(toastId),
-      },
+    toast.success('Account created. Sign in to continue.', {
       duration: 8000,
     });
   };
@@ -494,158 +492,271 @@ export const App = ({
     }
   };
 
+  const requestSignOut = (returnFocus?: HTMLElement) => {
+    const explicitReturnFocus =
+      returnFocus instanceof HTMLElement ? returnFocus : null;
+    const activeElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const menu = activeElement?.closest('.account-menu, .app-mobile-menu');
+    const menuTrigger = menu?.querySelector<HTMLElement>('[aria-haspopup="menu"]') ?? null;
+    signOutReturnFocusRef.current = explicitReturnFocus ?? menuTrigger ?? activeElement;
+    setIsSignOutConfirmationOpen(true);
+  };
+
+  const cancelSignOut = () => {
+    setIsSignOutConfirmationOpen(false);
+    const returnTarget = signOutReturnFocusRef.current;
+    window.setTimeout(() => {
+      if (returnTarget?.isConnected) {
+        returnTarget.focus();
+      }
+    }, 0);
+  };
+
+  const confirmSignOut = () => {
+    setIsSignOutConfirmationOpen(false);
+    void handleSignOut();
+  };
+
   return (
-    <AppShell
-      accountsAvailable={accountsAvailable}
-      currentUser={currentUser}
-      isSessionLoading={isSessionLoading}
-      sessionError={sessionError}
-      onHome={showHome}
-      onOpenAccount={openAccount}
-      onOpenProfile={showProfile}
-      onSignOut={handleSignOut}
-      showAccountActions={route.name !== 'account' && route.name !== 'profile'}
-    >
-      <Toaster
-        className="hunin-toaster"
-        closeButton
-        position="top-center"
-        toastOptions={{
-          classNames: {
-            actionButton: 'hunin-toast__action',
-            closeButton: 'hunin-toast__close',
-            description: 'hunin-toast__description',
-            toast: 'hunin-toast',
-            title: 'hunin-toast__title',
-          },
-        }}
-      />
-      {route.name === 'home' ? (
-        <HomePage
-          isSignedIn={currentUser !== null}
-          loadParties={partyApi.listParties}
-          onCreateCharacter={showNewCharacter}
-          onCreateParty={showNewParty}
-          onExploreCharacter={showSampleCharacter}
-          getPartyHref={getPartyHref}
-          onJoinParty={showJoinParty}
-          onOpenParty={showParty}
-          onSignIn={() => openAccount('sign-in')}
+    <>
+      <AppShell
+        accountsAvailable={accountsAvailable}
+        currentUser={currentUser}
+        isSessionLoading={isSessionLoading}
+        sessionError={sessionError}
+        onHome={showHome}
+        onOpenAccount={openAccount}
+        onOpenProfile={showProfile}
+        onSignOut={requestSignOut}
+      >
+        <Toaster
+          className="hunin-toaster"
+          closeButton
+          position="top-center"
+          toastOptions={{
+            classNames: {
+              actionButton: 'hunin-toast__action',
+              closeButton: 'hunin-toast__close',
+              description: 'hunin-toast__description',
+              icon: 'hunin-toast__icon',
+              toast: 'hunin-toast',
+              title: 'hunin-toast__title',
+            },
+          }}
         />
-      ) : route.name === 'account' ? (
-        <AccountPage
-          accountsAvailable={accountsAvailable}
-          currentUser={currentUser}
-          initialMode={route.mode}
-          onBack={handleAccountBack}
-          onAuthenticated={handleAuthenticated}
-          onModeChange={showAccountMode}
-          onRegistrationSuccess={handleRegistrationSuccess}
-          onSignOut={handleSignOut}
-        />
-      ) : route.name === 'profile' ? (
-        <ProfilePage
-          currentUser={currentUser}
-          isSessionLoading={isSessionLoading}
-          sessionError={sessionError}
-          onBack={showHome}
-          onSignIn={() => openAccount('sign-in')}
-          onSignOut={handleSignOut}
-        />
-      ) : route.name === 'new-character' ? (
-        <CharacterCreationPage
-          isSignedIn={currentUser !== null}
-          onBack={showHome}
-          onCreateAccount={() => openAccount('register')}
-          onOpenCharacterReference={(characterId) =>
-            handleCharacterSaved(characterId, inviteToken)
-          }
-          onSignIn={() => openAccount('sign-in')}
-        />
-      ) : route.name === 'sample-character' ? (
-        <CharacterReference
-          character={maraReferenceCharacter}
-          onBack={showHome}
-        />
-      ) : route.name === 'saved-character' ? (
-        <SavedCharacterReferencePage
-          characterId={route.id}
-          isSignedIn={currentUser !== null}
-          onBack={showHome}
-          onSignIn={() => openAccount('sign-in')}
-        />
-      ) : route.name === 'new-party' ? (
-        currentUser === null ? (
-          <SignedOutCreatePartyState
+        {route.name === 'home' ? (
+          <HomePage
+            isSignedIn={currentUser !== null}
+            loadParties={partyApi.listParties}
+            onCreateCharacter={showNewCharacter}
+            onCreateParty={showNewParty}
+            onExploreCharacter={showSampleCharacter}
+            getPartyHref={getPartyHref}
+            onJoinParty={showJoinParty}
+            onOpenParty={showParty}
             onSignIn={() => openAccount('sign-in')}
-            onCancel={showHome}
+          />
+        ) : route.name === 'account' ? (
+          <AccountPage
+            accountsAvailable={accountsAvailable}
+            currentUser={currentUser}
+            initialMode={route.mode}
+            onBack={handleAccountBack}
+            onAuthenticated={handleAuthenticated}
+            onModeChange={showAccountMode}
+            onRegistrationSuccess={handleRegistrationSuccess}
+            onSignOut={requestSignOut}
+          />
+        ) : route.name === 'profile' ? (
+          <ProfilePage
+            currentUser={currentUser}
+            isSessionLoading={isSessionLoading}
+            sessionError={sessionError}
+            onSignIn={() => openAccount('sign-in')}
+            onSignOut={requestSignOut}
+          />
+        ) : route.name === 'new-character' ? (
+          <CharacterCreationPage
+            isSignedIn={currentUser !== null}
+            onBack={showHome}
+            onCreateAccount={() => openAccount('register')}
+            onOpenCharacterReference={(characterId) =>
+              handleCharacterSaved(characterId, inviteToken)
+            }
+            onSignIn={() => openAccount('sign-in')}
+          />
+        ) : route.name === 'sample-character' ? (
+          <CharacterReference
+            character={maraReferenceCharacter}
+            onBack={showHome}
+          />
+        ) : route.name === 'saved-character' ? (
+          <SavedCharacterReferencePage
+            characterId={route.id}
+            isSignedIn={currentUser !== null}
+            onBack={showHome}
+            onSignIn={() => openAccount('sign-in')}
+          />
+        ) : route.name === 'new-party' ? (
+          currentUser === null ? (
+            <SignedOutCreatePartyState
+              onSignIn={() => openAccount('sign-in')}
+              onCancel={showHome}
+            />
+          ) : (
+            <CreatePartyPage
+              createParty={partyApi.createParty}
+              onPartyCreated={handlePartyCreated}
+              onCancel={showHome}
+            />
+          )
+        ) : route.name === 'join-party' ? (
+          <JoinPartyPage
+            token={inviteToken}
+            isSignedIn={currentUser !== null}
+            inspectInvite={partyApi.inspectPartyInvite}
+            loadCharacters={listCharacterSummaries}
+            joinParty={partyApi.joinParty}
+            onSignIn={handleInviteSignIn}
+            onCreateCharacter={showNewCharacter}
+            onJoined={handleJoinedParty}
+            onCancel={handleInviteCancel}
+            onInviteUnavailable={handleInviteUnavailable}
+            savedCharacterJoinState={
+              savedCharacterJoin?.token === inviteToken
+                ? savedCharacterJoin.status
+                : undefined
+            }
+            onRetrySavedCharacterJoin={retrySavedCharacterJoin}
+          />
+        ) : route.name === 'party' ? (
+          <PartyPage
+            partyId={route.partyId}
+            isSignedIn={currentUser !== null}
+            loadParty={partyApi.getParty}
+            onSignIn={() =>
+              beginAuthentication({ name: 'party', partyId: route.partyId })
+            }
+            onBack={showHome}
+            onOpenCharacter={(characterId) =>
+              navigateToRoute({
+                name: 'party-character',
+                partyId: route.partyId,
+                characterId,
+              })
+            }
+            renderPartyTools={renderPartyTools}
+          />
+        ) : route.name === 'party-character' ? (
+          <PartyCharacterReferencePage
+            partyId={route.partyId}
+            characterId={route.characterId}
+            isSignedIn={currentUser !== null}
+            loadPartyCharacter={partyApi.getPartyCharacter}
+            onBack={() =>
+              navigateToRoute({ name: 'party', partyId: route.partyId })
+            }
+            onSignIn={() =>
+              beginAuthentication({
+                name: 'party-character',
+                partyId: route.partyId,
+                characterId: route.characterId,
+              })
+            }
           />
         ) : (
-          <CreatePartyPage
-            createParty={partyApi.createParty}
-            onPartyCreated={handlePartyCreated}
-            onCancel={showHome}
-          />
-        )
-      ) : route.name === 'join-party' ? (
-        <JoinPartyPage
-          token={inviteToken}
-          isSignedIn={currentUser !== null}
-          inspectInvite={partyApi.inspectPartyInvite}
-          loadCharacters={listCharacterSummaries}
-          joinParty={partyApi.joinParty}
-          onSignIn={handleInviteSignIn}
-          onCreateCharacter={showNewCharacter}
-          onJoined={handleJoinedParty}
-          onCancel={handleInviteCancel}
-          onInviteUnavailable={handleInviteUnavailable}
-          savedCharacterJoinState={
-            savedCharacterJoin?.token === inviteToken
-              ? savedCharacterJoin.status
-              : undefined
-          }
-          onRetrySavedCharacterJoin={retrySavedCharacterJoin}
-        />
-      ) : route.name === 'party' ? (
-        <PartyPage
-          partyId={route.partyId}
-          isSignedIn={currentUser !== null}
-          loadParty={partyApi.getParty}
-          onSignIn={() =>
-            beginAuthentication({ name: 'party', partyId: route.partyId })
-          }
-          onBack={showHome}
-          onOpenCharacter={(characterId) =>
-            navigateToRoute({
-              name: 'party-character',
-              partyId: route.partyId,
-              characterId,
-            })
-          }
-          renderPartyTools={renderPartyTools}
-        />
-      ) : route.name === 'party-character' ? (
-        <PartyCharacterReferencePage
-          partyId={route.partyId}
-          characterId={route.characterId}
-          isSignedIn={currentUser !== null}
-          loadPartyCharacter={partyApi.getPartyCharacter}
-          onBack={() =>
-            navigateToRoute({ name: 'party', partyId: route.partyId })
-          }
-          onSignIn={() =>
-            beginAuthentication({
-              name: 'party-character',
-              partyId: route.partyId,
-              characterId: route.characterId,
-            })
-          }
-        />
-      ) : (
-        <NotFoundPage onHome={showHome} />
-      )}
-      <RouteFocusManager routeKey={pathForRoute(route)} />
-    </AppShell>
+          <NotFoundPage onHome={showHome} />
+        )}
+        <RouteFocusManager routeKey={pathForRoute(route)} />
+      </AppShell>
+      {isSignOutConfirmationOpen ? (
+        <SignOutConfirmationDialog onCancel={cancelSignOut} onConfirm={confirmSignOut} />
+      ) : null}
+    </>
+  );
+};
+
+const SignOutConfirmationDialog = ({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: () => void;
+}) => {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const app = document.querySelector<HTMLElement>('.global-shell');
+    if (app) {
+      app.inert = true;
+    }
+    cancelButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCancel();
+        return;
+      }
+
+      if (event.key !== 'Tab' || dialogRef.current === null) {
+        return;
+      }
+
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>('button, [href], [tabindex]'),
+      ).filter((element) => !element.hasAttribute('disabled'));
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (app) {
+        app.inert = false;
+      }
+    };
+  }, [onCancel]);
+
+  return (
+    <div className="confirmation-layer" onMouseDown={onCancel}>
+      <div
+        ref={dialogRef}
+        className="confirmation-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sign-out-dialog-title"
+        aria-describedby="sign-out-dialog-message"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <h2 id="sign-out-dialog-title">Sign out?</h2>
+        <p id="sign-out-dialog-message">Are you sure you want to sign out?</p>
+        <div className="confirmation-dialog__actions">
+          <button
+            ref={cancelButtonRef}
+            type="button"
+            className="button button--secondary"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button type="button" className="button button--primary" onClick={onConfirm}>
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 

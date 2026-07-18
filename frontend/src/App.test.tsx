@@ -207,16 +207,22 @@ describe('App', () => {
           screen.getByRole('button', { name: 'Need an account? Create one' }),
         );
         completeRegistrationForm();
-        fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+        fireEvent.click(
+          within(screen.getByRole('main')).getByRole('button', { name: 'Create account' }),
+        );
         expect(
           await screen.findByRole('heading', { name: 'Sign in' }),
         ).toBeInTheDocument();
         expect(window.location.pathname).toBe('/login');
         completeSignInForm();
-        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+        fireEvent.click(
+          within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }),
+        );
       } else {
         completeSignInForm();
-        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+        fireEvent.click(
+          within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }),
+        );
       }
 
       expect(
@@ -485,7 +491,9 @@ describe('App', () => {
 
     clickPrivateRouteSignIn();
     completeSignInForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(
+      within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }),
+    );
     expect(
       await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
     ).toBeInTheDocument();
@@ -510,7 +518,9 @@ describe('App', () => {
     expect(inviteAppearsInBrowserSurface(inviteToken)).toBe(false);
 
     completeSignInForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(
+      within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }),
+    );
     expect(
       await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
     ).toBeInTheDocument();
@@ -558,12 +568,16 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Need an account? Create one' }));
     expect(window.location.pathname).toBe('/sign-up');
     completeRegistrationForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    fireEvent.click(
+      within(screen.getByRole('main')).getByRole('button', { name: 'Create account' }),
+    );
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/login');
     completeSignInForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(
+      within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }),
+    );
 
     expect(
       await screen.findByRole('heading', { name: 'Join The Lantern Guard' }),
@@ -659,7 +673,7 @@ describe('App', () => {
 
     await screen.findByRole('heading', { name: 'Join The Lantern Guard' });
     fireEvent.click(screen.getByRole('button', { name: 'Mara account menu' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'My profile' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }));
     expect(window.location.pathname).toBe('/profile');
 
     window.history.back();
@@ -761,7 +775,7 @@ describe('App', () => {
       });
     });
     expect(joinParty).toHaveBeenCalledOnce();
-    expect(screen.getAllByText('Character saved.')).toHaveLength(1);
+    expect(await screen.findAllByText('Character saved.')).toHaveLength(1);
     expect(inviteAppearsInBrowserSurface(inviteToken)).toBe(false);
     expect(window.location.pathname).toBe('/parties/join');
 
@@ -1022,7 +1036,9 @@ describe('App', () => {
 
     clickPrivateRouteSignIn();
     completeSignInForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(
+      within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }),
+    );
     expect(await screen.findByRole('heading', { name: 'The Lantern Guard' })).toBeInTheDocument();
     expect(window.location.pathname).toBe('/parties/party-1');
   });
@@ -1125,7 +1141,7 @@ describe('App', () => {
     render(<App />);
 
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Open Branna Shieldhand Character Reference' }),
+      await screen.findByRole('button', { name: 'View Branna Shieldhand' }),
     );
 
     expect(screen.getByRole('heading', { name: 'Character Reference' })).toHaveFocus();
@@ -1175,16 +1191,22 @@ describe('App', () => {
           screen.getByRole('button', { name: 'Need an account? Create one' }),
         );
         completeRegistrationForm();
-        fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+        fireEvent.click(
+          within(screen.getByRole('main')).getByRole('button', { name: 'Create account' }),
+        );
         expect(
           await screen.findByRole('heading', { name: 'Sign in' }),
         ).toBeInTheDocument();
         expect(window.location.pathname).toBe('/login');
         completeSignInForm();
-        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+        fireEvent.click(
+          within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }),
+        );
       } else {
         completeSignInForm();
-        fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+        fireEvent.click(
+          within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }),
+        );
       }
 
       expect(
@@ -1285,7 +1307,7 @@ describe('App', () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Mara account menu' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'My profile' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Profile' }));
 
     expect(window.location.pathname).toBe('/profile');
     expect(await screen.findByRole('heading', { name: 'Mara' })).toHaveFocus();
@@ -1301,6 +1323,8 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'Checking your account...' })).toBeInTheDocument();
     expect(screen.queryByText('Mara')).not.toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Mara' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mara account menu' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Home' })).not.toBeInTheDocument();
   });
 
   it('shows signed-out profile behavior and opens sign in', async () => {
@@ -1312,7 +1336,9 @@ describe('App', () => {
     expect(
       await screen.findByRole('heading', { name: 'Sign in to view your profile.' }),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(
+      within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }),
+    );
 
     expect(window.location.pathname).toBe('/login');
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
@@ -1325,7 +1351,9 @@ describe('App', () => {
 
     render(<App />);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not check your session.');
+    expect(
+      await within(screen.getByRole('main')).findByRole('alert'),
+    ).toHaveTextContent('Could not check your session.');
     expect(screen.getByRole('heading', { name: 'Could not load your profile' })).toBeInTheDocument();
     expect(screen.queryByText('Mara')).not.toBeInTheDocument();
   });
@@ -1338,7 +1366,26 @@ describe('App', () => {
 
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+    const profileSignOut = await screen.findByRole('button', { name: 'Sign out' });
+    profileSignOut.focus();
+    fireEvent.click(profileSignOut);
+
+    const dialog = screen.getByRole('dialog', { name: 'Sign out?' });
+    expect(within(dialog).getByText('Are you sure you want to sign out?')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      'http://localhost:8080/auth/session',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog', { name: 'Sign out?' })).not.toBeInTheDocument();
+    await waitFor(() => expect(profileSignOut).toHaveFocus());
+
+    fireEvent.click(profileSignOut);
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Sign out?' })).getByRole('button', {
+        name: 'Sign out',
+      }),
+    );
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -1644,16 +1691,24 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('Password'), {
       target: { value: submittedValues.password },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    fireEvent.change(screen.getByLabelText('Confirm password'), {
+      target: { value: submittedValues.password },
+    });
+    fireEvent.click(
+      within(screen.getByRole('main')).getByRole('button', { name: 'Create account' }),
+    );
 
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mara account menu' })).not.toBeInTheDocument();
     const toast = await screen.findByText('Account created. Sign in to continue.');
     expect(toast).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Dismiss notification' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Dismiss notification' })).not.toBeInTheDocument();
+    const closeToast = screen.getByRole('button', { name: 'Close toast' });
+    expect(closeToast).toHaveClass('hunin-toast__close');
+    expect(toast.closest('[data-sonner-toast]')).toHaveAttribute('data-type', 'success');
     expect(document.body).not.toHaveTextContent(submittedValues.email);
     expect(document.body).not.toHaveTextContent(submittedValues.password);
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss notification' }));
+    fireEvent.click(closeToast);
     await waitFor(() => {
       expect(screen.queryByText('Account created. Sign in to continue.')).not.toBeInTheDocument();
     });
@@ -1675,10 +1730,20 @@ describe('App', () => {
     render(<App />);
 
     const accountMenu = await screen.findByRole('button', { name: 'Mara account menu' });
-    expect(await screen.findByRole('heading', { name: 'No saved characters yet' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'No heroes have arrived yet' }),
+    ).toBeInTheDocument();
 
     fireEvent.click(accountMenu);
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+
+    const signOutDialog = screen.getByRole('dialog', { name: 'Sign out?' });
+    expect(within(signOutDialog).getByText('Are you sure you want to sign out?')).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      'http://localhost:8080/auth/session',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+    fireEvent.click(within(signOutDialog).getByRole('button', { name: 'Sign out' }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -1691,6 +1756,30 @@ describe('App', () => {
     });
     expect(window.location.pathname).toBe('/');
     expect(screen.getAllByRole('button', { name: 'Create account' })[0]).toBeInTheDocument();
+  });
+
+  it('traps sign-out dialog focus, closes with Escape, and returns focus', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', signedInFetchMock());
+    render(<App />);
+
+    const accountMenu = await screen.findByRole('button', { name: 'Mara account menu' });
+    fireEvent.click(accountMenu);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Sign out?' });
+    const cancel = within(dialog).getByRole('button', { name: 'Cancel' });
+    const confirm = within(dialog).getByRole('button', { name: 'Sign out' });
+    await waitFor(() => expect(cancel).toHaveFocus());
+
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(confirm).toHaveFocus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(cancel).toHaveFocus();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Sign out?' })).not.toBeInTheDocument();
+    await waitFor(() => expect(accountMenu).toHaveFocus());
   });
 
   it('opens a saved character from My characters', async () => {
@@ -1873,6 +1962,9 @@ const completeRegistrationForm = () => {
     target: { value: 'mara@example.com' },
   });
   fireEvent.change(screen.getByLabelText('Password'), {
+    target: { value: 'Correct-horse-battery-staple1' },
+  });
+  fireEvent.change(screen.getByLabelText('Confirm password'), {
     target: { value: 'Correct-horse-battery-staple1' },
   });
 };

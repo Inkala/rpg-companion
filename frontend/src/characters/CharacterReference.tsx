@@ -69,7 +69,10 @@ export const CharacterReference = ({
 
   return (
     <>
-      <main className="app-shell reference-page">
+      <main
+        className="app-shell reference-page"
+        inert={activeQuickReference ? true : undefined}
+      >
         <header className="reference-nav">
           <button className="back-button" onClick={onBack} aria-label={backLabel}>
             Back

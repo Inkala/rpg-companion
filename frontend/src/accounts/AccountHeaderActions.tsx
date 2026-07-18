@@ -1,4 +1,4 @@
-import { LogOut, Sword, UserRound } from 'lucide-react';
+import { House, LogOut, Sword, UserRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { AccountMode } from '../app/appTypes';
 import type { AuthUser } from '../auth/api';
@@ -9,21 +9,29 @@ interface AccountHeaderActionsProps {
   currentUser: AuthUser | null;
   isSessionLoading: boolean;
   sessionError: string | null;
+  onHome: () => void;
   onOpenAccount: (mode: AccountMode) => void;
   onOpenProfile?: () => void;
-  onSignOut: () => void;
+  onSignOut: (returnFocus?: HTMLElement) => void;
 }
 
 export const AccountHeaderActions = ({
   accountsAvailable,
   currentUser,
   sessionError,
+  onHome,
   onOpenAccount,
   onOpenProfile,
   onSignOut,
 }: AccountHeaderActionsProps) => {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
+  const accountMenuTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  const openHome = () => {
+    setIsAccountMenuOpen(false);
+    onHome();
+  };
 
   const openProfile = () => {
     setIsAccountMenuOpen(false);
@@ -50,13 +58,28 @@ export const AccountHeaderActions = ({
       }
     };
 
+    const closeMenuOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsAccountMenuOpen(false);
+        accountMenuTriggerRef.current?.focus();
+      }
+    };
+
     document.addEventListener('pointerdown', closeMenuOnOutsideClick);
-    return () => document.removeEventListener('pointerdown', closeMenuOnOutsideClick);
+    document.addEventListener('keydown', closeMenuOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeMenuOnOutsideClick);
+      document.removeEventListener('keydown', closeMenuOnEscape);
+    };
   }, [isAccountMenuOpen]);
 
   if (!accountsAvailable) {
     return (
       <section className="account-strip account-strip--quiet" aria-label="Account status">
+        <button type="button" className="inline-action inline-action--icon" onClick={openHome}>
+          <House aria-hidden="true" size={18} strokeWidth={2.2} />
+          <span>Home</span>
+        </button>
         <p className="account-strip__text">
           Accounts are unavailable in the public demo until the backend is deployed. Mara remains
           available without an account.
@@ -75,6 +98,7 @@ export const AccountHeaderActions = ({
         ) : null}
         <div className="account-menu" ref={accountMenuRef}>
           <button
+            ref={accountMenuTriggerRef}
             type="button"
             className="account-menu__trigger"
             aria-label={`${currentUser.username} account menu`}
@@ -91,10 +115,19 @@ export const AccountHeaderActions = ({
                 type="button"
                 className="account-menu__item"
                 role="menuitem"
+                onClick={openHome}
+              >
+                <House aria-hidden="true" size={20} strokeWidth={2.2} />
+                <span>Home</span>
+              </button>
+              <button
+                type="button"
+                className="account-menu__item"
+                role="menuitem"
                 onClick={openProfile}
               >
                 <Sword aria-hidden="true" size={20} strokeWidth={2.2} />
-                <span>My profile</span>
+                <span>Profile</span>
               </button>
               <button
                 type="button"
@@ -102,7 +135,7 @@ export const AccountHeaderActions = ({
                 role="menuitem"
                 onClick={() => {
                   setIsAccountMenuOpen(false);
-                  onSignOut();
+                  onSignOut(accountMenuTriggerRef.current ?? undefined);
                 }}
               >
                 <LogOut aria-hidden="true" size={20} strokeWidth={2.2} />
@@ -123,6 +156,14 @@ export const AccountHeaderActions = ({
         </p>
       ) : null}
       <div className="account-actions">
+        <button
+          type="button"
+          className="inline-action inline-action--icon"
+          onClick={openHome}
+        >
+          <House aria-hidden="true" size={18} strokeWidth={2.2} />
+          <span>Home</span>
+        </button>
         <button
           type="button"
           className="inline-action"

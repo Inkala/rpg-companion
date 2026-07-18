@@ -114,6 +114,15 @@
   box-shadow: var(--shadow-card);
 }
 
+.party-member-card--gm {
+  border-left: 4px solid var(--color-detail-brass);
+  background: color-mix(in srgb, var(--color-detail-ochre-soft) 28%, var(--color-bg-surface));
+}
+
+.party-member-card--player {
+  border-left: 4px solid var(--color-accent-primary);
+}
+
 .party-member-avatar {
   display: block;
   width: 56px;
@@ -150,6 +159,28 @@
   color: var(--color-text-primary);
 }
 
+.party-role-badge {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+}
+
+.party-role-badge--gm {
+  border-color: var(--color-detail-brass);
+  background: var(--color-detail-ochre-soft);
+  color: var(--color-text-primary);
+}
+
+.party-role-badge--player {
+  border-color: var(--color-accent-primary);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+}
+
 .party-member-card__action,
 .party-invite-panel .button {
   min-height: 44px;
@@ -163,6 +194,31 @@
 
 .party-member-card__action {
   justify-self: stretch;
+}
+
+.party-member-card__view {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  justify-content: center;
+}
+
+.party-member-tooltip {
+  z-index: 30;
+  max-width: min(18rem, calc(100vw - var(--space-6)));
+  border-radius: var(--radius-md);
+  background: var(--color-text-primary);
+  color: var(--color-text-inverse);
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  box-shadow: var(--shadow-card);
+}
+
+.party-member-tooltip__arrow {
+  fill: var(--color-text-primary);
 }
 
 .party-invite-panel {

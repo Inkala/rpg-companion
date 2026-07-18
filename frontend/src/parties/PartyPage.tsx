@@ -1,3 +1,5 @@
+import * as Tooltip from '@radix-ui/react-tooltip';
+import { Crown, Eye } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import genericAvatar from '../assets/characters/generic-avatar.webp';
 import type { PartyDetailDTO, PartyMemberDTO, PartyRoleDTO } from './apiTypes';
@@ -121,7 +123,7 @@ const SignedOutPartyState = ({ onSignIn }: { onSignIn: () => void }) => {
       <h1 id="signed-out-party-title" className="account-title">
         Sign in to view this party
       </h1>
-      <p>Party details and rosters are private to party members.</p>
+      <p>Party details and member information are private to party members.</p>
       <button type="button" className="button button--primary" onClick={onSignIn}>
         Sign in
       </button>
@@ -182,9 +184,9 @@ const LoadedParty = ({
 
       <section className="party-roster" aria-labelledby="party-roster-title">
         <h2 id="party-roster-title" className="party-roster__title">
-          Roster
+          Members
         </h2>
-        <ul className="party-roster__list" aria-label={`${party.name} roster`}>
+        <ul className="party-roster__list" aria-label={`${party.name} members`}>
           {party.members.map((member, index) => (
             <PartyMember
               key={`${member.username}-${index}`}
@@ -218,7 +220,10 @@ const PartyMember = ({
 
   return (
     <li className="party-roster__item">
-      <article className="party-member-card" aria-labelledby={titleId}>
+      <article
+        className={`party-member-card party-member-card--${member.role}`}
+        aria-labelledby={titleId}
+      >
         <img
           className="party-member-avatar"
           src={genericAvatar}
@@ -230,7 +235,13 @@ const PartyMember = ({
             {member.username}
           </h3>
           <p className="party-member-card__meta">
-            Role: <strong>{displayRole(member.role)}</strong>
+            Role:{' '}
+            <strong className={`party-role-badge party-role-badge--${member.role}`}>
+              {member.role === 'gm' ? (
+                <Crown aria-hidden="true" size={18} strokeWidth={2.2} />
+              ) : null}
+              <span>{displayRole(member.role)}</span>
+            </strong>
           </p>
           {character ? (
             <>
@@ -238,14 +249,26 @@ const PartyMember = ({
                 Character: <strong>{character.name}</strong>
               </p>
               {canOpenCharacter ? (
-                <button
-                  type="button"
-                  className="button button--secondary party-member-card__action"
-                  aria-label={`Open ${character.name} Character Reference`}
-                  onClick={() => onOpenCharacter(character.id)}
-                >
-                  Open Character Reference
-                </button>
+                <Tooltip.Provider delayDuration={200}>
+                  <Tooltip.Root>
+                    <Tooltip.Trigger asChild>
+                      <button
+                        type="button"
+                        className="button button--secondary party-member-card__action party-member-card__view"
+                        aria-label={`View ${character.name}`}
+                        onClick={() => onOpenCharacter(character.id)}
+                      >
+                        <Eye aria-hidden="true" size={20} strokeWidth={2.2} />
+                      </button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Portal>
+                      <Tooltip.Content className="party-member-tooltip" sideOffset={8}>
+                        View {character.name}
+                        <Tooltip.Arrow className="party-member-tooltip__arrow" />
+                      </Tooltip.Content>
+                    </Tooltip.Portal>
+                  </Tooltip.Root>
+                </Tooltip.Provider>
               ) : null}
             </>
           ) : (

@@ -5,7 +5,6 @@ interface ProfilePageProps {
   currentUser: AuthUser | null;
   isSessionLoading: boolean;
   sessionError: string | null;
-  onBack: () => void;
   onSignIn: () => void;
   onSignOut: () => void;
 }
@@ -14,18 +13,11 @@ export const ProfilePage = ({
   currentUser,
   isSessionLoading,
   sessionError,
-  onBack,
   onSignIn,
   onSignOut,
 }: ProfilePageProps) => {
   return (
     <main className="app-shell account-page account-page--auth">
-      <header className="reference-nav">
-        <button type="button" className="back-button" onClick={onBack}>
-          Home
-        </button>
-      </header>
-
       {isSessionLoading ? (
         <ProfileCard title="Checking your account...">
           <p className="account-card__text">Loading your Hunin profile.</p>

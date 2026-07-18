@@ -138,11 +138,13 @@ describe('HomePage', () => {
     vi.stubGlobal('fetch', fetchMock);
     const { onCreateCharacter } = renderHomePage(true);
 
-    expect(await screen.findByRole('heading', { name: 'No saved characters yet' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'No heroes have arrived yet' }),
+    ).toBeInTheDocument();
     const myCharacters = screen.getByRole('region', { name: 'My characters' });
     expect(myCharacters).toHaveClass('home-panel--characters', 'home-panel--muted');
     expect(
-      within(myCharacters).getByRole('heading', { name: 'No saved characters yet' })
+      within(myCharacters).getByRole('heading', { name: 'No heroes have arrived yet' })
         .parentElement?.parentElement,
     ).toHaveClass('home-panel__header-row');
     expect(
@@ -153,11 +155,11 @@ describe('HomePage', () => {
       expect.objectContaining({ credentials: 'include' }),
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create character' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New character' }));
 
     expect(onCreateCharacter).toHaveBeenCalledOnce();
 
-    await screen.findByText('You have not joined a party yet.');
+    await screen.findByRole('heading', { name: 'There are no quests in sight' });
     expect(screen.getByRole('region', { name: 'My parties' }).parentElement).toHaveClass(
       'home-panel--parties',
       'home-panel--muted',
@@ -171,7 +173,7 @@ describe('HomePage', () => {
     const { rerender, props } = renderHomePage(true, { loadParties });
 
     expect(
-      await screen.findByText('You have not joined a party yet.'),
+      await screen.findByRole('heading', { name: 'There are no quests in sight' }),
     ).toBeInTheDocument();
     expect(loadParties).toHaveBeenCalledOnce();
 
@@ -190,11 +192,17 @@ describe('HomePage', () => {
       onJoinParty,
     });
 
-    const emptyMessage = await screen.findByText('You have not joined a party yet.');
-    expect(emptyMessage.closest('.party-list__empty')).not.toBeNull();
-    expect(screen.queryByRole('heading', { name: 'No parties yet' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Create party' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
+    const emptyHeading = await screen.findByRole('heading', {
+      name: 'There are no quests in sight',
+    });
+    const emptyCard = emptyHeading.closest('.party-list__empty');
+    expect(emptyCard).not.toBeNull();
+    expect(within(emptyCard as HTMLElement).getByText(
+      'Create or join an adventure to satisfy your thirst for adventure.',
+    )).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'My parties' })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
 
     expect(onCreateParty).toHaveBeenCalledOnce();
     expect(onJoinParty).toHaveBeenCalledOnce();
@@ -214,7 +222,8 @@ describe('HomePage', () => {
     const partyList = await screen.findByRole('list', { name: 'Your parties' });
     expect(within(partyList).getByText('lantern-gm')).toBeInTheDocument();
     expect(within(partyList).getByText('Mara Vale:')).toBeInTheDocument();
-    expect(within(partyList).getByText('No linked characters yet.')).toBeInTheDocument();
+    expect(within(partyList).getAllByText('MEMBERS')).toHaveLength(2);
+    expect(within(partyList).getByText('No members yet.')).toBeInTheDocument();
     expect(within(partyList).queryByText('Player')).not.toBeInTheDocument();
     expect(within(partyList).queryByText(/Role:/)).not.toBeInTheDocument();
     const links = within(partyList).getAllByRole('link');

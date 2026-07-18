@@ -1216,11 +1216,6 @@ export const CharacterCreationPage = ({
                     <span className="creation-answer-card__label">
                       {answer.label}
                     </span>
-                    {isSelected ? (
-                      <span className="creation-answer-card__selected">
-                        Selected
-                      </span>
-                    ) : null}
                   </span>
                 </label>
               );
