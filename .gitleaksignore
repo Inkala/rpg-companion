@@ -24,3 +24,6 @@
 cf79f919f3ef56b77f6e1779606c3bc7aa94e77d:backend/internal/server/server_test.go:generic-api-key:311
 cf79f919f3ef56b77f6e1779606c3bc7aa94e77d:backend/internal/server/server_test.go:generic-api-key:347
 cf79f919f3ef56b77f6e1779606c3bc7aa94e77d:frontend/src/App.test.tsx:generic-api-key:1395
+
+# T-024 approved exact test-fixture fingerprints. Do not broaden these suppressions.
+02800c50d5f16d2236049b11e8b94cdec06088b4:frontend/src/accounts/AuthForm.test.tsx:generic-api-key:242
