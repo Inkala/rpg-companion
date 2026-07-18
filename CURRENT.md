@@ -24,6 +24,30 @@ T-022 merged through PR #30 as `ce57d79f3465df6ae166622521c1c26379cbd5f3`. Final
 Secret history. Railway and Cloudflare deployed the exact final SHA successfully. Public visual
 smoke at `390px` passed and no runtime errors were found.
 
+## Active parallel T-026 and T-023 worktrees
+
+### T-026 implementation
+
+- Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-level-up`.
+- Branch: `codex/t026-level-up`.
+- Base SHA: `06a9b2a9386aa110e33438ecf96ef416f50e43fe`.
+- Status: running separately under the approved product, rules-data, generation, test, and T-026
+  task-document ownership.
+- Integration: must merge, deploy, and complete public smoke before T-023 final reconciliation.
+
+### T-023 documentation
+
+- Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-submission-docs`.
+- Branch: `codex/t023-submission-docs`.
+- Base SHA: `06a9b2a9386aa110e33438ecf96ef416f50e43fe`.
+- Status: evaluator-facing draft prepared with explicit final-evidence placeholders; changes are
+  unstaged for review.
+- Ownership: README, portrait attribution, submission checklist, T-023 task documentation, and
+  explicitly assigned shared coordination records only. No product, rules-data, T-026, migration,
+  deployment, or provider files.
+- Integration: rebase onto final main after T-026, replace every placeholder, revalidate, and merge
+  last.
+
 ## Approved T-023, T-024, and T-025 planning
 
 ### T-023: Final TFM submission documentation
@@ -272,9 +296,10 @@ conditions.
 
 ## Single next action
 
-Integrate this planning checkpoint, then create separate T-026 and T-023 worktrees. T-026 owns
-product/rules/test implementation and merges first. T-023 may draft with placeholders, then rebases
-and merges final evidence after T-026 deployment and public smoke. Keep T-025 and portrait
-integration deferred, and do not restart final slide/video production until feature freeze.
+Review the unstaged T-023 documentation draft while T-026 continues separately. T-026 must merge,
+deploy, and complete public smoke first. T-023 then rebases onto final main, replaces all final
+evidence placeholders, completes the teacher/slides/video/submission gates, revalidates, and merges
+last. Keep T-025 and portrait integration deferred, and do not restart final slide/video production
+until feature freeze.
 
 Last updated: 2026-07-18

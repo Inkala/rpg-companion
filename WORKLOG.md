@@ -599,3 +599,20 @@ base.
   placeholders, reconcile final evidence, and merge last.
 - Kept T-025 deferred and preserved T-024 completion evidence at
   `b942700a31af7efa22b0349018d692084b32965b`.
+
+## 2026-07-18: Prepared the T-023 evaluator-documentation draft
+
+- Created the isolated `codex/t023-submission-docs` worktree from exact planning SHA
+  `06a9b2a9386aa110e33438ecf96ef416f50e43fe`, which includes T-024 merge
+  `b942700a31af7efa22b0349018d692084b32965b`.
+- Confirmed T-026 is running separately on `codex/t026-level-up` from the same base and retains first
+  integration, deployment, and public-smoke priority.
+- Rewrote the evaluator-facing README for the implemented guest, authentication, character, Party,
+  and Character Reference experience while keeping Level-up explicitly pending T-026.
+- Added the portrait provenance and attribution record from the finalized external rights record
+  without personal account identifiers or evaluator-facing local filesystem instructions.
+- Reconciled only confirmed submission evidence, including T-024 completion, and retained explicit
+  placeholders for final T-026, test, teacher-access, slides, video, and submission-date evidence.
+- Recorded the exact post-T-026 rebase, replacement, validation, and merge-last sequence.
+- Scope remains documentation-only. T-026 and the final TFM submission are not claimed complete,
+  and the drafting changes remain unstaged for review.
