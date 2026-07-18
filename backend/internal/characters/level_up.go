@@ -241,6 +241,7 @@ func buildLeveledCharacter(character Character, request levelUpRequest) (Charact
 
 	manualContent := hasManualLevelUpOverrides(request.Overrides)
 	canonicalSubclass := ""
+	recoveredCanonicalSubclass := false
 	if result.SubclassName != nil {
 		canonicalSubclass = matchingSubclassIndex(classRule, *result.SubclassName)
 	}
@@ -256,6 +257,7 @@ func buildLeveledCharacter(character Character, request levelUpRequest) (Charact
 			}
 			subclassName = classRule.Subclasses[0].Name
 			canonicalSubclass = classRule.Subclasses[0].Index
+			recoveredCanonicalSubclass = true
 		case "manual":
 			subclassName = strings.TrimSpace(request.Subclass.Name)
 			if request.Subclass.Index != "" || subclassName == "" || utf8.RuneCountInString(subclassName) > maxCharacterCoreRunes {
@@ -374,7 +376,7 @@ func buildLeveledCharacter(character Character, request levelUpRequest) (Charact
 				continue
 			}
 			for _, featureLevel := range subclass.FeaturesByLevel {
-				if featureLevel.Level == targetLevel {
+				if featureLevel.Level == targetLevel || (recoveredCanonicalSubclass && featureLevel.Level <= targetLevel) {
 					for _, feature := range featureLevel.Features {
 						features = appendUniqueFeature(features, canonicalFeature(subclass.Name+" feature", feature))
 					}
@@ -890,12 +892,22 @@ func featureChoiceAlreadyPresent(features []any, choice levelrules.Choice, count
 			return true
 		}
 		for _, option := range choice.Options {
-			if id == option.Index {
+			if id == option.Index || featureMatchesCanonicalChoiceOption(feature, option) {
 				matched++
 			}
 		}
 	}
 	return matched >= count
+}
+
+func featureMatchesCanonicalChoiceOption(feature map[string]any, option levelrules.ChoiceOption) bool {
+	labelParts := strings.SplitN(option.Name, ":", 2)
+	if len(labelParts) != 2 || !strings.EqualFold(strings.TrimSpace(stringField(feature, "category")), strings.TrimSpace(labelParts[0])) ||
+		!strings.EqualFold(strings.TrimSpace(stringField(feature, "name")), strings.TrimSpace(labelParts[1])) {
+		return false
+	}
+	source, ok := objectField(feature, "source")
+	return ok && stringField(source, "rulesVersion") == "2014" && stringField(source, "status") == "confirmed"
 }
 
 func featureIDPresent(features []any, expected string) bool {

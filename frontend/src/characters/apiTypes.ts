@@ -65,3 +65,49 @@ export type CharacterSummaryDTO = {
 export type CharacterListResponse = {
   characters: CharacterSummaryDTO[];
 };
+
+export type AbilityName = keyof AbilityScoresDTO;
+
+export type LevelUpClassChoiceInput = {
+  ruleId: string;
+  optionIds: string[];
+  manualNote?: string;
+};
+
+export type LevelUpSpellChoiceInput = {
+  source: 'srd';
+  index: string;
+};
+
+export type LevelUpCharacterRequestDTO = {
+  expectedUpdatedAt: string;
+  hp: { mode: 'fixed-average' } | { mode: 'rolled'; roll: number };
+  currentHp:
+    | { mode: 'increase-by-gain' | 'retain' }
+    | { mode: 'manual'; value: number };
+  prerequisiteChoices: LevelUpClassChoiceInput[];
+  subclass?:
+    | { source: 'srd'; index: string }
+    | { source: 'manual'; name: string };
+  abilityScoreImprovement?:
+    | { mode: 'ability-scores'; increases: Partial<Record<AbilityName, 1 | 2>> }
+    | { mode: 'feat-note'; note: string };
+  spells?: {
+    additions: LevelUpSpellChoiceInput[];
+    replacements: Array<{
+      removeSpellId: string;
+      add: LevelUpSpellChoiceInput;
+    }>;
+    preparedSpellIds: string[];
+    wizardSpellbookAdditions: LevelUpSpellChoiceInput[];
+  };
+  classChoices: LevelUpClassChoiceInput[];
+  overrides?: {
+    proficiencyBonus?: number;
+    initiative?: number;
+    passivePerception?: number;
+    spellSaveDC?: number;
+    spellAttackBonus?: number;
+  };
+  decisionSummary: string[];
+};

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import genericAvatar from '../assets/characters/generic-avatar.webp';
 import { CharacterReferenceSection } from './CharacterReferenceSection';
 import { HitPointStat, Stat } from './CharacterStats';
@@ -19,12 +19,14 @@ interface CharacterReferenceProps {
   character: CharacterReferenceViewModel;
   onBack: () => void;
   backLabel?: string;
+  primaryAction?: ReactNode;
 }
 
 export const CharacterReference = ({
   character,
   onBack,
   backLabel = 'Back to guest landing page',
+  primaryAction,
 }: CharacterReferenceProps) => {
   const portrait = character.portrait ?? {
     src: genericAvatar,
@@ -93,13 +95,17 @@ export const CharacterReference = ({
               alt={portrait.alt}
             />
             <div>
-              <h2 className="character-name reference-character">{character.name}</h2>
+              <h2 className="character-name reference-character" tabIndex={-1}>{character.name}</h2>
               <p className="identity-line">{character.identity}</p>
               {character.supportingIdentity ? (
                 <p className="supporting-line">{character.supportingIdentity}</p>
               ) : null}
             </div>
           </header>
+
+          {primaryAction ? (
+            <div className="reference-level-up-action">{primaryAction}</div>
+          ) : null}
 
           <dl className="primary-stats" aria-label="Primary stats">
             <HitPointStat hitPoints={character.stats.hitPoints} />

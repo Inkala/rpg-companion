@@ -4,8 +4,10 @@ import {
   CharactersApiError,
   createCharacter,
   getCharacterById,
+  levelUpCharacter,
   listCharacterSummaries,
 } from './api';
+import type { LevelUpCharacterRequestDTO } from './apiTypes';
 
 const maraSummary: CharacterSummaryDTO = {
   id: '11111111-1111-1111-1111-111111111111',
@@ -61,6 +63,35 @@ beforeEach(() => {
 });
 
 describe('characters API', () => {
+  it('submits only the bounded level-up decision DTO with PATCH', async () => {
+    const request: LevelUpCharacterRequestDTO = {
+      expectedUpdatedAt: createdFighter.updatedAt,
+      hp: { mode: 'fixed-average' },
+      currentHp: { mode: 'increase-by-gain' },
+      prerequisiteChoices: [],
+      classChoices: [],
+      decisionSummary: ['Confirmed level-up review.'],
+    };
+    const updated = { ...createdFighter, level: 2 };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(updated));
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(levelUpCharacter(createdFighter.id, request)).resolves.toEqual(updated);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `http://localhost:8080/characters/${createdFighter.id}/level-up`,
+      expect.objectContaining({
+        method: 'PATCH',
+        credentials: 'include',
+        body: JSON.stringify(request),
+      }),
+    );
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).not.toEqual(
+      expect.objectContaining({ className: expect.anything() }),
+    );
+  });
+
   it('lists character summaries through the configured backend', async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ characters: [maraSummary] }));
     vi.stubEnv('VITE_API_BASE_URL', ' http://localhost:8080/ ');

@@ -422,6 +422,46 @@ func TestLevelUpChoiceOptionsRejectDuplicatesBeforePersistence(t *testing.T) {
 	}
 }
 
+func TestLevelUpRecoveredEarlierSubclassAddsCanonicalFeaturesThroughTargetLevel(t *testing.T) {
+	cleric, _ := levelrules.FindClass("Cleric")
+	persisted, request := completeLevelUpFixture(t, cleric, 1)
+	setFixtureClass(t, &persisted, cleric.Name, nil)
+	request.Subclass = &levelUpSubclassInput{Source: "srd", Index: "life"}
+
+	updated, err := buildLeveledCharacter(persisted, request)
+	if err != nil {
+		t.Fatalf("recover earlier subclass: %v", err)
+	}
+	sheet := decodedLevelUpSheet(t, updated)
+	features, _ := arrayField(sheet, "features")
+	for _, featureID := range []string{"bonus-proficiency", "disciple-of-life", "channel-divinity-preserve-life"} {
+		if !featureIDPresent(features, featureID) {
+			t.Fatalf("recovered Life Domain is missing canonical feature %q", featureID)
+		}
+	}
+}
+
+func TestLevelUpRecognizesReliableLegacyCanonicalChoiceWithoutDuplicatingIt(t *testing.T) {
+	fighter, _ := levelrules.FindClass("Fighter")
+	persisted, request := completeLevelUpFixture(t, fighter, 1)
+	sheet := decodedLevelUpSheet(t, persisted)
+	sheet["features"] = []any{map[string]any{
+		"id": "defense", "name": "Defense", "category": "Fighting Style",
+		"source": map[string]any{"rulesVersion": "2014", "status": "confirmed"},
+		"tags":   []any{"Passive"}, "summary": "+1 AC while wearing armor.", "includeInReference": true,
+	}}
+	persisted.ReferencePayload, _ = json.Marshal(sheet)
+
+	updated, err := buildLeveledCharacter(persisted, request)
+	if err != nil {
+		t.Fatalf("recognize reliable legacy choice: %v", err)
+	}
+	features, _ := arrayField(decodedLevelUpSheet(t, updated), "features")
+	if featureIDPresent(features, "fighter-fighting-style-defense") {
+		t.Fatal("reliable represented Defense style was duplicated")
+	}
+}
+
 func TestBuildLeveledCharacterRejectsUnsupportedAndMissingPrerequisites(t *testing.T) {
 	fighter, _ := levelrules.FindClass("Fighter")
 	valid, request := completeLevelUpFixture(t, fighter, 1)

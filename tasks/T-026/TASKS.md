@@ -66,32 +66,32 @@ Status: approved
 
 ## Slice 2: frontend flow
 
-- [ ] Add frontend owner-only `Level up` action.
-- [ ] Ensure no Level-up action appears for Mara, signed-out saved reference, GM read-only Character
+- [x] Add frontend owner-only `Level up` action.
+- [x] Ensure no Level-up action appears for Mara, signed-out saved reference, GM read-only Character
   Reference, unsupported class, multiclass character, malformed payload, or level 5+ character.
-- [ ] Show a safe blocked state for unsupported class, multiclass, level outside 1-4, or invalid
+- [x] Show a safe blocked state for unsupported class, multiclass, level outside 1-4, or invalid
   payload.
-- [ ] Add guided level-up state machine.
-- [ ] Audit and collect safely representable missing earlier prerequisites before target-level
+- [x] Add guided level-up state machine.
+- [x] Audit and collect safely representable missing earlier prerequisites before target-level
   choices; otherwise show a clear blocked state.
-- [ ] Show every suggested change with previous value, suggested value, reason, and editable
+- [x] Show every suggested change with previous value, suggested value, reason, and editable
   override.
-- [ ] Support fixed-average HP and manual rolled HP.
-- [ ] Require current HP confirmation after max HP changes.
-- [ ] Support subclass decisions at the correct levels for SRD classes.
-- [ ] Support level-4 ASI allocation or manual feat note.
-- [ ] Support learned, prepared, and replaced SRD spell decisions while retaining existing non-SRD
+- [x] Support fixed-average HP and manual rolled HP.
+- [x] Require current HP confirmation after max HP changes.
+- [x] Support subclass decisions at the correct levels for SRD classes.
+- [x] Support level-4 ASI allocation or manual feat note.
+- [x] Support learned, prepared, and replaced SRD spell decisions while retaining existing non-SRD
   spells unchanged.
-- [ ] Support class-specific decision hooks, including fighting styles, expertise, invocations,
+- [x] Support class-specific decision hooks, including fighting styles, expertise, invocations,
   metamagic, pact boon, and similar canonical-source choices.
-- [ ] Retain AC, Speed, equipment, attacks, and exceptional/manual values unless the player reviews
+- [x] Retain AC, Speed, equipment, attacks, and exceptional/manual values unless the player reviews
   and overrides them.
-- [ ] Preserve non-SRD existing content instead of replacing it.
-- [ ] Add review screen showing every change before persistence.
-- [ ] Prevent duplicate submission.
-- [ ] Keep failures retryable without partial changes.
-- [ ] Treat `409` conflict as a reload-required state without automatic retry.
-- [ ] On success, show fixed safe confirmation `Character leveled up.` and render updated Character
+- [x] Preserve non-SRD existing content instead of replacing it.
+- [x] Add review screen showing every change before persistence.
+- [x] Prevent duplicate submission.
+- [x] Keep failures retryable without partial changes.
+- [x] Treat `409` conflict as a reload-required state without automatic retry.
+- [x] On success, show fixed safe confirmation `Character leveled up.` and render updated Character
   Reference.
 
 ## Validation
@@ -100,10 +100,10 @@ Status: approved
 - [x] Run focused CORS/security validation.
 - [x] Run canonical schema/checksum/generated-output parity validation.
 - [x] Run focused frontend validation.
-- [ ] Run complete frontend validation.
+- [x] Run complete frontend validation.
 - [x] Run complete backend validation.
 - [x] Run PostgreSQL-backed repository/server tests.
-- [ ] Run browser checks at 320px, 390px, 720px, and desktop.
+- [x] Run browser checks at 320px, 390px, 720px, and desktop.
 - [ ] Run PR CI.
 - [ ] Verify Railway and Cloudflare deployment SHAs.
 - [ ] Run public smoke for owner level-up, level-5 blocked state, Party-link preservation, and GM

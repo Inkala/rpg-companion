@@ -1,0 +1,293 @@
+.level-up-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: end center;
+  padding: 0;
+  background: rgb(4 9 20 / 78%);
+}
+
+.level-up-flow {
+  width: min(100%, 54rem);
+  max-height: min(94dvh, 58rem);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary, #f7f5ff);
+  background: #101a31;
+  border: 1px solid rgb(150 180 255 / 32%);
+  border-radius: 1.25rem 1.25rem 0 0;
+  box-shadow: 0 -1rem 4rem rgb(0 0 0 / 45%);
+}
+
+.level-up-flow__header {
+  position: relative;
+  padding: 1.25rem 4.75rem 0.75rem 1.25rem;
+  border-bottom: 1px solid rgb(150 180 255 / 20%);
+}
+
+.level-up-flow__header h3 {
+  margin: 0.2rem 0 0;
+  font-size: clamp(1.35rem, 5vw, 2rem);
+  outline: none;
+}
+
+.level-up-flow__header h3:focus-visible {
+  box-shadow: 0 0 0 3px #8ad8ff;
+  border-radius: 0.25rem;
+}
+
+.level-up-flow__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem;
+  color: inherit;
+  background: transparent;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 0.65rem;
+}
+
+.level-up-flow__progress,
+.level-up-flow__body,
+.level-up-errors {
+  padding-inline: 1.25rem;
+}
+
+.level-up-flow__progress {
+  margin: 0;
+  padding-block: 0.8rem;
+  color: #c7d2ef;
+  background: rgb(255 255 255 / 4%);
+}
+
+.level-up-flow__body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-block: 1rem 2rem;
+  overscroll-behavior: contain;
+}
+
+.level-up-panel,
+.level-up-panel fieldset {
+  min-width: 0;
+}
+
+.level-up-panel fieldset {
+  margin: 1.25rem 0;
+  padding: 0;
+  border: 0;
+}
+
+.level-up-panel legend,
+.level-up-payload-note h4 {
+  margin-bottom: 0.7rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.level-up-option {
+  min-height: 44px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0.65rem 0;
+  padding: 0.75rem;
+  border: 1px solid rgb(170 192 255 / 30%);
+  border-radius: 0.8rem;
+  background: rgb(255 255 255 / 5%);
+  cursor: pointer;
+}
+
+.level-up-option:has(input:checked) {
+  border-color: #8ad8ff;
+  box-shadow: inset 0 0 0 1px #8ad8ff;
+}
+
+.level-up-option input {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0.1rem 0 0;
+  accent-color: #60c7f6;
+}
+
+.level-up-option span,
+.level-up-option small,
+.level-up-review-row dd,
+.level-up-review-row dd span {
+  display: block;
+  min-width: 0;
+}
+
+.level-up-option small,
+.level-up-review-row small,
+.level-up-help {
+  margin-top: 0.25rem;
+  color: #c7d2ef;
+  line-height: 1.45;
+}
+
+.level-up-field {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.9rem 0;
+  font-weight: 700;
+}
+
+.level-up-field input,
+.level-up-field select,
+.level-up-field textarea,
+.level-up-ability-grid select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.7rem;
+  color: #fff;
+  background: #0a1226;
+  border: 1px solid #7181aa;
+  border-radius: 0.55rem;
+  font: inherit;
+}
+
+.level-up-field textarea {
+  resize: vertical;
+}
+
+.level-up-field input:focus-visible,
+.level-up-field select:focus-visible,
+.level-up-field textarea:focus-visible,
+.level-up-ability-grid select:focus-visible,
+.level-up-option:has(input:focus-visible),
+.level-up-flow button:focus-visible {
+  outline: 3px solid #8ad8ff;
+  outline-offset: 2px;
+}
+
+.level-up-ability-grid,
+.level-up-check-grid,
+.level-up-spell-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.25rem;
+}
+
+.level-up-ability-grid label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, 10rem);
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.level-up-review-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.level-up-review-row {
+  min-width: 0;
+  padding: 0.9rem;
+  background: rgb(255 255 255 / 5%);
+  border-radius: 0.75rem;
+}
+
+.level-up-review-row dt {
+  margin-bottom: 0.35rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.level-up-review-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.level-up-errors,
+.level-up-blocked {
+  margin: 1rem 1.25rem 0;
+  padding-block: 0.75rem;
+  border: 2px solid #f6bd67;
+  border-radius: 0.75rem;
+  background: rgb(246 189 103 / 12%);
+}
+
+.level-up-errors h4 {
+  margin: 0;
+}
+
+.level-up-payload-note {
+  margin-top: 1.25rem;
+  padding: 0.9rem;
+  border-left: 4px solid #8ad8ff;
+  background: rgb(138 216 255 / 8%);
+}
+
+.level-up-flow__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid rgb(150 180 255 / 20%);
+  background: #0c152a;
+}
+
+.level-up-flow__actions .button {
+  min-height: 44px;
+  flex: 1 1 9rem;
+}
+
+.reference-level-up-action {
+  margin-top: 1rem;
+}
+
+.reference-level-up-action .button {
+  min-height: 44px;
+}
+
+.level-up-unavailable {
+  margin: 0;
+  padding: 0.75rem;
+  color: #dce5ff;
+  background: rgb(255 255 255 / 6%);
+  border-left: 4px solid #98a8cf;
+  border-radius: 0.35rem;
+}
+
+@media (min-width: 720px) {
+  .level-up-layer {
+    place-items: center;
+    padding: 1.5rem;
+  }
+
+  .level-up-flow {
+    border-radius: 1.25rem;
+  }
+
+  .level-up-check-grid,
+  .level-up-spell-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .level-up-flow__actions .button {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 340px) {
+  .level-up-flow__header,
+  .level-up-flow__progress,
+  .level-up-flow__body,
+  .level-up-flow__actions {
+    padding-inline: 0.8rem;
+  }
+
+  .level-up-ability-grid label {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
