@@ -54,6 +54,7 @@ func validateStoredCharacterForPartyGM(character Character) error {
 }
 
 func characterFromRequest(request createCharacterRequest, now time.Time) (Character, error) {
+	now = now.UTC().Truncate(time.Microsecond)
 	var validationErrors []string
 
 	name := strings.TrimSpace(request.Name)

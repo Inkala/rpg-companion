@@ -18,6 +18,7 @@ type Handler struct {
 	repository             *Repository
 	createCharacter        func(context.Context, Character) (Character, error)
 	getCharacterForPartyGM func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (Character, error)
+	levelUpCharacter       func(context.Context, uuid.UUID, uuid.UUID, time.Time, levelUpRequest) (Character, error)
 }
 
 func NewHandler(repository *Repository) Handler {
@@ -25,8 +26,55 @@ func NewHandler(repository *Repository) Handler {
 	if repository != nil {
 		handler.createCharacter = repository.Create
 		handler.getCharacterForPartyGM = repository.GetByIDForPartyGM
+		handler.levelUpCharacter = repository.LevelUp
 	}
 	return handler
+}
+
+func (handler Handler) LevelUp(w http.ResponseWriter, r *http.Request) {
+	ownerID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "character id must be a valid UUID")
+		return
+	}
+
+	var request levelUpRequest
+	if err := httpjson.Decode(w, r, &request, characterRequestBodyLimit); err != nil {
+		writeError(w, http.StatusBadRequest, "level-up request validation failed")
+		return
+	}
+	expectedUpdatedAt, err := validateLevelUpRequest(request)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "level-up request validation failed")
+		return
+	}
+	if handler.levelUpCharacter == nil {
+		writeError(w, http.StatusInternalServerError, "could not level up character")
+		return
+	}
+
+	updated, err := handler.levelUpCharacter(r.Context(), id, ownerID, expectedUpdatedAt, request)
+	switch {
+	case errors.Is(err, ErrNotFound):
+		writeError(w, http.StatusNotFound, "character not found")
+		return
+	case errors.Is(err, ErrLevelUpConflict):
+		writeError(w, http.StatusConflict, "character changed; reload before leveling up")
+		return
+	case errors.Is(err, ErrLevelUpUnsupported), errors.Is(err, ErrInvalidCharacterData):
+		writeError(w, http.StatusUnprocessableEntity, "character cannot be leveled up by Hunin yet")
+		return
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, "could not level up character")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, responseFromCharacter(updated))
 }
 
 func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {

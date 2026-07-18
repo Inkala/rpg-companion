@@ -4,6 +4,7 @@ import type {
   CharacterListResponse,
   CharacterSummaryDTO,
   CreateCharacterRequestDTO,
+  LevelUpCharacterRequestDTO,
 } from './apiTypes';
 
 type ErrorResponse = {
@@ -36,6 +37,16 @@ export const createCharacter = async (
 
 export const getCharacterById = async (id: string): Promise<CharacterDTO> => {
   return characterRequest<CharacterDTO>(`/characters/${id}`);
+};
+
+export const levelUpCharacter = async (
+  id: string,
+  decisions: LevelUpCharacterRequestDTO,
+): Promise<CharacterDTO> => {
+  return characterRequest<CharacterDTO>(`/characters/${id}/level-up`, {
+    method: 'PATCH',
+    body: JSON.stringify(decisions),
+  });
 };
 
 const characterRequest = async <T,>(path: string, init: RequestInit = {}): Promise<T> => {

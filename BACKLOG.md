@@ -21,8 +21,16 @@ Task IDs reflect actual task folders and do not map reliably to the older GitHub
 - [x] T-017: Party MVP integrated, deployed, and publicly smoke-tested.
 - [x] T-019: account and character UX polish integrated and deployed.
 - [x] T-020: Party quest-board cards and Home section contrast integrated and deployed.
-- [ ] T-021: Save and invite reliability approved, implementation not started.
-- [ ] T-022: Character Reference visual QA approved, implementation not started.
+- [x] T-021: Save and invite reliability integrated and deployed.
+- [x] T-022: Character Reference visual QA integrated and deployed.
+- [ ] T-023: Final TFM submission documentation approved for parallel drafting with T-026 evidence
+  placeholders; final reconciliation and merge follow T-026.
+- [x] T-024: Quick QA consistency fixes merged, deployed, and publicly validated at
+  `b942700a31af7efa22b0349018d692084b32965b`.
+- [ ] T-025: Character-sheet fidelity, SRD data, and derived calculations deferred until
+  post-submission approval.
+- [ ] T-026: Bounded all-12-SRD-classes, levels-1-through-5 Level-up MVP approved. Implement,
+  validate, deploy, and smoke-test before T-023 final evidence reconciliation.
 
 ## P0: TFM submission package
 
@@ -51,20 +59,21 @@ Recommended parallel tasks after the current dirty-main integration is resolved:
 - [x] GM roster and server-side party authorization.
 - [ ] Post-MVP Party follow-up: let a GM remove a Player membership without deleting or modifying
   the linked character. The removed character becomes available to join another party.
-- [ ] Post-MVP Party follow-up: character creation launched from an invite uses the ordinary
-  creation experience, automatically links the saved character to the pending Party, and opens the
-  expanded Character Reference.
+- [x] Character creation launched from an invite uses the ordinary creation experience and
+  automatically attempts to join the pending Party with the saved character.
+- [ ] Post-MVP Party follow-up: existing-member linked-character replacement remains deferred.
 - [ ] Profile editing, email verification, and password reset.
 - [ ] Account, character, and production test-data deletion.
 - [ ] Built-in portrait-bank integration.
+- [ ] Portrait-bank application integration, future task ID TBD.
 - [ ] Gender selector and data contract.
 - [ ] Character/profile/account editing and deletion.
 - [ ] Party editing/deletion, description, and member removal.
-- [ ] Existing-member linked-character replacement.
 - [ ] Attack reminder badges and calculation breakdowns.
 - [ ] HP/resource tracking and saved-character editing.
 - [ ] Character search, broader rules content, and additional classes.
-- [ ] Level-up guidance.
+- [ ] Broader level-up guidance beyond bounded T-026.
+- [ ] Multiclassing.
 - [ ] AI explanation or recommendation feature.
 
 ## Completed baseline

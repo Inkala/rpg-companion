@@ -486,6 +486,71 @@ func TestCORSAndOriginChecks(t *testing.T) {
 	}
 }
 
+func TestLevelUpPatchCORSContract(t *testing.T) {
+	handler := New(nil, nil, nil, Options{AllowedOrigins: []string{localOrigin}})
+
+	t.Run("approved-origin PATCH preflight", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodOptions, "/characters/00000000-0000-0000-0000-000000000001/level-up", nil)
+		request.Header.Set("Origin", localOrigin)
+		request.Header.Set("Access-Control-Request-Method", http.MethodPatch)
+
+		handler.ServeHTTP(response, request)
+
+		if response.Code != http.StatusNoContent {
+			t.Fatalf("expected 204, got %d", response.Code)
+		}
+		assertCredentialCORS(t, response)
+		if methods := response.Header().Get("Access-Control-Allow-Methods"); !strings.Contains(methods, http.MethodPatch) {
+			t.Fatalf("expected PATCH in allowed methods, got %q", methods)
+		}
+	})
+
+	t.Run("rejected origin", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodOptions, "/characters/00000000-0000-0000-0000-000000000001/level-up", nil)
+		request.Header.Set("Origin", "https://evil.example")
+		request.Header.Set("Access-Control-Request-Method", http.MethodPatch)
+
+		handler.ServeHTTP(response, request)
+
+		if response.Code != http.StatusForbidden {
+			t.Fatalf("expected 403, got %d", response.Code)
+		}
+		if response.Header().Get("Access-Control-Allow-Origin") != "" {
+			t.Fatal("rejected origin received an allow-origin header")
+		}
+	})
+
+	t.Run("credentialed PATCH requires Origin", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodPatch, "/characters/00000000-0000-0000-0000-000000000001/level-up", strings.NewReader(`{}`))
+		request.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "session-token"})
+
+		handler.ServeHTTP(response, request)
+
+		if response.Code != http.StatusForbidden {
+			t.Fatalf("expected 403, got %d", response.Code)
+		}
+	})
+
+	t.Run("existing methods remain advertised", func(t *testing.T) {
+		response := httptest.NewRecorder()
+		request := httptest.NewRequest(http.MethodOptions, "/auth/register", nil)
+		request.Header.Set("Origin", localOrigin)
+		request.Header.Set("Access-Control-Request-Method", http.MethodPost)
+
+		handler.ServeHTTP(response, request)
+
+		methods := response.Header().Get("Access-Control-Allow-Methods")
+		for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions} {
+			if !strings.Contains(methods, method) {
+				t.Fatalf("expected %s in allowed methods, got %q", method, methods)
+			}
+		}
+	})
+}
+
 func TestAPISecurityHeadersApplyToSuccessAndErrorResponses(t *testing.T) {
 	handler := New(nil, nil, nil, Options{AllowedOrigins: []string{localOrigin}})
 	tests := []struct {

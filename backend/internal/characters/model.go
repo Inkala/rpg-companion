@@ -148,7 +148,7 @@ func responseFromCharacter(character Character) characterResponse {
 		SpeedFt:          character.SpeedFt,
 		ReferencePayload: character.ReferencePayload,
 		CreatedAt:        character.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:        character.UpdatedAt.UTC().Format(time.RFC3339),
+		UpdatedAt:        character.UpdatedAt.UTC().Format(time.RFC3339Nano),
 	}
 }
 
@@ -177,6 +177,6 @@ func responseFromCharacterSummary(summary CharacterSummary) characterSummaryResp
 		PortraitAlt:       summary.PortraitAlt,
 		FeaturedAbilities: summary.FeaturedAbilities,
 		LandingConcept:    summary.LandingConcept,
-		UpdatedAt:         summary.UpdatedAt.UTC().Format(time.RFC3339),
+		UpdatedAt:         summary.UpdatedAt.UTC().Format(time.RFC3339Nano),
 	}
 }

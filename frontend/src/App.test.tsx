@@ -1406,6 +1406,7 @@ describe('App', () => {
       screen.getByRole('heading', { level: 1, name: 'Character Reference' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Mara Velard' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Level up' })).not.toBeInTheDocument();
   });
 
   it('keeps the public sample available when the API configuration is invalid', () => {
