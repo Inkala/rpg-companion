@@ -74,13 +74,14 @@ product feature set is frozen.
 
 ## Timing gate
 
-T-023 documentation drafting may proceed in parallel with T-026 from a separate worktree. Final
-slide and narrated-video production remains paused until Marcela says the product feature set is
-frozen.
+T-026 source implementation has merged at
+`232335f26b8a16b5addcc68bf5de29bd22451b3f`, and T-023 has rebased its drafting checkpoint onto
+that exact SHA. Final slide and narrated-video production remains paused until Marcela says the
+product feature set is frozen.
 
-Drafts must retain explicit placeholders for T-026 final SHA, CI, deployment, implemented
-functionality, screenshots, and public smoke evidence. T-023 must rebase onto final main after T-026
-integrates and replace every placeholder before final merge.
+The draft records confirmed source behavior, integrated SHA, final CI, deployment, public smoke,
+and final test evidence. It must retain explicit placeholders for teacher access, slides, video,
+and submission date until each value is confirmed.
 
 ## Parallel ownership and integration
 
@@ -92,6 +93,8 @@ T-023 must not edit product code, canonical/generated rules data, `docs/rules-da
 
 Required merge order:
 
-1. T-026 implementation, validation, deployment, and public smoke.
-2. T-023 rebases onto final main, replaces every T-026 placeholder, reconciles final evidence, and
-   merges last.
+1. Completed: T-026 source implementation, validation, merge, T-023 rebase, final CI, exact-SHA
+   deployment, and public smoke.
+2. Pending: explicit feature freeze, dedicated teacher access and smoke, slides, video, submission
+   form, and final T-023 commit.
+3. T-023 replaces the remaining placeholders, reconciles final evidence, and merges last.

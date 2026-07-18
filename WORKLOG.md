@@ -616,3 +616,51 @@ base.
 - Recorded the exact post-T-026 rebase, replacement, validation, and merge-last sequence.
 - Scope remains documentation-only. T-026 and the final TFM submission are not claimed complete,
   and the drafting changes remain unstaged for review.
+
+## 2026-07-18: Rebased T-023 after T-026 source integration
+
+- Confirmed `origin/main` at exact T-026 merge SHA
+  `232335f26b8a16b5addcc68bf5de29bd22451b3f`.
+- Rebased only the reviewed T-023 drafting commit onto that main SHA. The rebased commit is
+  `38e466968fd1c9ce97bf85f88e771147057cb460`.
+- Verified the rebased branch differs from main only in the seven reviewed T-023 documentation
+  files and does not alter T-026 or T-027 product code, canonical/generated rules data, generator,
+  `docs/rules-data.md`, or task evidence.
+- Updated the remote branch with an explicit force-with-lease after confirming the old remote SHA.
+- Confirmed the integrated source implements bounded owner-only Level Up for all 12 SRD classes,
+  exactly one level at a time from current levels 1 through 4 to target levels 2 through 5.
+- Confirmed `docs/rules-data.md` now exists and records the canonical snapshot, transformation,
+  checksum, source links, scope, and CC-BY-4.0 attribution.
+- Production deployment, final CI, public smoke, final test evidence, teacher access, slides, video,
+  and submission evidence remain placeholder-backed and are not claimed complete.
+- The post-T-026 documentation correction remains unstaged for review.
+
+## 2026-07-18: Confirmed T-026 CI, deployment, and public smoke
+
+- GitHub Actions run `29647619803` succeeded for exact SHA
+  `232335f26b8a16b5addcc68bf5de29bd22451b3f`; Frontend job `88088389787`, Backend job
+  `88088389776`, and Secret history job `88088389784` all succeeded.
+- Frontend final-main evidence passed 32 test files and 649 tests, audit with no known
+  vulnerabilities, lint, typecheck, and production build.
+- Backend final-main evidence passed all 9 packages with PostgreSQL-backed tests, govulncheck with
+  no vulnerabilities, vet, and build.
+- Railway deployment `0d40c230-9b63-42ff-b162-9f7bf38c4783` was Active and successful at the exact
+  SHA. Cloudflare Pages deployment `18ff8791-beb0-4bfc-9de6-898ed49d4c69` succeeded at the exact
+  SHA. Automatic deployments remain enabled.
+- Public frontend and backend health returned HTTP 200. Health returned
+  `{"status":"ok","service":"hunin-backend"}`.
+- Public smoke on `2026-07-18` advanced fictional Fighter `Rook Ember QA` through 1 to 2, 2 to 3
+  with Champion, 3 to 4 with Strength +2 ASI, and 4 to 5. Every transition showed
+  `Character leveled up.`
+- Level 5 blocked further Level Up, refresh retained level and updated values, Party membership
+  survived every transition, and GM read-only access showed the updated character without a Level
+  Up action.
+- Desktop and 390px checks found no overflow; the mobile dialog scrolled internally; controls were
+  at least 44px; dialog focus moved to the heading; and browser console errors were zero.
+- Browser automation could not conclusively verify the visible focus ring through Tab navigation.
+  This is recorded as an evidence limitation, not a confirmed accessibility defect.
+- Production residue is limited to two signed-out fictional smoke accounts, `Rook Ember QA` at
+  level 5, Party `Silver Lantern QA`, one Player membership, and one generated invite. No
+  credentials or invite token are recorded.
+- Feature freeze, dedicated teacher access and smoke, slides, video, submission date/form, and the
+  final T-023 submission commit remain incomplete.

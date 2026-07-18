@@ -16,15 +16,16 @@ continuous integration, cloud deployment, and documentation as code.
 - Public application: [https://hunin.marceramirez.com](https://hunin.marceramirez.com)
 - API health: [https://api.hunin.marceramirez.com/healthz](https://api.hunin.marceramirez.com/healthz)
 - Public repository: [https://github.com/Inkala/rpg-companion](https://github.com/Inkala/rpg-companion)
-- Final T-026 SHA: `[T026_FINAL_SHA]`
-- Final CI run: `[T026_CI_RUN_URL]`
-- Final deployment status: `[T026_DEPLOYMENT_STATUS]`
-- Final public smoke date: `[T026_PUBLIC_SMOKE_DATE]`
+- Integrated T-026 merge SHA: `232335f26b8a16b5addcc68bf5de29bd22451b3f`
+- Final CI: [GitHub Actions run 29647619803](https://github.com/Inkala/rpg-companion/actions/runs/29647619803), successful
+- Final deployment: Railway and Cloudflare successful at exact SHA
+  `232335f26b8a16b5addcc68bf5de29bd22451b3f`
+- Final public Level Up smoke date: `2026-07-18`
 - Final submission date: `[FINAL_SUBMISSION_DATE]`
 
-These placeholders are intentional in the T-023 drafting branch. T-026 must merge, deploy, and pass
-public smoke first. This branch must then rebase onto final `main` and replace every placeholder
-before submission.
+T-026 source, CI, deployment, and public Level Up smoke are confirmed. Teacher access, slides,
+video, and submission evidence remain intentionally placeholder-backed. The final-submission commit
+is not yet created because this T-023 documentation correction remains under review.
 
 ## Teacher review access
 
@@ -94,12 +95,53 @@ existing member's linked character.
 - Support public sample, owner, and authorized GM read-only routes.
 - Adapt to phone, tablet, and desktop widths.
 
-### Level-up: pending T-026
+### Level Up
 
-Level-up is not claimed complete in this documentation draft. T-026 is implementing a bounded,
-owner-only, one-level-at-a-time flow for eligible saved single-class SRD characters, covering only
-the approved transitions from levels 1 through 5. Its final functionality, validation, deployment,
-and public smoke evidence must be reconciled after T-026 integrates.
+The merged source implements an owner-only guided Level Up flow for eligible saved single-class
+characters across all 12 SRD 5.1/2014 classes. It advances exactly one level at a time and supports
+only current levels 1 through 4, producing levels 2 through 5.
+
+The flow audits eligibility and earlier prerequisites, presents automatic changes and player
+choices for review, and persists only after complete confirmation. Depending on class and level,
+the review may include HP, current HP, subclass, Ability Score Improvement or a manual feat note,
+spells, and class-specific SRD choices. The backend reconstructs and validates the result from the
+stored character, canonical rules, and bounded decisions. It uses optimistic concurrency and
+preserves the character ID and Party membership link.
+
+Existing non-SRD content is retained rather than silently replaced. Unsupported classes,
+multiclass characters, invalid sheets, unrepresentable prerequisites, and characters already at
+level 5 or above cannot use the automated flow. Source integration is confirmed at
+`232335f26b8a16b5addcc68bf5de29bd22451b3f`; CI, deployment, and public smoke passed at that exact
+SHA.
+
+## Confirmed T-026 release evidence
+
+- GitHub Actions run
+  [29647619803](https://github.com/Inkala/rpg-companion/actions/runs/29647619803) succeeded.
+  Frontend job `88088389787`, Backend job `88088389776`, and Secret history job `88088389784` all
+  succeeded.
+- Railway deployment `0d40c230-9b63-42ff-b162-9f7bf38c4783` is Active and successful at the exact
+  merge SHA.
+- Cloudflare Pages deployment `18ff8791-beb0-4bfc-9de6-898ed49d4c69` succeeded at the exact merge
+  SHA. Automatic deployments remain enabled.
+- The public frontend returned HTTP 200. Backend health returned HTTP 200 with
+  `{"status":"ok","service":"hunin-backend"}`.
+- On 2026-07-18, fictional Fighter `Rook Ember QA` advanced from level 1 to 5 through all four
+  supported transitions. Champion was selected at level 3 and Strength received a +2 Ability Score
+  Improvement at level 4. Every save showed `Character leveled up.`
+- At level 5, Level Up was unavailable with the bounded-support message. Refresh retained level 5,
+  proficiency +3, Passive Perception 14, and Extra Attack.
+- Party membership survived every transition. The GM read-only Character Reference showed the
+  updated level-5 character and no Level Up action.
+- Desktop and 390px checks found no horizontal overflow. The mobile dialog used internal scrolling,
+  controls measured at least 44px, the browser console reported zero errors, and opening the dialog
+  moved focus to its heading.
+- Evidence limitation: browser automation could not conclusively verify the visible focus ring
+  during Tab navigation. This is an evidence limitation, not a confirmed accessibility defect.
+
+Production smoke left two fictional accounts, signed out; level-5 character `Rook Ember QA`; Party
+`Silver Lantern QA`; one Player membership; and one generated invite. No credentials or invite
+token are recorded in this repository.
 
 ## Architecture and deployment
 
@@ -239,10 +281,14 @@ at the normal `hunin` development database or any production database. The dispo
 database may be dropped afterward. GitHub Actions additionally runs dependency checks and a
 redacted full-history secret scan.
 
-Final evidence after T-026:
+Final-main validation evidence:
 
-- Frontend test count: `[FINAL_FRONTEND_TEST_COUNT]`
-- Backend test evidence: `[FINAL_BACKEND_TEST_EVIDENCE]`
+- Frontend: 32 test files and 649 tests passed. Audit found no known vulnerabilities. Lint,
+  typecheck, and production build passed.
+- Backend: `go test -p 1 ./...` passed all 9 packages, including PostgreSQL-backed tests. The
+  packages were `cmd/server`, `auth`, `characters`, `config`, `health`, `httpjson`, `parties`,
+  `rules`, and `server`. Govulncheck found no vulnerabilities. `go vet ./...` and `go build ./...`
+  passed.
 
 ## Security and privacy
 
@@ -270,9 +316,10 @@ monitoring, and formal data-retention automation are not implemented.
 Accessibility is treated as an implementation requirement. The interface uses meaningful headings
 and labels, visible focus treatment, keyboard-operable controls, accessible names for icon actions,
 error messages associated with forms, semantics that do not rely on color alone, readable mobile
-type, and touch-friendly targets. Character and Party paths have been checked at 320px, 390px,
-720px, and desktop widths during completed feature work. The final T-026 flow still requires its own
-responsive and accessibility evidence before this statement can cover level-up.
+type, and touch-friendly targets. Character, Party, and integrated Level Up paths have recorded
+browser checks at 320px, 390px, 720px, and desktop widths. Public smoke passed at desktop and 390px
+without horizontal overflow. Browser automation did not conclusively verify the visible focus ring
+during Tab navigation; this remains an evidence limitation rather than a confirmed defect.
 
 The product uses progressive disclosure and short summaries to reduce cognitive load. The design is
 mobile-first for in-session reference and expands for creation and management on larger screens.
@@ -296,14 +343,18 @@ human contribution, non-uniqueness, and review limitations are documented in
 
 ## SRD and rules-data attribution
 
-T-026 owns the canonical SRD rules-data record. Its final source, license, transformation, and
-generated-file evidence must be reconciled after T-026 integrates. See
-[Rules-data provenance and attribution](docs/rules-data.md). This link intentionally targets the
-T-026-owned document that is not present on the T-023 drafting base.
+The integrated Level Up implementation uses a committed, schema-validated SRD 5.1/2014 snapshot as
+the production rules authority. It covers all 12 SRD classes through class level 5 and SRD spells
+through spell level 3. TypeScript and Go representations are generated deterministically from the
+same checked source. Sources, transformation, checksum, scope, and CC-BY-4.0 attribution are
+documented in [Rules-data provenance and attribution](docs/rules-data.md).
 
 ## Known limitations
 
-- Level-up remains pending T-026 and is not part of the current completion claim.
+- Level Up is bounded to eligible saved, owner-controlled, single-class SRD characters and only the
+  transitions 1 to 2, 2 to 3, 3 to 4, and 4 to 5.
+- Levels above 5, multiclassing, unsupported classes, non-SRD automation, a complete feats catalog,
+  homebrew automation, and paid-book content are not supported.
 - Only the approved guided Fighter builds and manually supplied character content are supported in
   the existing creation experience.
 - There is no general character edit or delete flow.
@@ -323,8 +374,8 @@ T-026-owned document that is not present on the T-023 drafting base.
 - Narrated screen-capture video: `[VIDEO_URL]`
 - Final submission checklist: [docs/submission-checklist.md](docs/submission-checklist.md)
 
-The slides and video remain pending feature freeze and final T-026 reconciliation. They must not be
-presented as complete until their URLs replace the placeholders.
+The slides and video remain pending Marcela's explicit feature-freeze confirmation and publication.
+They must not be presented as complete until their URLs replace the placeholders.
 
 ## Further documentation
 

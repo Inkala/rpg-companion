@@ -42,6 +42,19 @@ Status: approved
 8. Record final evidence in task notes and shared status docs.
 9. Validate the complete documentation diff and stop for review.
 
+## Post-T-026 release checkpoint
+
+- T-026 source implementation merged to `main` at
+  `232335f26b8a16b5addcc68bf5de29bd22451b3f`.
+- T-023 rebased its single drafting commit onto that exact SHA and force-with-lease pushed rebased
+  commit `38e466968fd1c9ce97bf85f88e771147057cb460`.
+- `docs/rules-data.md` now exists on the integrated base and remains owned by T-026.
+- Final CI, frontend/backend evidence, exact-SHA Railway and Cloudflare deployments, and public Level
+  Up smoke are confirmed.
+- T-023 now retains placeholders only for teacher access, slides, video, and submission date.
+- Feature freeze, dedicated teacher smoke, submission form, and final T-023 commit still wait for
+  Marcela or later confirmed evidence.
+
 ## Strict non-owned files
 
 - Product code and tests
@@ -51,8 +64,9 @@ Status: approved
 
 ## Merge order
 
-T-026 merges, deploys, and completes public smoke first. T-023 then rebases, replaces placeholders,
-reconciles final evidence, and merges last.
+T-026 source, final CI, deployment, and public smoke are confirmed, and T-023 has rebased. T-023
+must complete the teacher, feature-freeze, slides, video, submission-form, and final-commit gates
+before merging last.
 
 ## Non-goals
 
