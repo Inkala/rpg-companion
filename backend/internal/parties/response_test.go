@@ -177,15 +177,24 @@ func TestInviteResponseMappingsUseCanonicalTimestampsAndLimitRawToken(t *testing
 		CreatedAt: sourceTime,
 		ExpiresAt: expiresAt,
 	}))
-	requireJSONKeys(t, creationJSON, "token", "createdAt", "expiresAt")
+	requireJSONKeys(t, creationJSON, "token", "code", "createdAt", "expiresAt")
 	if creationJSON["token"] != rawToken {
 		t.Fatal("invite creation response did not contain the one-time raw token")
+	}
+	if creationJSON["code"] != rawCode {
+		t.Fatal("invite creation response did not contain the one-time formatted code")
 	}
 	if creationJSON["createdAt"] != "2026-07-14T13:30:00Z" || creationJSON["expiresAt"] != "2026-07-21T13:30:00Z" {
 		t.Fatal("invite creation timestamps are not canonical UTC RFC3339")
 	}
-	if strings.Contains(marshalResponseString(t, creationJSON), rawCode) {
-		t.Fatal("Slice 1 invite creation response exposed the short code before the API contract was approved for Slice 2")
+	serializedCreation := marshalResponseString(t, creationJSON)
+	if strings.Count(serializedCreation, rawToken) != 1 || strings.Count(serializedCreation, rawCode) != 1 {
+		t.Fatal("invite creation response must serialize each one-time credential exactly once")
+	}
+	for _, forbidden := range []string{"tokenHash", "codeHash", "partyId", "userId", "hashKey", "link"} {
+		if strings.Contains(serializedCreation, forbidden) {
+			t.Fatalf("invite creation response exposed forbidden field %q", forbidden)
+		}
 	}
 
 	inspectionResponse := responseFromInviteInspection(InviteInspection{

@@ -318,6 +318,23 @@ func TestSlidingWindowLimiterAllowAllRejectedRuleRecordsNothing(t *testing.T) {
 	}
 }
 
+func TestSlidingWindowLimiterAllowAllReturnsLongestRejectingRetry(t *testing.T) {
+	clock := newLimiterTestClock()
+	limiter := NewSlidingWindowLimiter(clock.Now)
+	limiter.Allow("minute", 1, time.Minute)
+	limiter.Allow("hour", 1, time.Hour)
+	clock.Advance(30 * time.Second)
+
+	result := limiter.AllowAll([]LimitRule{
+		{Key: "minute", Limit: 1, Window: time.Minute},
+		{Key: "hour", Limit: 1, Window: time.Hour},
+		{Key: "global", Limit: 100, Window: time.Minute},
+	})
+	if result.Allowed || result.RetryAfter != 59*time.Minute+30*time.Second || result.Window != time.Hour {
+		t.Fatalf("expected longest one-hour rejection, got allowed=%t retry=%s window=%s", result.Allowed, result.RetryAfter, result.Window)
+	}
+}
+
 func TestSlidingWindowLimiterAllowAllPreventsConcurrentCheckThenRecordRace(t *testing.T) {
 	clock := newLimiterTestClock()
 	limiter := NewSlidingWindowLimiter(clock.Now)

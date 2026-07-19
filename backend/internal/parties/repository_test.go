@@ -836,6 +836,132 @@ func TestRepositoryInspectInvitePreservesDatabaseErrors(t *testing.T) {
 	}
 }
 
+func TestRepositoryInspectInviteByCodeNormalizesAndReturnsCurrentInvite(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	partyID := seedInviteRepositoryParty(t, pool)
+	now := time.Date(2026, 7, 18, 9, 0, 0, 0, time.UTC)
+	repository := newTestPartyRepository(pool)
+	repository.now = func() time.Time { return now }
+	repository.newInviteToken = func() (string, error) { return validInviteToken(0x79), nil }
+	repository.newInviteCode = func() (string, error) { return "ABCD2345", nil }
+	if _, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID)); err != nil {
+		t.Fatalf("create code invitation: %v", err)
+	}
+
+	inspection, err := repository.InspectInviteByCode(context.Background(), " \t abcd - 2345 \r\n")
+	if err != nil {
+		t.Fatalf("inspect current invite by normalized code: %v", err)
+	}
+	if inspection.PartyID != partyID || inspection.PartyName != "Invite Party" || !inspection.ExpiresAt.Equal(now.Add(7*24*time.Hour)) {
+		t.Fatal("code inspection returned unexpected public Party data")
+	}
+}
+
+func TestRepositoryInspectInviteByCodeMakesUnavailableStatesIndistinguishable(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	partyID := seedInviteRepositoryParty(t, pool)
+	now := time.Date(2026, 7, 18, 10, 0, 0, 0, time.UTC)
+	repository := newTestPartyRepository(pool)
+	repository.now = func() time.Time { return now }
+
+	tests := []struct {
+		name    string
+		code    string
+		prepare func(t *testing.T)
+	}{
+		{name: "missing code", code: ""},
+		{name: "malformed code", code: "private-malformed-code-marker"},
+		{name: "unknown code", code: "WXYZ6789"},
+		{
+			name: "expired code", code: "ABCD2345",
+			prepare: func(t *testing.T) {
+				insertCodeInviteForRepositoryTest(t, pool, partyID, "ABCD2345", now.Add(-8*24*time.Hour), nil)
+			},
+		},
+		{
+			name: "code expiring exactly now", code: "2345ABCD",
+			prepare: func(t *testing.T) {
+				insertCodeInviteForRepositoryTest(t, pool, partyID, "2345ABCD", now.Add(-7*24*time.Hour), nil)
+			},
+		},
+		{
+			name: "revoked code", code: "EFGH2345",
+			prepare: func(t *testing.T) {
+				revokedAt := now.Add(-time.Minute)
+				insertCodeInviteForRepositoryTest(t, pool, partyID, "EFGH2345", now.Add(-time.Hour), &revokedAt)
+			},
+		},
+		{
+			name: "replaced code", code: "JKLM2345",
+			prepare: func(t *testing.T) {
+				replacedAt := now.Add(-30 * time.Minute)
+				insertCodeInviteForRepositoryTest(t, pool, partyID, "JKLM2345", now.Add(-time.Hour), &replacedAt)
+				insertCodeInviteForRepositoryTest(t, pool, partyID, "NPQR2345", replacedAt, nil)
+			},
+		},
+	}
+
+	var firstInspectError string
+	var firstJoinError string
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := pool.Exec(context.Background(), `DELETE FROM party_invites`); err != nil {
+				t.Fatalf("reset code invite fixtures: %v", err)
+			}
+			if tt.prepare != nil {
+				tt.prepare(t)
+			}
+			_, err := repository.InspectInviteByCode(context.Background(), tt.code)
+			if !errors.Is(err, ErrInviteUnavailable) {
+				t.Fatalf("expected ErrInviteUnavailable, got %v", err)
+			}
+			if tt.code != "" && strings.Contains(err.Error(), tt.code) {
+				t.Fatal("code inspection error exposed the submitted code")
+			}
+			if firstInspectError == "" {
+				firstInspectError = err.Error()
+			} else if err.Error() != firstInspectError {
+				t.Fatal("unavailable code states returned distinguishable repository errors")
+			}
+
+			_, joinErr := repository.JoinPartyByCode(
+				context.Background(),
+				tt.code,
+				uuid.MustParse(testOtherUserID),
+				uuid.MustParse(testThirdCharacterID),
+			)
+			if !errors.Is(joinErr, ErrInviteUnavailable) {
+				t.Fatalf("expected code join ErrInviteUnavailable, got %v", joinErr)
+			}
+			if tt.code != "" && strings.Contains(joinErr.Error(), tt.code) {
+				t.Fatal("code join error exposed the submitted code")
+			}
+			if firstJoinError == "" {
+				firstJoinError = joinErr.Error()
+			} else if joinErr.Error() != firstJoinError {
+				t.Fatal("unavailable code states returned distinguishable join errors")
+			}
+		})
+	}
+}
+
+func TestRepositoryCodeOperationsWrapDatabaseErrorsWithoutCredentialExposure(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	repository := newTestPartyRepository(pool)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	rawCode := "ABCD-2345"
+
+	_, inspectErr := repository.InspectInviteByCode(ctx, rawCode)
+	if inspectErr == nil || !errors.Is(inspectErr, context.Canceled) || strings.Contains(inspectErr.Error(), rawCode) {
+		t.Fatal("code inspection did not preserve a wrapped private database error safely")
+	}
+	_, joinErr := repository.JoinPartyByCode(ctx, rawCode, uuid.MustParse(testOtherUserID), uuid.MustParse(testThirdCharacterID))
+	if joinErr == nil || !errors.Is(joinErr, context.Canceled) || strings.Contains(joinErr.Error(), rawCode) {
+		t.Fatal("code join did not preserve a wrapped private database error safely")
+	}
+}
+
 func TestPartyMembershipModelExposesJoinResultFields(t *testing.T) {
 	requireStructFields(t, PartyMembership{}, []string{"ID", "PartyID", "Role", "CharacterID", "JoinedAt"})
 	requireStructFields(t, JoinPartyResult{}, []string{"Membership", "Created"})
@@ -879,6 +1005,32 @@ WHERE id = $1::uuid`, membershipID.String()).Scan(&storedRole, &storedCharacterI
 	if storedRole != RolePlayer || storedCharacterID != testThirdCharacterID || !storedJoinedAt.Equal(now) {
 		t.Fatal("stored membership does not match the join result")
 	}
+}
+
+func TestRepositoryJoinPartyByCodePreservesCreationReplayAndAuthorization(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	partyID := seedInviteRepositoryParty(t, pool)
+	now := time.Date(2026, 7, 18, 13, 0, 0, 0, time.UTC)
+	repository := newTestPartyRepository(pool)
+	repository.now = func() time.Time { return now }
+	repository.newInviteToken = func() (string, error) { return validInviteToken(0x80), nil }
+	repository.newInviteCode = func() (string, error) { return "ABCD2345", nil }
+	if _, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID)); err != nil {
+		t.Fatalf("create code join invitation: %v", err)
+	}
+
+	first, err := repository.JoinPartyByCode(context.Background(), "abcd-2345", uuid.MustParse(testOtherUserID), uuid.MustParse(testThirdCharacterID))
+	if err != nil {
+		t.Fatalf("join Party by code: %v", err)
+	}
+	second, err := repository.JoinPartyByCode(context.Background(), "ABCD2345", uuid.MustParse(testOtherUserID), uuid.MustParse(testThirdCharacterID))
+	if err != nil {
+		t.Fatalf("replay Party join by code: %v", err)
+	}
+	if !first.Created || second.Created || first.Membership != second.Membership {
+		t.Fatal("code join did not preserve creation and idempotent replay semantics")
+	}
+	requireUserMembershipCount(t, pool, partyID, uuid.MustParse(testOtherUserID), 1)
 }
 
 func TestRepositoryJoinPartyMakesUnavailableInvitesIndistinguishable(t *testing.T) {
@@ -1389,6 +1541,31 @@ INSERT INTO party_invites (
 		uuid.New().String(), partyID.String(), creatorID, tokenHash[:], createdAt, createdAt.Add(7*24*time.Hour))
 	if err != nil {
 		t.Fatalf("insert Party invite fixture: %v", err)
+	}
+}
+
+func insertCodeInviteForRepositoryTest(
+	t *testing.T,
+	pool *pgxpool.Pool,
+	partyID uuid.UUID,
+	rawCode string,
+	createdAt time.Time,
+	revokedAt *time.Time,
+) {
+	t.Helper()
+	codeHash, err := InviteCodeHash(testInviteCodeHashKey(), rawCode)
+	if err != nil {
+		t.Fatalf("hash code invite fixture: %v", err)
+	}
+	tokenHash := sha256.Sum256([]byte(uuid.New().String()))
+	_, err = pool.Exec(context.Background(), `
+INSERT INTO party_invites (
+  id, party_id, created_by_user_id, token_hash, code_hash, created_at, expires_at, revoked_at
+) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8)`,
+		uuid.New().String(), partyID.String(), testGMUserID, tokenHash[:], codeHash,
+		createdAt, createdAt.Add(7*24*time.Hour), revokedAt)
+	if err != nil {
+		t.Fatalf("insert code invite fixture: %v", err)
 	}
 }
 

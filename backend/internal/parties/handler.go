@@ -16,10 +16,16 @@ import (
 )
 
 const (
-	partyRequestBodyLimit int64 = 4096
-	joinAttemptLimit            = 10
-	joinAttemptWindow           = time.Minute
-	joinLimiterKeyPrefix        = "party-join:"
+	partyRequestBodyLimit   int64 = 4096
+	joinAttemptLimit              = 10
+	joinAttemptWindow             = time.Minute
+	joinLimiterKeyPrefix          = "party-join:"
+	codeUserMinuteLimit           = 5
+	codeUserHourLimit             = 20
+	codeGlobalMinuteLimit         = 100
+	codeUserMinuteKeyPrefix       = "party-invite-code:user-minute:"
+	codeUserHourKeyPrefix         = "party-invite-code:user-hour:"
+	codeGlobalMinuteKey           = "party-invite-code:global-minute"
 )
 
 const (
@@ -40,25 +46,41 @@ type handlerRepository interface {
 	GetPartyForMember(context.Context, uuid.UUID, uuid.UUID) (PartyDetail, error)
 	CreateOrRegenerateInvite(context.Context, uuid.UUID, uuid.UUID) (PartyInvite, error)
 	InspectInvite(context.Context, string) (InviteInspection, error)
+	InspectInviteByCode(context.Context, string) (InviteInspection, error)
 	JoinParty(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error)
+	JoinPartyByCode(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error)
 }
 
 type joinAttemptLimiter interface {
 	Allow(string, int, time.Duration) auth.LimitResult
 }
 
+type codeAttemptLimiter interface {
+	AllowAll([]auth.LimitRule) auth.LimitResult
+}
+
 type Handler struct {
 	repository  handlerRepository
 	joinLimiter joinAttemptLimiter
+	codeLimiter codeAttemptLimiter
 }
 
 func NewHandler(repository handlerRepository) Handler {
 	clock := func() time.Time { return time.Now().UTC() }
-	return newHandlerWithJoinLimiter(repository, auth.NewSlidingWindowLimiter(clock))
+	return newHandlerWithLimiters(
+		repository,
+		auth.NewSlidingWindowLimiter(clock),
+		auth.NewSlidingWindowLimiter(clock),
+	)
 }
 
 func newHandlerWithJoinLimiter(repository handlerRepository, limiter joinAttemptLimiter) Handler {
-	return Handler{repository: repository, joinLimiter: limiter}
+	clock := func() time.Time { return time.Now().UTC() }
+	return newHandlerWithLimiters(repository, limiter, auth.NewSlidingWindowLimiter(clock))
+}
+
+func newHandlerWithLimiters(repository handlerRepository, joinLimiter joinAttemptLimiter, codeLimiter codeAttemptLimiter) Handler {
+	return Handler{repository: repository, joinLimiter: joinLimiter, codeLimiter: codeLimiter}
 }
 
 type createPartyRequest struct {
@@ -69,8 +91,17 @@ type inspectInviteRequest struct {
 	Token string `json:"token"`
 }
 
+type inspectInviteCodeRequest struct {
+	Code string `json:"code"`
+}
+
 type joinPartyRequest struct {
 	Token       string `json:"token"`
+	CharacterID string `json:"characterId"`
+}
+
+type joinPartyByCodeRequest struct {
+	Code        string `json:"code"`
 	CharacterID string `json:"characterId"`
 }
 
@@ -226,6 +257,38 @@ func (handler Handler) InspectInvite(w http.ResponseWriter, r *http.Request) {
 	writePartyJSON(w, http.StatusOK, responseFromInviteInspection(inspection))
 }
 
+func (handler Handler) InspectInviteByCode(w http.ResponseWriter, r *http.Request) {
+	requesterID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writePartyError(w, http.StatusUnauthorized, partyErrorAuthenticationRequired)
+		return
+	}
+	if !handler.allowCodeAttempt(w, requesterID) {
+		return
+	}
+
+	var request inspectInviteCodeRequest
+	if !decodePartyRequest(w, r, &request) {
+		return
+	}
+	if handler.repository == nil {
+		writePartyError(w, http.StatusInternalServerError, partyErrorServer)
+		return
+	}
+
+	inspection, err := handler.repository.InspectInviteByCode(r.Context(), request.Code)
+	if errors.Is(err, ErrInviteUnavailable) {
+		writePartyError(w, http.StatusBadRequest, partyErrorInviteUnavailable)
+		return
+	}
+	if err != nil {
+		writePartyError(w, http.StatusInternalServerError, partyErrorServer)
+		return
+	}
+
+	writePartyJSON(w, http.StatusOK, responseFromInviteInspection(inspection))
+}
+
 func (handler Handler) Join(w http.ResponseWriter, r *http.Request) {
 	requesterID, ok := auth.UserIDFromContext(r.Context())
 	if !ok {
@@ -283,6 +346,81 @@ func (handler Handler) Join(w http.ResponseWriter, r *http.Request) {
 	writePartyJSON(w, statusCode, responseFromPartyMembership(result.Membership))
 }
 
+func (handler Handler) JoinByCode(w http.ResponseWriter, r *http.Request) {
+	requesterID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		writePartyError(w, http.StatusUnauthorized, partyErrorAuthenticationRequired)
+		return
+	}
+	if !handler.allowCodeAttempt(w, requesterID) {
+		return
+	}
+
+	var request joinPartyByCodeRequest
+	if !decodePartyRequest(w, r, &request) {
+		return
+	}
+	characterID, err := uuid.Parse(request.CharacterID)
+	if err != nil {
+		writePartyError(w, http.StatusBadRequest, partyErrorValidation)
+		return
+	}
+	if handler.repository == nil {
+		writePartyError(w, http.StatusInternalServerError, partyErrorServer)
+		return
+	}
+
+	result, err := handler.repository.JoinPartyByCode(r.Context(), request.Code, requesterID, characterID)
+	if errors.Is(err, ErrInviteUnavailable) {
+		writePartyError(w, http.StatusBadRequest, partyErrorInviteUnavailable)
+		return
+	}
+	if errors.Is(err, ErrCharacterNotFound) {
+		writePartyError(w, http.StatusNotFound, partyErrorNotFound)
+		return
+	}
+	if errors.Is(err, ErrAlreadyMember) {
+		writePartyError(w, http.StatusConflict, partyErrorAlreadyMember)
+		return
+	}
+	if errors.Is(err, ErrCharacterAlreadyLinked) {
+		writePartyError(w, http.StatusConflict, partyErrorCharacterAlreadyLinked)
+		return
+	}
+	if err != nil {
+		writePartyError(w, http.StatusInternalServerError, partyErrorServer)
+		return
+	}
+
+	statusCode := http.StatusOK
+	if result.Created {
+		statusCode = http.StatusCreated
+	}
+	writePartyJSON(w, statusCode, responseFromPartyMembership(result.Membership))
+}
+
+func (handler Handler) allowCodeAttempt(w http.ResponseWriter, requesterID uuid.UUID) bool {
+	if handler.codeLimiter == nil {
+		writePartyError(w, http.StatusInternalServerError, partyErrorServer)
+		return false
+	}
+
+	digest := sha256.Sum256([]byte(requesterID.String()))
+	digestText := hex.EncodeToString(digest[:])
+	result := handler.codeLimiter.AllowAll([]auth.LimitRule{
+		{Key: codeUserMinuteKeyPrefix + digestText, Limit: codeUserMinuteLimit, Window: time.Minute},
+		{Key: codeUserHourKeyPrefix + digestText, Limit: codeUserHourLimit, Window: time.Hour},
+		{Key: codeGlobalMinuteKey, Limit: codeGlobalMinuteLimit, Window: time.Minute},
+	})
+	if result.Allowed {
+		return true
+	}
+
+	w.Header().Set("Retry-After", strconv.FormatInt(codeRetryAfterSeconds(result.RetryAfter), 10))
+	writePartyError(w, http.StatusTooManyRequests, partyErrorRateLimited)
+	return false
+}
+
 func joinLimiterKey(requesterID uuid.UUID) string {
 	digest := sha256.Sum256([]byte(requesterID.String()))
 	return joinLimiterKeyPrefix + hex.EncodeToString(digest[:])
@@ -294,6 +432,18 @@ func joinRetryAfterSeconds(retryAfter time.Duration) int64 {
 		return 1
 	}
 	maximum := int64(joinAttemptWindow / time.Second)
+	if seconds > maximum {
+		return maximum
+	}
+	return seconds
+}
+
+func codeRetryAfterSeconds(retryAfter time.Duration) int64 {
+	seconds := int64((retryAfter + time.Second - 1) / time.Second)
+	if seconds < 1 {
+		return 1
+	}
+	const maximum = int64(time.Hour / time.Second)
 	if seconds > maximum {
 		return maximum
 	}

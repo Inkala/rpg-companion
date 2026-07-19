@@ -49,6 +49,7 @@ type partyMemberCharacterResponse struct {
 
 type partyInviteResponse struct {
 	Token     string `json:"token"`
+	Code      string `json:"code"`
 	CreatedAt string `json:"createdAt"`
 	ExpiresAt string `json:"expiresAt"`
 }
@@ -138,6 +139,7 @@ func responseFromPartyMember(member PartyMember) partyMemberResponse {
 func responseFromPartyInvite(invite PartyInvite) partyInviteResponse {
 	return partyInviteResponse{
 		Token:     invite.Token,
+		Code:      invite.Code,
 		CreatedAt: formatPartyTimestamp(invite.CreatedAt),
 		ExpiresAt: formatPartyTimestamp(invite.ExpiresAt),
 	}

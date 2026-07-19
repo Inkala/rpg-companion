@@ -36,17 +36,17 @@ Planning is approved. Implementation must not start until it is separately assig
 
 ## Slice 2: API and attempt controls
 
-- [ ] Add initial failing exact response, privacy, no-store, logging, and throttle tests.
-- [ ] Extend GM invitation creation with the one-time formatted `code` field.
-- [ ] Prove the generation result is the only source for GM code and complete-link display and that
+- [x] Add initial failing exact response, privacy, no-store, logging, and throttle tests.
+- [x] Extend GM invitation creation with the one-time formatted `code` field.
+- [x] Prove the generation result is the only source for GM code and complete-link display and that
   neither credential can be recovered from stored hashes.
-- [ ] Add authenticated `/party-invites/code/inspect`.
-- [ ] Add authenticated `/party-invites/code/join`.
-- [ ] Apply the shared layered limiter immediately after authentication and before request-body
+- [x] Add authenticated `/party-invites/code/inspect`.
+- [x] Add authenticated `/party-invites/code/join`.
+- [x] Apply the shared layered limiter immediately after authentication and before request-body
   decoding, normalization, hashing, and lookup.
-- [ ] Make malformed, expired, revoked, replaced, and unknown code responses indistinguishable.
-- [ ] Preserve wrapped internal database errors and generic public errors.
-- [ ] Prove existing token endpoints and complete invitation links remain unchanged.
+- [x] Make malformed, expired, revoked, replaced, and unknown code responses indistinguishable.
+- [x] Preserve wrapped internal database errors and generic public errors.
+- [x] Prove existing token endpoints and complete invitation links remain unchanged.
 
 ## Slice 3: frontend flow
 
