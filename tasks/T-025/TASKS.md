@@ -37,6 +37,8 @@ Status: approved
 - [ ] Add exact conditional defense unions and persisted AC source inputs.
 - [ ] Add explicit attack ability/proficiency inputs and bounded manual attack overrides.
 - [ ] Add fully populated persisted canonical/manual spell and feature contracts.
+- [ ] Add bounded manual Race, manual Class, and combined fallback contracts.
+- [ ] Add the exact lossless canonical/manual persisted-feature union.
 - [ ] Add exact subclass timing and level-N HP progression contracts.
 - [ ] Add strict frontend and Go V2 parsing and validation.
 - [ ] Implement generated-rule calculations and override preservation.
@@ -62,6 +64,15 @@ Status: approved
 - [ ] Test TypeScript/Go exact nested-union key parity, including empty and zero-valued extra fields.
 - [ ] Test complete persisted-sheet revalidation of every authoritative derived value and retained
   source input.
+- [ ] Test manual Race with canonical Class builds with imported scores and Speed override, preserves
+  Class automation, and rejects Race automation.
+- [ ] Test manual Class derives universal proficiency, requires maximum-HP override, supports valid
+  defense, rejects Class/Subclass automation, and requires null spellcasting.
+- [ ] Test combined manual Race/Class builds only with imported scores, Speed override, and
+  maximum-HP override.
+- [ ] Test missing manual-identity imports or overrides fail safely without persistence.
+- [ ] Test manual feature ID, category, description, and provenance round-trip exactly in TypeScript
+  and Go, including exact-key and persisted-sheet parity.
 - [ ] Add V1/V2 discriminated parsing and Mara compatibility tests.
 - [ ] Stop for review before commit or Slice 3.
 

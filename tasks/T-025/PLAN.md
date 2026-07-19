@@ -33,6 +33,8 @@ Estimate: 2 to 3 focused days.
 - Add unified bounded `ruleChoices` for Race and class decisions.
 - Add calculated-base versus imported-final ability-score inputs.
 - Add exact defense, calculated-attack, spell, feature, subclass, and HP-progression contracts.
+- Add bounded manual Race, manual Class, and combined manual identity validation paths.
+- Add an exact lossless canonical/manual persisted-feature union.
 - Add frontend and Go calculation helpers driven by generated rules.
 - Add strict V2 parsers and validators with nested exact-union key parity.
 - Keep V1 and Mara compatibility tests green.
@@ -197,6 +199,14 @@ No migration file is expected. If one becomes necessary, implementation stops fo
 - nested union variants reject unknown and cross-variant keys even when values are empty or zero;
 - complete saved-sheet revalidation covers abilities/modifiers, proficiency, Initiative, Passive
   Perception, Speed, HP, AC, spell calculations/slots, prepared IDs, attacks, and features;
+- manual Race with canonical Class accepts imported scores and required Speed override, preserves
+  canonical Class automation, and rejects Race automation;
+- manual Class derives universal proficiency, requires maximum-HP override, accepts supported
+  defense modes, rejects Class/Subclass automation, and requires null spellcasting;
+- combined manual Race/Class requires imported scores plus Speed and maximum-HP overrides;
+- missing required manual-identity inputs fail without persistence;
+- canonical/manual feature unions round-trip exact IDs, categories, display fields, provenance, and
+  nested keys in TypeScript and Go;
 - proficiency and ability modifiers at boundaries;
 - Initiative and Passive Perception with none, proficiency, expertise, supported modifiers, and
   overrides;

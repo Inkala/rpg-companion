@@ -101,6 +101,20 @@ sheet as truth.
 - Complete saved-sheet validation rederives every authoritative value from retained inputs and
   verifies prepared spell references, attack provenance, and feature ownership.
 
+## Final Slice 2 fallback correction
+
+- Manual Race with canonical Class is supported through imported final ability scores and a required
+  Speed override. Race automation is disabled while valid canonical Class automation remains.
+- Manual Class uses universal proficiency, requires a maximum-HP override, supports only generally
+  valid defense modes, rejects canonical Class/Subclass automation, and has null spellcasting in the
+  current bounded contract.
+- Combined manual Race/Class requires all applicable imported values and overrides. Missing inputs
+  fail safely; the server does not invent rules.
+- Persisted features are an exact canonical/manual union. Manual features retain their original ID,
+  name, user-entered category, description, and imported provenance without substitution.
+- Slice 2 includes TypeScript/Go build, validation, failure, exact-key, round-trip,
+  persisted-sheet, and parity coverage for these paths.
+
 ## Risks
 
 - V2 affects creation, Character Reference, Party-GM reads, summaries, and Level up. Partial rollout

@@ -284,13 +284,26 @@ type CharacterSheetV2Spell = {
   provenance: ValueProvenance;
 };
 
-type CharacterSheetV2Feature = {
-  canonicalIndex: string | null;
-  name: string;
-  category: 'race' | 'class' | 'subclass' | 'manual';
-  description: string;
-  provenance: ValueProvenance;
-};
+type CharacterSheetV2Feature =
+  | {
+      id: string;
+      source: 'srd';
+      canonicalIndex: string;
+      ownerKind: 'race' | 'class' | 'subclass';
+      name: string;
+      category: string;
+      description: string;
+      provenance: { kind: 'calculated'; ruleId: string };
+    }
+  | {
+      id: string;
+      source: 'manual';
+      canonicalIndex: null;
+      name: string;
+      category: string;
+      description: string;
+      provenance: { kind: 'imported'; note?: string };
+    };
 ```
 
 Canonical spell inputs are resolved into every `CharacterSheetV2Spell` field from generated rules.
@@ -300,6 +313,34 @@ IDs must reference IDs in the persisted spell collection.
 Canonical feature indexes are valid only when their generated owner and availability match the
 selected Race, Class, Subclass, and level. The persisted feature retains both its canonical index
 and resolved display data. A valid index from another owner or unavailable level is rejected.
+Manual features round-trip their original stable ID, bounded name, bounded user-entered category,
+description, and imported provenance. The validator never substitutes a generated ID or the literal
+category `manual`.
+
+## Manual identity fallback matrix
+
+### Manual Race and canonical Class
+
+- `abilityScores` must be imported final values and `combat.speedOverride` is required.
+- Race-owned `ruleChoices` and canonical Race features are rejected.
+- No Race/subrace bonus or trait is applied.
+- Canonical Class calculations and spellcasting remain available.
+
+### Manual Class
+
+- Proficiency uses the universal level progression.
+- `hitPointProgression.maximumOverride` is required because no Hit Die is known.
+- Canonical Class/Subclass rule choices and features are rejected.
+- Subclass is `null` or a bounded manual selection with no automation.
+- Canonical armor, the universal standard-unarmored formula, and manual defense remain available;
+  class-owned defense formulas do not.
+- `spellcasting` is `null` in this bounded contract. A future imported spellcasting union requires
+  separate approval.
+
+### Manual Race and manual Class
+
+- Both validation sets apply. Imported final scores, Speed override, and maximum-HP override are
+  mandatory, and the server invents no Race or Class behavior.
 
 ## Exact saved DTO
 
@@ -409,6 +450,9 @@ an explicit Reset to calculated action.
 - Obtain owner ID only from the authenticated session.
 - Validate every Race and class rule choice against generated Go rules, including rule owner,
   availability, prerequisites, selection count, distinctness, options, and manual policy.
+- Apply the manual identity fallback matrix before calculations. Missing imported scores, Speed, or
+  maximum-HP overrides fail validation; manual identities do not fail merely because they are
+  manual.
 - Enforce canonical subclass timing: `null` before the decision level and exactly one compatible
   SRD or bounded manual selection at or after it.
 - Resolve calculated final ability scores on the server. Preserve imported final scores without
@@ -420,6 +464,7 @@ an explicit Reset to calculated action.
   names.
 - Resolve canonical spells and features into complete persisted display data while validating
   membership, ownership, and level availability.
+- Round-trip manual feature IDs, categories, descriptions, and imported provenance exactly.
 - Build CharacterSheetV2 server-side. Never trust a client-supplied full payload.
 - Reject unknown or cross-variant keys at every nested union boundary, including empty and
   zero-valued fields. TypeScript and Go validators must enforce equivalent exact-key rules.
