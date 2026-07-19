@@ -95,10 +95,34 @@ T-025 must extend that same source with:
 - Every dropdown has a visible label, keyboard operation, a description/help affordance, and a
   programmatically associated error.
 
+## Rule choices and ability-score input
+
+- CharacterSheetV2 creation uses one bounded `ruleChoices` collection for both Race and class
+  decisions. Each entry contains a canonical `ruleId`, distinct selected `optionIds`, and an
+  optional bounded `manualNote` only when that rule permits a manual fallback.
+- The backend validates every rule ID, its Race or class owner, availability at the selected level,
+  prerequisites, selection count, distinctness, allowed options, and manual-fallback policy.
+- Ability-score input is explicitly one of:
+  - `calculated`: base scores to which the server applies canonical fixed Race/subrace bonuses and
+    validated selectable Race bonuses;
+  - `imported`: final transferred values plus a bounded reason. Canonical Race bonuses are not
+    applied again.
+- Imported scores receive imported provenance and remain unchanged when Race or another source
+  input changes. They change only when the player edits the imported values or explicitly selects
+  Reset to calculated.
+- Reset to calculated requires usable base scores and valid canonical Race choices.
+- Manual or unsupported Races receive no invented ability bonuses. They require imported values or
+  an explicitly supported manual rule path.
+- Ability modifiers always derive from the resolved final scores.
+- The frontend may display base score, Race contribution, and final score during review, but the
+  backend remains authoritative for the result.
+
 ## Derived values and provenance
 
 Automatically calculate every value supported deterministically by the structured inputs:
 
+- final ability scores from base scores plus validated canonical Race choices when the input mode
+  is `calculated`;
 - proficiency bonus from total level;
 - ability modifiers using `floor((score - 10) / 2)`;
 - Initiative from Dexterity plus supported modifiers;

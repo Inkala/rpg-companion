@@ -30,10 +30,13 @@ Estimate: 2 to 3 focused days.
 ### Slice 2: CharacterSheetV2 and calculation contracts
 
 - Add the V2 domain, request, response, provenance, and structured-section types.
+- Add unified bounded `ruleChoices` for Race and class decisions.
+- Add calculated-base versus imported-final ability-score inputs.
 - Add frontend and Go calculation helpers driven by generated rules.
 - Add strict V2 parsers and validators.
 - Keep V1 and Mara compatibility tests green.
-- Prove overrides survive source-input changes until explicitly reset.
+- Prove imported scores and other overrides survive source-input changes until explicitly reset.
+- Prove Reset to calculated requires usable base scores and valid canonical Race choices.
 
 Estimate: 2 to 4 focused days.
 
@@ -170,6 +173,14 @@ No migration file is expected. If one becomes necessary, implementation stops fo
   parity;
 - all 12 classes and conditional subclass levels, including Ranger Hunter;
 - every Race speed and manual Race fallback;
+- calculated base scores plus canonical fixed Race bonuses;
+- Half-Elf selects two distinct available +1 ability bonuses;
+- canonical subrace bonuses are applied exactly once;
+- imported final scores are not modified by Race bonuses and survive Race changes;
+- Reset to calculated resolves from usable base scores and current valid Race choices;
+- invalid, duplicate, unavailable, wrong-owner, wrong-count, and failed-prerequisite rule choices;
+- manual Race receives no invented ability-score automation;
+- frontend and Go final-score calculation parity;
 - proficiency and ability modifiers at boundaries;
 - Initiative and Passive Perception with none, proficiency, expertise, supported modifiers, and
   overrides;

@@ -32,8 +32,19 @@ Status: approved
 ## Slice 2: CharacterSheetV2 contracts and calculations
 
 - [ ] Add exact V2 creation, saved, domain, structured-section, and provenance types.
+- [ ] Replace class-only choices with unified bounded Race/class `ruleChoices`.
+- [ ] Add calculated-base and imported-final ability-score input modes.
 - [ ] Add strict frontend and Go V2 parsing and validation.
 - [ ] Implement generated-rule calculations and override preservation.
+- [ ] Test calculated base scores plus fixed Race bonuses.
+- [ ] Test Half-Elf selects two distinct available +1 bonuses and rejects duplicates.
+- [ ] Test canonical subrace bonuses are applied exactly once.
+- [ ] Test imported final scores are unchanged and survive Race changes.
+- [ ] Test Reset to calculated requires usable base scores and valid Race choices.
+- [ ] Test invalid, duplicate, unavailable, wrong-owner, wrong-count, and failed-prerequisite rule
+  choices.
+- [ ] Test manual Race receives no invented automation.
+- [ ] Test frontend and Go ability-score calculation parity.
 - [ ] Add V1/V2 discriminated parsing and Mara compatibility tests.
 - [ ] Stop for review before commit or Slice 3.
 
