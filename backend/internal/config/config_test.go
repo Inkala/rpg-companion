@@ -1,6 +1,10 @@
 package config
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -19,6 +23,65 @@ func TestFromEnvAcceptsValidLocalConfigurationAndDefaultsPort(t *testing.T) {
 	}
 	if cfg.CookieSecure {
 		t.Fatal("expected local cookie to remain non-Secure")
+	}
+}
+
+func TestFromEnvAcceptsCanonicalInviteCodeHashKey(t *testing.T) {
+	setValidEnvironment(t, "local")
+
+	cfg, err := FromEnv()
+	if err != nil {
+		t.Fatalf("expected canonical invite code hash key to be accepted, got %v", err)
+	}
+	want := [32]byte{}
+	copy(want[:], bytes.Repeat([]byte{0x5a}, 32))
+	if cfg.InviteCodeHashKey.Bytes() != want {
+		t.Fatal("configuration did not retain the decoded invite code hash key")
+	}
+}
+
+func TestFromEnvRejectsInvalidInviteCodeHashKeys(t *testing.T) {
+	valid := validInviteCodeHashKeyEnvironmentValue()
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{name: "missing"},
+		{name: "malformed", value: "not-base64url!"},
+		{name: "padded", value: valid + "="},
+		{name: "leading whitespace", value: " " + valid},
+		{name: "trailing whitespace", value: valid + " "},
+		{name: "short", value: base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0x5a}, 31))},
+		{name: "long", value: base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0x5a}, 33))},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setValidEnvironment(t, "local")
+			t.Setenv("INVITE_CODE_HASH_KEY", tt.value)
+
+			if _, err := FromEnv(); err == nil {
+				t.Fatal("expected INVITE_CODE_HASH_KEY validation error")
+			}
+		})
+	}
+}
+
+func TestInviteCodeHashKeyCannotBeFormattedOrSerialized(t *testing.T) {
+	setValidEnvironment(t, "local")
+	cfg, err := FromEnv()
+	if err != nil {
+		t.Fatalf("load valid configuration: %v", err)
+	}
+
+	encoded := validInviteCodeHashKeyEnvironmentValue()
+	for _, formatted := range []string{fmt.Sprint(cfg.InviteCodeHashKey), fmt.Sprintf("%#v", cfg.InviteCodeHashKey)} {
+		if strings.Contains(formatted, encoded) || strings.Contains(formatted, "90 90 90") {
+			t.Fatal("formatted invite code hash key exposed secret material")
+		}
+	}
+	if serialized, err := json.Marshal(cfg.InviteCodeHashKey); err == nil || len(serialized) != 0 {
+		t.Fatal("invite code hash key must fail closed when serialization is attempted")
 	}
 }
 
@@ -231,10 +294,29 @@ func TestFromEnvErrorsDoNotExposeSensitiveValues(t *testing.T) {
 	}
 }
 
+func TestFromEnvInviteCodeHashKeyErrorsDoNotExposeSensitiveValues(t *testing.T) {
+	setValidEnvironment(t, "local")
+	const sensitiveValue = "sensitive-invite-code-hash-key-marker!"
+	t.Setenv("INVITE_CODE_HASH_KEY", sensitiveValue)
+
+	_, err := FromEnv()
+	if err == nil {
+		t.Fatal("expected invite code hash key validation error")
+	}
+	if strings.Contains(err.Error(), sensitiveValue) {
+		t.Fatal("configuration error exposed invite code hash key material")
+	}
+}
+
 func setValidEnvironment(t *testing.T, appEnv string) {
 	t.Helper()
 	t.Setenv("APP_ENV", appEnv)
 	t.Setenv("DATABASE_URL", "postgres://db.internal/hunin")
 	t.Setenv("ALLOWED_ORIGINS", "http://localhost:5173")
 	t.Setenv("PORT", "8080")
+	t.Setenv("INVITE_CODE_HASH_KEY", validInviteCodeHashKeyEnvironmentValue())
+}
+
+func validInviteCodeHashKeyEnvironmentValue() string {
+	return base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0x5a}, 32))
 }

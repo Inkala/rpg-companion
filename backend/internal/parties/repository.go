@@ -19,19 +19,25 @@ var ErrCharacterNotFound = errors.New("character not found")
 var ErrAlreadyMember = errors.New("user is already a Party member")
 var ErrCharacterAlreadyLinked = errors.New("character is already linked to a Party")
 
+const maxInviteCredentialAttempts = 8
+
 type Repository struct {
-	pool           *pgxpool.Pool
-	newID          func() uuid.UUID
-	newInviteToken func() (string, error)
-	now            func() time.Time
+	pool              *pgxpool.Pool
+	newID             func() uuid.UUID
+	newInviteToken    func() (string, error)
+	newInviteCode     func() (string, error)
+	inviteCodeHashKey InviteCodeHashKey
+	now               func() time.Time
 }
 
-func NewRepository(pool *pgxpool.Pool) *Repository {
-	return newRepository(
+func NewRepository(pool *pgxpool.Pool, inviteCodeHashKey InviteCodeHashKey) *Repository {
+	repository := newRepository(
 		pool,
 		uuid.New,
 		func() time.Time { return time.Now().UTC() },
 	)
+	repository.inviteCodeHashKey = inviteCodeHashKey
+	return repository
 }
 
 func newRepository(pool *pgxpool.Pool, newID func() uuid.UUID, now func() time.Time) *Repository {
@@ -39,6 +45,7 @@ func newRepository(pool *pgxpool.Pool, newID func() uuid.UUID, now func() time.T
 		pool:           pool,
 		newID:          newID,
 		newInviteToken: NewInviteToken,
+		newInviteCode:  NewInviteCode,
 		now:            now,
 	}
 }
@@ -322,18 +329,15 @@ FOR UPDATE OF p`
 		return PartyInvite{}, ErrPartyForbidden
 	}
 
-	rawToken, err := repository.newInviteToken()
+	credentialPair, err := repository.newInviteCredentialPair()
 	if err != nil {
-		return PartyInvite{}, errors.New("could not generate invite token")
-	}
-	tokenHash, err := InviteTokenHash(rawToken)
-	if err != nil {
-		return PartyInvite{}, err
+		return PartyInvite{}, errors.New("could not generate invite credentials")
 	}
 
 	createdAt := repository.now().UTC()
 	invite := PartyInvite{
-		Token:     rawToken,
+		Token:     credentialPair.rawToken,
+		Code:      credentialPair.formattedCode,
 		CreatedAt: createdAt,
 		ExpiresAt: createdAt.Add(7 * 24 * time.Hour),
 	}
@@ -349,24 +353,78 @@ WHERE party_id = $1::uuid
 
 	const insertInvite = `
 INSERT INTO party_invites (
-  id, party_id, created_by_user_id, token_hash, created_at, expires_at, revoked_at
-) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, NULL)`
-	if _, err := transaction.Exec(ctx, insertInvite,
-		repository.newID().String(),
-		partyID.String(),
-		requesterID.String(),
-		tokenHash,
-		invite.CreatedAt,
-		invite.ExpiresAt,
-	); err != nil {
-		return PartyInvite{}, err
+  id, party_id, created_by_user_id, token_hash, code_hash, created_at, expires_at, revoked_at
+) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, NULL)
+ON CONFLICT (code_hash) WHERE code_hash IS NOT NULL DO NOTHING`
+	for attempt := 0; attempt < maxInviteCredentialAttempts; attempt++ {
+		if attempt > 0 {
+			credentialPair, err = repository.newInviteCredentialPair()
+			if err != nil {
+				return PartyInvite{}, errors.New("could not generate invite credentials")
+			}
+			invite.Token = credentialPair.rawToken
+			invite.Code = credentialPair.formattedCode
+		}
+
+		result, err := transaction.Exec(ctx, insertInvite,
+			repository.newID().String(),
+			partyID.String(),
+			requesterID.String(),
+			credentialPair.tokenHash,
+			credentialPair.codeHash,
+			invite.CreatedAt,
+			invite.ExpiresAt,
+		)
+		if err != nil {
+			return PartyInvite{}, err
+		}
+		if result.RowsAffected() == 1 {
+			if err := transaction.Commit(ctx); err != nil {
+				return PartyInvite{}, err
+			}
+			return invite, nil
+		}
 	}
 
-	if err := transaction.Commit(ctx); err != nil {
-		return PartyInvite{}, err
+	return PartyInvite{}, errors.New("could not create unique invite credentials")
+}
+
+type inviteCredentialPair struct {
+	rawToken      string
+	formattedCode string
+	tokenHash     []byte
+	codeHash      []byte
+}
+
+func (repository *Repository) newInviteCredentialPair() (inviteCredentialPair, error) {
+	rawToken, err := repository.newInviteToken()
+	if err != nil {
+		return inviteCredentialPair{}, err
+	}
+	tokenHash, err := InviteTokenHash(rawToken)
+	if err != nil {
+		return inviteCredentialPair{}, err
 	}
 
-	return invite, nil
+	rawCode, err := repository.newInviteCode()
+	if err != nil {
+		return inviteCredentialPair{}, err
+	}
+	formattedCode, err := FormatInviteCode(rawCode)
+	if err != nil {
+		return inviteCredentialPair{}, err
+	}
+	codeHash, err := InviteCodeHash(repository.inviteCodeHashKey, rawCode)
+	if err != nil {
+		return inviteCredentialPair{}, err
+	}
+
+	return inviteCredentialPair{
+		rawToken:      rawToken,
+		formattedCode: formattedCode,
+		tokenHash:     tokenHash,
+		codeHash:      codeHash,
+	}, nil
 }
 
 func (repository *Repository) InspectInvite(ctx context.Context, rawToken string) (InviteInspection, error) {

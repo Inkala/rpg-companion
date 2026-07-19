@@ -166,12 +166,14 @@ func TestPartyDetailResponseMappingIsRosterScopedAndPrivacySafe(t *testing.T) {
 
 func TestInviteResponseMappingsUseCanonicalTimestampsAndLimitRawToken(t *testing.T) {
 	rawToken := "raw-private-invite-token"
+	rawCode := "ABCD-2345"
 	partyID := uuid.MustParse("71000000-0000-0000-0000-000000000003")
 	sourceTime := time.Date(2026, 7, 14, 15, 30, 0, 123, time.FixedZone("test-offset", 2*60*60))
 	expiresAt := sourceTime.Add(7 * 24 * time.Hour)
 
 	creationJSON := marshalResponseMap(t, responseFromPartyInvite(PartyInvite{
 		Token:     rawToken,
+		Code:      rawCode,
 		CreatedAt: sourceTime,
 		ExpiresAt: expiresAt,
 	}))
@@ -181,6 +183,9 @@ func TestInviteResponseMappingsUseCanonicalTimestampsAndLimitRawToken(t *testing
 	}
 	if creationJSON["createdAt"] != "2026-07-14T13:30:00Z" || creationJSON["expiresAt"] != "2026-07-21T13:30:00Z" {
 		t.Fatal("invite creation timestamps are not canonical UTC RFC3339")
+	}
+	if strings.Contains(marshalResponseString(t, creationJSON), rawCode) {
+		t.Fatal("Slice 1 invite creation response exposed the short code before the API contract was approved for Slice 2")
 	}
 
 	inspectionResponse := responseFromInviteInspection(InviteInspection{

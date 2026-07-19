@@ -281,7 +281,7 @@ func TestProductionSignInSessionCookieIsSecure(t *testing.T) {
 	pool := setupIntegrationDatabase(t)
 	handler := New(
 		characters.NewRepository(pool),
-		parties.NewRepository(pool),
+		parties.NewRepository(pool, serverTestInviteCodeHashKey()),
 		auth.NewRepository(pool),
 		Options{
 			AllowedOrigins: []string{localOrigin},
@@ -1678,13 +1678,21 @@ func decodeServerJSON(t *testing.T, response *httptest.ResponseRecorder, destina
 func newTestServer(pool *pgxpool.Pool) http.Handler {
 	return New(
 		characters.NewRepository(pool),
-		parties.NewRepository(pool),
+		parties.NewRepository(pool, serverTestInviteCodeHashKey()),
 		auth.NewRepository(pool),
 		Options{
 			AllowedOrigins: []string{localOrigin},
 			PasswordConfig: testPasswordConfig(),
 		},
 	)
+}
+
+func serverTestInviteCodeHashKey() parties.InviteCodeHashKey {
+	var keyBytes [32]byte
+	for index := range keyBytes {
+		keyBytes[index] = byte(index + 1)
+	}
+	return parties.NewInviteCodeHashKey(keyBytes)
 }
 
 func testPasswordConfig() auth.PasswordConfig {

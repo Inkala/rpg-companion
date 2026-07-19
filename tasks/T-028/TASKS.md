@@ -20,19 +20,19 @@ Planning is approved. Implementation must not start until it is separately assig
 
 ## Slice 1: credential and PostgreSQL contract
 
-- [ ] Add initial failing code generation, normalization, digest, collision, migration, regeneration,
+- [x] Add initial failing code generation, normalization, digest, collision, migration, regeneration,
   expiry, rollback, and concurrency tests.
-- [ ] Add migration 000004 up/down and PostgreSQL migration coverage.
-- [ ] Add secure code generation and canonical normalization.
-- [ ] Add domain-separated HMAC digesting and fail-closed typed key configuration.
-- [ ] Prove the key is a dedicated stable 32-byte secret that is never logged, returned, committed,
+- [x] Add migration 000004 up/down and PostgreSQL migration coverage.
+- [x] Add secure code generation and canonical normalization.
+- [x] Add domain-separated HMAC digesting and fail-closed typed key configuration.
+- [x] Prove the key is a dedicated stable 32-byte secret that is never logged, returned, committed,
   sent to the frontend, or reused from another application secret.
-- [ ] Document regeneration of active invitations as recovery after an intentional key change; do
+- [x] Document regeneration of active invitations as recovery after an intentional key change; do
   not add key rotation.
-- [ ] Extend invitation creation to persist one unique code hash with the existing token hash.
-- [ ] Retry complete credential-pair generation on collision without losing the prior active invite.
-- [ ] Preserve legacy token-only invitation inspection and join.
-- [ ] Run and record focused PostgreSQL and race validation.
+- [x] Extend invitation creation to persist one unique code hash with the existing token hash.
+- [x] Retry complete credential-pair generation on collision without losing the prior active invite.
+- [x] Preserve legacy token-only invitation inspection and join.
+- [x] Run and record focused PostgreSQL and race validation.
 
 ## Slice 2: API and attempt controls
 

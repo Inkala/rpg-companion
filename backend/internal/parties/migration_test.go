@@ -49,6 +49,8 @@ func TestPartyMigrationLifecycleAndConstraints(t *testing.T) {
 		for _, relation := range []string{"parties", "party_memberships", "party_invites"} {
 			requireRelationExists(t, pool, relation, true)
 		}
+		requireColumnExists(t, pool, "party_invites", "code_hash", true)
+		requireIndexExists(t, pool, "party_invites_code_hash_key", true)
 	})
 
 	seedPartyMigrationUsers(t, pool)
@@ -150,6 +152,32 @@ VALUES ('51000000-0000-0000-0000-000000000003', $1::uuid, $2::uuid, $3, $4, $5, 
 
 	insertTestInvite(t, pool, "50000000-0000-0000-0000-000000000001", testPartyID, testGMUserID, 0x10)
 
+	t.Run("legacy invite code hash remains nullable", func(t *testing.T) {
+		var codeHash []byte
+		if err := pool.QueryRow(context.Background(), `
+SELECT code_hash FROM party_invites WHERE id = '50000000-0000-0000-0000-000000000001'`).Scan(&codeHash); err != nil {
+			t.Fatalf("load legacy invite code hash: %v", err)
+		}
+		if codeHash != nil {
+			t.Fatal("legacy token-only invitation unexpectedly received a code hash")
+		}
+	})
+
+	t.Run("invite code hash must contain exactly 32 bytes", func(t *testing.T) {
+		requireConstraintViolation(t, pool, "party_invites_code_hash_length_check", `
+UPDATE party_invites
+SET code_hash = $1
+WHERE id = '50000000-0000-0000-0000-000000000001'`, bytes.Repeat([]byte{0x21}, 31))
+	})
+
+	codeHash := bytes.Repeat([]byte{0x22}, 32)
+	if _, err := pool.Exec(context.Background(), `
+UPDATE party_invites
+SET code_hash = $1
+WHERE id = '50000000-0000-0000-0000-000000000001'`, codeHash); err != nil {
+		t.Fatalf("store valid invite code hash: %v", err)
+	}
+
 	t.Run("invite token hash is unique", func(t *testing.T) {
 		requireConstraintViolation(t, pool, "party_invites_token_hash_key", `
 INSERT INTO party_invites (id, party_id, created_by_user_id, token_hash, created_at, expires_at, revoked_at)
@@ -175,6 +203,16 @@ UPDATE party_invites SET revoked_at = $1 WHERE id = '50000000-0000-0000-0000-000
 		insertTestInvite(t, pool, "50000000-0000-0000-0000-000000000002", testPartyID, testGMUserID, 0x12)
 	})
 
+	t.Run("invite code hash remains globally unique after revocation", func(t *testing.T) {
+		requireConstraintViolation(t, pool, "party_invites_code_hash_key", `
+INSERT INTO party_invites (
+  id, party_id, created_by_user_id, token_hash, code_hash, created_at, expires_at, revoked_at
+) VALUES (
+  '51000000-0000-0000-0000-000000000006', $1::uuid, $2::uuid, $3, $4, $5, $6, NULL
+)`, testOtherPartyID, testOtherGMUserID, bytes.Repeat([]byte{0x23}, 32), codeHash,
+			migrationTestNow, migrationTestNow.Add(7*24*time.Hour))
+	})
+
 	t.Run("character deletion is restricted while linked", func(t *testing.T) {
 		requireConstraintViolation(t, pool, "party_memberships_character_id_fkey", `
 DELETE FROM characters WHERE id = $1::uuid`, testCharacterID)
@@ -192,9 +230,48 @@ DELETE FROM characters WHERE id = $1::uuid`, testCharacterID)
 		requireRowCount(t, pool, "party_invites", "party_id", testCascadePartyID, 0)
 	})
 
-	t.Run("migration down removes only party tables", func(t *testing.T) {
+	var usersBefore int
+	var charactersBefore int
+	var partiesBefore int
+	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM users`).Scan(&usersBefore); err != nil {
+		t.Fatalf("count users before invite-code migration rollback: %v", err)
+	}
+	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM characters`).Scan(&charactersBefore); err != nil {
+		t.Fatalf("count characters before invite-code migration rollback: %v", err)
+	}
+	if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM parties`).Scan(&partiesBefore); err != nil {
+		t.Fatalf("count Parties before invite-code migration rollback: %v", err)
+	}
+
+	t.Run("invite code migration down preserves existing Party and core data", func(t *testing.T) {
 		if err := migrator.Steps(-1); err != nil {
-			t.Fatalf("migrate party schema down: %v", err)
+			t.Fatalf("migrate invite code schema down: %v", err)
+		}
+
+		for _, relation := range []string{"party_invites", "party_memberships", "parties", "users", "user_sessions", "characters"} {
+			requireRelationExists(t, pool, relation, true)
+		}
+		requireColumnExists(t, pool, "party_invites", "code_hash", false)
+		requireIndexExists(t, pool, "party_invites_code_hash_key", false)
+		requireTableCount(t, pool, "users", usersBefore)
+		requireTableCount(t, pool, "characters", charactersBefore)
+		requireTableCount(t, pool, "parties", partiesBefore)
+	})
+
+	t.Run("invite code migration up succeeds again without changing existing data", func(t *testing.T) {
+		if err := migrator.Steps(1); err != nil {
+			t.Fatalf("migrate invite code schema up again: %v", err)
+		}
+		requireColumnExists(t, pool, "party_invites", "code_hash", true)
+		requireIndexExists(t, pool, "party_invites_code_hash_key", true)
+		requireTableCount(t, pool, "users", usersBefore)
+		requireTableCount(t, pool, "characters", charactersBefore)
+		requireTableCount(t, pool, "parties", partiesBefore)
+	})
+
+	t.Run("party migration down removes only Party tables", func(t *testing.T) {
+		if err := migrator.Steps(-2); err != nil {
+			t.Fatalf("migrate Party and invite code schemas down: %v", err)
 		}
 
 		for _, relation := range []string{"party_invites", "party_memberships", "parties"} {
@@ -205,13 +282,15 @@ DELETE FROM characters WHERE id = $1::uuid`, testCharacterID)
 		}
 	})
 
-	t.Run("migration up succeeds again after down", func(t *testing.T) {
-		if err := migrator.Steps(1); err != nil {
+	t.Run("Party and invite code migrations succeed again after down", func(t *testing.T) {
+		if err := migrator.Steps(2); err != nil {
 			t.Fatalf("migrate party schema up again: %v", err)
 		}
 		for _, relation := range []string{"parties", "party_memberships", "party_invites"} {
 			requireRelationExists(t, pool, relation, true)
 		}
+		requireColumnExists(t, pool, "party_invites", "code_hash", true)
+		requireIndexExists(t, pool, "party_invites_code_hash_key", true)
 	})
 }
 
@@ -390,6 +469,50 @@ func requireRelationExists(t *testing.T, pool *pgxpool.Pool, relation string, wa
 	}
 	if exists != want {
 		t.Fatalf("relation %s existence: expected %t, got %t", relation, want, exists)
+	}
+}
+
+func requireColumnExists(t *testing.T, pool *pgxpool.Pool, table string, column string, want bool) {
+	t.Helper()
+	var exists bool
+	if err := pool.QueryRow(context.Background(), `
+SELECT EXISTS (
+  SELECT 1
+  FROM information_schema.columns
+  WHERE table_schema = 'public'
+    AND table_name = $1
+    AND column_name = $2
+)`, table, column).Scan(&exists); err != nil {
+		t.Fatalf("inspect column %s.%s: %v", table, column, err)
+	}
+	if exists != want {
+		t.Fatalf("column %s.%s existence: expected %t, got %t", table, column, want, exists)
+	}
+}
+
+func requireIndexExists(t *testing.T, pool *pgxpool.Pool, index string, want bool) {
+	t.Helper()
+	var exists bool
+	if err := pool.QueryRow(context.Background(), `SELECT to_regclass($1) IS NOT NULL`, "public."+index).Scan(&exists); err != nil {
+		t.Fatalf("inspect index %s: %v", index, err)
+	}
+	if exists != want {
+		t.Fatalf("index %s existence: expected %t, got %t", index, want, exists)
+	}
+}
+
+func requireTableCount(t *testing.T, pool *pgxpool.Pool, table string, want int) {
+	t.Helper()
+	allowed := map[string]bool{"users": true, "characters": true, "parties": true}
+	if !allowed[table] {
+		t.Fatal("unsupported table-count query")
+	}
+	var count int
+	if err := pool.QueryRow(context.Background(), "SELECT count(*) FROM "+table).Scan(&count); err != nil {
+		t.Fatalf("count rows in %s: %v", table, err)
+	}
+	if count != want {
+		t.Fatalf("expected %d rows in %s, got %d", want, table, count)
 	}
 }
 

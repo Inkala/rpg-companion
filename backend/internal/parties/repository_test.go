@@ -214,7 +214,7 @@ func TestRepositoryListPartiesForUserReturnsApprovedSummariesWithoutUnrelatedRos
 	insertRosterMembership(t, pool, "42000000-0000-0000-0000-000000000209", rosterPartyID, thirdPlayerUserID, RolePlayer, &secondScoutID, sharedJoinedAt)
 	insertRosterMembership(t, pool, "42000000-0000-0000-0000-000000000298", unrelatedPartyID, testOtherUserID, RolePlayer, &unrelatedCharacterID, unrelatedCreatedAt.Add(time.Minute))
 
-	summaries, err := NewRepository(pool).ListPartiesForUser(context.Background(), uuid.MustParse(testPlayerUserID))
+	summaries, err := newTestPartyRepository(pool).ListPartiesForUser(context.Background(), uuid.MustParse(testPlayerUserID))
 	if err != nil {
 		t.Fatalf("list approved Party summaries: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestRepositoryListPartiesForUserReturnsApprovedSummariesWithoutUnrelatedRos
 
 func TestRepositoryListPartiesForUserPreservesDatabaseErrors(t *testing.T) {
 	pool := setupPartyRepositoryTest(t)
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -304,7 +304,7 @@ VALUES ($1::uuid, 'Roster Party', $2::uuid, $3, $4)`, partyID.String(), testGMUs
 	otherCharacterID := testThirdCharacterID
 	insertRosterMembership(t, pool, "43000000-0000-0000-0000-000000000003", partyID.String(), testOtherUserID, RolePlayer, &otherCharacterID, sharedJoinedAt)
 
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 
 	gmDetail, err := repository.GetPartyForMember(context.Background(), partyID, uuid.MustParse(testGMUserID))
 	if err != nil {
@@ -327,7 +327,7 @@ func TestRepositoryGetPartyForMemberHidesUnknownAndNonMemberParties(t *testing.T
 	insertTestParty(t, pool, partyID, "Private Party", testGMUserID)
 	insertTestMembership(t, pool, "43000000-0000-0000-0000-000000000010", partyID, testGMUserID, RoleGM, nil)
 
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	tests := []struct {
 		name      string
 		partyID   uuid.UUID
@@ -356,7 +356,7 @@ func TestRepositoryGetPartyForMemberHidesUnknownAndNonMemberParties(t *testing.T
 
 func TestRepositoryGetPartyForMemberPreservesDatabaseErrors(t *testing.T) {
 	pool := setupPartyRepositoryTest(t)
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -369,14 +369,20 @@ func TestRepositoryGetPartyForMemberPreservesDatabaseErrors(t *testing.T) {
 	}
 }
 
+func TestPartyInviteModelCarriesOneCredentialPairInternally(t *testing.T) {
+	requireStructFields(t, PartyInvite{}, []string{"Token", "Code", "CreatedAt", "ExpiresAt"})
+}
+
 func TestRepositoryCreateOrRegenerateInviteCreatesSevenDayInviteForGM(t *testing.T) {
 	pool := setupPartyRepositoryTest(t)
 	partyID := seedInviteRepositoryParty(t, pool)
 	createdAt := time.Date(2026, 7, 13, 14, 0, 0, 0, time.UTC)
 	rawToken := validInviteToken(0x31)
-	repository := NewRepository(pool)
+	rawCode := "ABCD2345"
+	repository := newTestPartyRepository(pool)
 	repository.now = func() time.Time { return createdAt }
 	repository.newInviteToken = func() (string, error) { return rawToken, nil }
+	repository.newInviteCode = func() (string, error) { return rawCode, nil }
 
 	invite, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID))
 	if err != nil {
@@ -384,6 +390,9 @@ func TestRepositoryCreateOrRegenerateInviteCreatesSevenDayInviteForGM(t *testing
 	}
 	if invite.Token != rawToken {
 		t.Fatal("repository did not return the generated raw token")
+	}
+	if invite.Code != "ABCD-2345" {
+		t.Fatalf("repository did not return the formatted generated code: %q", invite.Code)
 	}
 	if !invite.CreatedAt.Equal(createdAt) {
 		t.Fatal("invite creation time does not match the injected clock")
@@ -393,13 +402,14 @@ func TestRepositoryCreateOrRegenerateInviteCreatesSevenDayInviteForGM(t *testing
 	}
 
 	var storedHash []byte
+	var storedCodeHash []byte
 	var storedCreatedAt time.Time
 	var storedExpiresAt time.Time
 	var revokedAt *time.Time
 	if err := pool.QueryRow(context.Background(), `
-SELECT token_hash, created_at, expires_at, revoked_at
+SELECT token_hash, code_hash, created_at, expires_at, revoked_at
 FROM party_invites
-WHERE party_id = $1::uuid`, partyID.String()).Scan(&storedHash, &storedCreatedAt, &storedExpiresAt, &revokedAt); err != nil {
+WHERE party_id = $1::uuid`, partyID.String()).Scan(&storedHash, &storedCodeHash, &storedCreatedAt, &storedExpiresAt, &revokedAt); err != nil {
 		t.Fatalf("load stored Party invite: %v", err)
 	}
 	expectedHash := sha256.Sum256([]byte(rawToken))
@@ -408,6 +418,16 @@ WHERE party_id = $1::uuid`, partyID.String()).Scan(&storedHash, &storedCreatedAt
 	}
 	if bytes.Equal(storedHash, []byte(rawToken)) {
 		t.Fatal("database stored the raw invite token")
+	}
+	expectedCodeHash, err := InviteCodeHash(testInviteCodeHashKey(), rawCode)
+	if err != nil {
+		t.Fatalf("hash expected invite code: %v", err)
+	}
+	if !bytes.Equal(storedCodeHash, expectedCodeHash) {
+		t.Fatal("stored invite code hash does not match the approved HMAC")
+	}
+	if bytes.Equal(storedCodeHash, []byte(rawCode)) || bytes.Equal(storedCodeHash, []byte(invite.Code)) {
+		t.Fatal("database stored a raw invite code representation")
 	}
 	if !storedCreatedAt.Equal(createdAt) || !storedExpiresAt.Equal(createdAt.Add(7*24*time.Hour)) {
 		t.Fatal("stored invite timestamps do not match the repository result")
@@ -420,11 +440,16 @@ WHERE party_id = $1::uuid`, partyID.String()).Scan(&storedHash, &storedCreatedAt
 func TestRepositoryCreateOrRegenerateInviteEnforcesGMPrivacyAndRole(t *testing.T) {
 	pool := setupPartyRepositoryTest(t)
 	partyID := seedInviteRepositoryParty(t, pool)
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	tokenGenerationCalls := 0
+	codeGenerationCalls := 0
 	repository.newInviteToken = func() (string, error) {
 		tokenGenerationCalls++
 		return validInviteToken(0x32), nil
+	}
+	repository.newInviteCode = func() (string, error) {
+		codeGenerationCalls++
+		return "ABCD2345", nil
 	}
 
 	if _, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testPlayerUserID)); !errors.Is(err, ErrPartyForbidden) {
@@ -443,6 +468,9 @@ func TestRepositoryCreateOrRegenerateInviteEnforcesGMPrivacyAndRole(t *testing.T
 	if tokenGenerationCalls != 0 {
 		t.Fatalf("expected unauthorized requests not to generate tokens, got %d calls", tokenGenerationCalls)
 	}
+	if codeGenerationCalls != 0 {
+		t.Fatalf("expected unauthorized requests not to generate codes, got %d calls", codeGenerationCalls)
+	}
 	requireInviteCounts(t, pool, partyID, 0, 0)
 }
 
@@ -453,9 +481,10 @@ func TestRepositoryCreateOrRegenerateInviteRevokesPreviousInvite(t *testing.T) {
 	secondCreatedAt := firstCreatedAt.Add(time.Hour)
 	firstToken := validInviteToken(0x41)
 	secondToken := validInviteToken(0x42)
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	repository.now = sequentialPartyTimes(t, firstCreatedAt, secondCreatedAt)
 	repository.newInviteToken = sequentialInviteTokens(t, firstToken, secondToken)
+	repository.newInviteCode = sequentialInviteCodes(t, "ABCD2345", "WXYZ6789")
 
 	if _, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID)); err != nil {
 		t.Fatalf("create first Party invite: %v", err)
@@ -482,9 +511,10 @@ func TestRepositoryCreateOrRegenerateInviteRollsBackFailedReplacement(t *testing
 	createdAt := time.Date(2026, 7, 13, 16, 0, 0, 0, time.UTC)
 	activeToken := validInviteToken(0x51)
 	duplicateToken := validInviteToken(0x52)
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	repository.now = func() time.Time { return createdAt }
 	repository.newInviteToken = func() (string, error) { return activeToken, nil }
+	repository.newInviteCode = func() (string, error) { return "ABCD2345", nil }
 	if _, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID)); err != nil {
 		t.Fatalf("create active Party invite: %v", err)
 	}
@@ -496,6 +526,7 @@ func TestRepositoryCreateOrRegenerateInviteRollsBackFailedReplacement(t *testing
 
 	repository.now = func() time.Time { return createdAt.Add(time.Hour) }
 	repository.newInviteToken = func() (string, error) { return duplicateToken, nil }
+	repository.newInviteCode = func() (string, error) { return "WXYZ6789", nil }
 	_, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID))
 	if err == nil {
 		t.Fatal("expected duplicate invite hash to fail replacement")
@@ -516,18 +547,105 @@ SELECT revoked_at FROM party_invites WHERE token_hash = $1`, activeHash[:]).Scan
 	requireInviteCounts(t, pool, partyID, 1, 1)
 }
 
+func TestRepositoryCreateOrRegenerateInviteRetriesCompletePairAfterCodeHashCollision(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	partyID := seedInviteRepositoryParty(t, pool)
+	createdAt := time.Date(2026, 7, 13, 16, 30, 0, 0, time.UTC)
+	collidingCode := "WXYZ6789"
+	seedHistoricalInviteCodeCollision(t, pool, collidingCode, createdAt.Add(-time.Hour))
+
+	firstToken := validInviteToken(0x53)
+	secondToken := validInviteToken(0x54)
+	repository := newTestPartyRepository(pool)
+	repository.now = func() time.Time { return createdAt }
+	repository.newInviteToken = sequentialInviteTokens(t, firstToken, secondToken)
+	repository.newInviteCode = sequentialInviteCodes(t, collidingCode, "ABCD2345")
+
+	invite, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID))
+	if err != nil {
+		t.Fatalf("create invite after code-hash collision: %v", err)
+	}
+	if invite.Token != secondToken || invite.Code != "ABCD-2345" {
+		t.Fatalf("collision retry did not return the second complete credential pair: %+v", invite)
+	}
+
+	secondTokenHash := sha256.Sum256([]byte(secondToken))
+	secondCodeHash, err := InviteCodeHash(testInviteCodeHashKey(), "ABCD2345")
+	if err != nil {
+		t.Fatalf("hash replacement code: %v", err)
+	}
+	var storedTokenHash []byte
+	var storedCodeHash []byte
+	if err := pool.QueryRow(context.Background(), `
+SELECT token_hash, code_hash
+FROM party_invites
+WHERE party_id = $1::uuid
+  AND revoked_at IS NULL`, partyID.String()).Scan(&storedTokenHash, &storedCodeHash); err != nil {
+		t.Fatalf("load collision-retried invite: %v", err)
+	}
+	if !bytes.Equal(storedTokenHash, secondTokenHash[:]) || !bytes.Equal(storedCodeHash, secondCodeHash) {
+		t.Fatal("database did not persist the second complete credential pair")
+	}
+}
+
+func TestRepositoryCreateOrRegenerateInviteExhaustedCodeCollisionsRestorePreviousInvite(t *testing.T) {
+	pool := setupPartyRepositoryTest(t)
+	partyID := seedInviteRepositoryParty(t, pool)
+	createdAt := time.Date(2026, 7, 13, 16, 45, 0, 0, time.UTC)
+	activeToken := validInviteToken(0x55)
+	repository := newTestPartyRepository(pool)
+	repository.now = func() time.Time { return createdAt }
+	repository.newInviteToken = func() (string, error) { return activeToken, nil }
+	repository.newInviteCode = func() (string, error) { return "ABCD2345", nil }
+	if _, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID)); err != nil {
+		t.Fatalf("create active invite before collision exhaustion: %v", err)
+	}
+
+	collidingCode := "WXYZ6789"
+	seedHistoricalInviteCodeCollision(t, pool, collidingCode, createdAt.Add(-time.Hour))
+	repository.now = func() time.Time { return createdAt.Add(time.Hour) }
+	tokenGenerationCalls := 0
+	repository.newInviteToken = func() (string, error) {
+		tokenGenerationCalls++
+		return validInviteToken(byte(0x60 + tokenGenerationCalls)), nil
+	}
+	codeGenerationCalls := 0
+	repository.newInviteCode = func() (string, error) {
+		codeGenerationCalls++
+		return collidingCode, nil
+	}
+
+	_, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID))
+	if err == nil {
+		t.Fatal("expected exhausted code-hash collision retries to fail")
+	}
+	if strings.Contains(err.Error(), collidingCode) {
+		t.Fatal("collision exhaustion error exposed the raw invite code")
+	}
+	if tokenGenerationCalls != maxInviteCredentialAttempts || codeGenerationCalls != maxInviteCredentialAttempts {
+		t.Fatalf("expected %d complete pair attempts, got %d tokens and %d codes",
+			maxInviteCredentialAttempts, tokenGenerationCalls, codeGenerationCalls)
+	}
+	if _, inspectErr := repository.InspectInvite(context.Background(), activeToken); inspectErr != nil {
+		t.Fatalf("previous strong invitation became unusable after collision exhaustion: %v", inspectErr)
+	}
+	requireInviteCounts(t, pool, partyID, 1, 1)
+}
+
 func TestRepositoryCreateOrRegenerateInviteSerializesConcurrentRegeneration(t *testing.T) {
 	pool := setupPartyRepositoryTest(t)
 	partyID := seedInviteRepositoryParty(t, pool)
 	createdAt := time.Date(2026, 7, 13, 17, 0, 0, 0, time.UTC)
 	firstToken := validInviteToken(0x61)
 	secondToken := validInviteToken(0x62)
-	firstRepository := NewRepository(pool)
+	firstRepository := newTestPartyRepository(pool)
 	firstRepository.now = func() time.Time { return createdAt }
 	firstRepository.newInviteToken = func() (string, error) { return firstToken, nil }
-	secondRepository := NewRepository(pool)
+	firstRepository.newInviteCode = func() (string, error) { return "ABCD2345", nil }
+	secondRepository := newTestPartyRepository(pool)
 	secondRepository.now = func() time.Time { return createdAt }
 	secondRepository.newInviteToken = func() (string, error) { return secondToken, nil }
+	secondRepository.newInviteCode = func() (string, error) { return "WXYZ6789", nil }
 
 	type inviteResult struct {
 		invite PartyInvite
@@ -554,6 +672,9 @@ func TestRepositoryCreateOrRegenerateInviteSerializesConcurrentRegeneration(t *t
 	if firstResult.invite.Token == secondResult.invite.Token {
 		t.Fatal("concurrent regeneration returned duplicate raw tokens")
 	}
+	if firstResult.invite.Code == secondResult.invite.Code {
+		t.Fatal("concurrent regeneration returned duplicate raw codes")
+	}
 	requireInviteCounts(t, pool, partyID, 2, 1)
 
 	var activeHash []byte
@@ -579,7 +700,7 @@ func TestRepositoryInspectInviteReturnsCurrentInviteWithoutSensitiveState(t *tes
 	createdAt := now.Add(-24 * time.Hour)
 	rawToken := validInviteToken(0x71)
 	insertInviteForRepositoryTest(t, pool, partyID, testGMUserID, rawToken, createdAt)
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	repository.now = func() time.Time { return now }
 
 	inspection, err := repository.InspectInvite(context.Background(), rawToken)
@@ -598,7 +719,7 @@ func TestRepositoryInspectInviteMakesUnavailableStatesIndistinguishable(t *testi
 	pool := setupPartyRepositoryTest(t)
 	partyID := seedInviteRepositoryParty(t, pool)
 	now := time.Date(2026, 7, 14, 10, 0, 0, 0, time.UTC)
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	repository.now = func() time.Time { return now }
 
 	tests := []struct {
@@ -670,9 +791,10 @@ func TestRepositoryInspectInviteHidesTokenReplacedThroughRegeneration(t *testing
 	currentTime := time.Date(2026, 7, 14, 11, 0, 0, 0, time.UTC)
 	previousToken := validInviteToken(0x76)
 	replacementToken := validInviteToken(0x77)
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	repository.now = func() time.Time { return currentTime }
 	repository.newInviteToken = sequentialInviteTokens(t, previousToken, replacementToken)
+	repository.newInviteCode = sequentialInviteCodes(t, "ABCD2345", "WXYZ6789")
 
 	if _, err := repository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID)); err != nil {
 		t.Fatalf("create previous invite: %v", err)
@@ -701,7 +823,7 @@ func TestRepositoryInspectInviteHidesTokenReplacedThroughRegeneration(t *testing
 
 func TestRepositoryInspectInvitePreservesDatabaseErrors(t *testing.T) {
 	pool := setupPartyRepositoryTest(t)
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -763,7 +885,7 @@ func TestRepositoryJoinPartyMakesUnavailableInvitesIndistinguishable(t *testing.
 	pool := setupPartyRepositoryTest(t)
 	partyID := seedInviteRepositoryParty(t, pool)
 	now := time.Date(2026, 7, 14, 14, 0, 0, 0, time.UTC)
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	repository.now = func() time.Time { return now }
 
 	replacedToken := validInviteToken(0x86)
@@ -806,9 +928,10 @@ UPDATE party_invites SET revoked_at = $1 WHERE token_hash = $2`, now.Add(-30*tim
 			name:  "replaced token",
 			token: replacedToken,
 			prepare: func(t *testing.T) {
-				creationRepository := NewRepository(pool)
+				creationRepository := newTestPartyRepository(pool)
 				creationRepository.now = func() time.Time { return now.Add(-time.Hour) }
 				creationRepository.newInviteToken = sequentialInviteTokens(t, replacedToken, validInviteToken(0x87))
+				creationRepository.newInviteCode = sequentialInviteCodes(t, "ABCD2345", "WXYZ6789")
 				if _, err := creationRepository.CreateOrRegenerateInvite(context.Background(), partyID, uuid.MustParse(testGMUserID)); err != nil {
 					t.Fatalf("create replaced join invite: %v", err)
 				}
@@ -851,7 +974,7 @@ func TestRepositoryJoinPartyHidesUnknownAndForeignCharacters(t *testing.T) {
 	now := time.Date(2026, 7, 14, 15, 0, 0, 0, time.UTC)
 	rawToken := validInviteToken(0x88)
 	partyID := seedJoinRepositoryParty(t, pool, rawToken, now.Add(-time.Hour))
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	repository.now = func() time.Time { return now }
 
 	tests := []struct {
@@ -906,7 +1029,7 @@ func TestRepositoryJoinPartyRejectsDifferentJoinForExistingMember(t *testing.T) 
 	now := time.Date(2026, 7, 14, 17, 0, 0, 0, time.UTC)
 	rawToken := validInviteToken(0x8a)
 	partyID := seedJoinRepositoryParty(t, pool, rawToken, now.Add(-time.Hour))
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	repository.now = func() time.Time { return now }
 
 	_, err := repository.JoinParty(
@@ -931,7 +1054,7 @@ func TestRepositoryJoinPartyRejectsCharacterLinkedToAnotherParty(t *testing.T) {
 	insertTestMembership(t, pool, "45000000-0000-0000-0000-000000000020", otherPartyID, testOtherGMUserID, RoleGM, nil)
 	characterID := testThirdCharacterID
 	insertTestMembership(t, pool, "45000000-0000-0000-0000-000000000021", otherPartyID, testOtherUserID, RolePlayer, &characterID)
-	repository := NewRepository(pool)
+	repository := newTestPartyRepository(pool)
 	repository.now = func() time.Time { return now }
 
 	_, err := repository.JoinParty(context.Background(), rawToken, uuid.MustParse(testOtherUserID), uuid.MustParse(testThirdCharacterID))
@@ -1190,6 +1313,18 @@ func validInviteToken(fill byte) string {
 	return base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{fill}, 32))
 }
 
+func testInviteCodeHashKey() InviteCodeHashKey {
+	var keyBytes [32]byte
+	for index := range keyBytes {
+		keyBytes[index] = byte(index + 1)
+	}
+	return NewInviteCodeHashKey(keyBytes)
+}
+
+func newTestPartyRepository(pool *pgxpool.Pool) *Repository {
+	return NewRepository(pool, testInviteCodeHashKey())
+}
+
 func sequentialInviteTokens(t *testing.T, tokens ...string) func() (string, error) {
 	t.Helper()
 	index := 0
@@ -1200,6 +1335,40 @@ func sequentialInviteTokens(t *testing.T, tokens ...string) func() (string, erro
 		token := tokens[index]
 		index++
 		return token, nil
+	}
+}
+
+func sequentialInviteCodes(t *testing.T, codes ...string) func() (string, error) {
+	t.Helper()
+	index := 0
+	return func() (string, error) {
+		if index >= len(codes) {
+			t.Fatal("Party repository requested an unexpected invite code")
+		}
+		code := codes[index]
+		index++
+		return code, nil
+	}
+}
+
+func seedHistoricalInviteCodeCollision(t *testing.T, pool *pgxpool.Pool, code string, createdAt time.Time) {
+	t.Helper()
+	otherPartyID := "34000000-0000-0000-0000-000000000003"
+	insertTestParty(t, pool, otherPartyID, "Historical Code Party", testOtherGMUserID)
+	insertTestMembership(t, pool, "44000000-0000-0000-0000-000000000004", otherPartyID, testOtherGMUserID, RoleGM, nil)
+	tokenHash := sha256.Sum256([]byte(validInviteToken(0x59)))
+	codeHash, err := InviteCodeHash(testInviteCodeHashKey(), code)
+	if err != nil {
+		t.Fatalf("hash historical collision code: %v", err)
+	}
+	_, err = pool.Exec(context.Background(), `
+INSERT INTO party_invites (
+  id, party_id, created_by_user_id, token_hash, code_hash, created_at, expires_at, revoked_at
+) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8)`,
+		uuid.New().String(), otherPartyID, testOtherGMUserID, tokenHash[:], codeHash,
+		createdAt, createdAt.Add(7*24*time.Hour), createdAt.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("insert historical invite code collision: %v", err)
 	}
 }
 
