@@ -34,6 +34,10 @@ Status: approved
 - [ ] Add exact V2 creation, saved, domain, structured-section, and provenance types.
 - [ ] Replace class-only choices with unified bounded Race/class `ruleChoices`.
 - [ ] Add calculated-base and imported-final ability-score input modes.
+- [ ] Add exact conditional defense unions and persisted AC source inputs.
+- [ ] Add explicit attack ability/proficiency inputs and bounded manual attack overrides.
+- [ ] Add fully populated persisted canonical/manual spell and feature contracts.
+- [ ] Add exact subclass timing and level-N HP progression contracts.
 - [ ] Add strict frontend and Go V2 parsing and validation.
 - [ ] Implement generated-rule calculations and override preservation.
 - [ ] Test calculated base scores plus fixed Race bonuses.
@@ -45,6 +49,19 @@ Status: approved
   choices.
 - [ ] Test manual Race receives no invented automation.
 - [ ] Test frontend and Go ability-score calculation parity.
+- [ ] Test armor, shield, unarmored-formula, manual-defense, equipped-item, and inert-manual-equipment
+  validation.
+- [ ] Test Strength, Dexterity, spellcasting, proficiency, manual override, and no-name-inference
+  attack-bonus behavior.
+- [ ] Test complete canonical/manual spell fields, explicit state, higher-level/material text, and
+  prepared-ID references.
+- [ ] Test canonical Race/Class/Subclass feature ownership, level availability, resolved display
+  fields, and provenance.
+- [ ] Test subclass null-before, required-at/after, cross-Class rejection, and Ranger Hunter.
+- [ ] Test exact level-2-through-N HP gains and reject missing, duplicate, level-1, or future gains.
+- [ ] Test TypeScript/Go exact nested-union key parity, including empty and zero-valued extra fields.
+- [ ] Test complete persisted-sheet revalidation of every authoritative derived value and retained
+  source input.
 - [ ] Add V1/V2 discriminated parsing and Mara compatibility tests.
 - [ ] Stop for review before commit or Slice 3.
 

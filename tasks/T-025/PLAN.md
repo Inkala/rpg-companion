@@ -32,8 +32,9 @@ Estimate: 2 to 3 focused days.
 - Add the V2 domain, request, response, provenance, and structured-section types.
 - Add unified bounded `ruleChoices` for Race and class decisions.
 - Add calculated-base versus imported-final ability-score inputs.
+- Add exact defense, calculated-attack, spell, feature, subclass, and HP-progression contracts.
 - Add frontend and Go calculation helpers driven by generated rules.
-- Add strict V2 parsers and validators.
+- Add strict V2 parsers and validators with nested exact-union key parity.
 - Keep V1 and Mara compatibility tests green.
 - Prove imported scores and other overrides survive source-input changes until explicitly reset.
 - Prove Reset to calculated requires usable base scores and valid canonical Race choices.
@@ -181,6 +182,21 @@ No migration file is expected. If one becomes necessary, implementation stops fo
 - invalid, duplicate, unavailable, wrong-owner, wrong-count, and failed-prerequisite rule choices;
 - manual Race receives no invented ability-score automation;
 - frontend and Go final-score calculation parity;
+- armor defense requires equipped canonical armor and optional equipped canonical shield;
+- unarmored defense retains and validates the selected compatible formula and shield policy;
+- manual defense requires an AC value and reason and ignores equipment automation;
+- calculated attack bonus uses the selected Strength, Dexterity, or supported spellcasting ability
+  and the explicit proficiency flag;
+- manual attack bonus persists its bounded value and reason, and no ability is inferred from a name;
+- canonical and manual spells persist every approved display field, explicit state, and provenance;
+- prepared spell IDs reference stored spells;
+- canonical Race, Class, and Subclass feature ownership and level availability, including rejection
+  of valid indexes from the wrong owner;
+- canonical subclass timing, required selection, cross-Class rejection, and Ranger Hunter;
+- level-N HP progression has exactly levels 2 through N with no missing, duplicate, or future gain;
+- nested union variants reject unknown and cross-variant keys even when values are empty or zero;
+- complete saved-sheet revalidation covers abilities/modifiers, proficiency, Initiative, Passive
+  Perception, Speed, HP, AC, spell calculations/slots, prepared IDs, attacks, and features;
 - proficiency and ability modifiers at boundaries;
 - Initiative and Passive Perception with none, proficiency, expertise, supported modifiers, and
   overrides;
