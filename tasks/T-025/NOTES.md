@@ -65,6 +65,22 @@ sheet as truth.
 - Ordinary save keeps the fixed `Character saved.` toast and opens the complete saved Character
   Reference. Invite creation continues to create once, join once, and open the Party.
 
+## Slice 2 contract correction
+
+- The creation request uses one `ruleChoices` collection for Race and class decisions. The backend
+  validates rule ownership, availability, prerequisites, selection count, distinctness, allowed
+  options, and manual-fallback policy.
+- Ability-score input is either calculated base scores or imported final scores with a reason.
+- Calculated mode applies validated canonical fixed and selectable Race/subrace bonuses on the
+  server.
+- Imported mode never reapplies Race bonuses. Imported values retain imported provenance and survive
+  Race changes until the player explicitly resets them.
+- Reset to calculated requires usable base scores and valid canonical Race choices.
+- Manual or unsupported Races receive no invented automation.
+- Ability modifiers always derive from the resolved final scores.
+- Slice 2 includes fixed Race, Half-Elf distinct choices, subrace, imported-value persistence,
+  reset, invalid-choice, manual-Race, and TypeScript/Go parity regressions.
+
 ## Risks
 
 - V2 affects creation, Character Reference, Party-GM reads, summaries, and Level up. Partial rollout

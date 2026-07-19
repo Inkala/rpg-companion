@@ -88,6 +88,23 @@ type ResolvedValue<T> = {
   value: T;
   provenance: ValueProvenance;
 };
+
+type RuleChoiceInput = {
+  ruleId: string;
+  optionIds: string[];
+  manualNote?: string;
+};
+
+type AbilityScoreInput =
+  | {
+      mode: 'calculated';
+      base: AbilityScoresDTO;
+    }
+  | {
+      mode: 'imported';
+      values: AbilityScoresDTO;
+      reason: string;
+    };
 ```
 
 Manual reasons and notes are length-bounded, plain text, and never interpreted as rules.
@@ -111,7 +128,7 @@ type CreateCharacterV2RequestDTO = {
     level: number;
     subclass: RuleSelection | null;
   };
-  abilityScores: AbilityScoresDTO;
+  abilityScores: AbilityScoreInput;
   proficiencies: {
     perception: 'none' | 'proficient' | 'expertise';
     skills: Array<{ name: string; rank: 'proficient' | 'expertise' }>;
@@ -130,11 +147,7 @@ type CreateCharacterV2RequestDTO = {
     speedOverride?: { value: number; reason: string };
     armorClassOverride?: { value: number; reason: string };
   };
-  classChoices: Array<{
-    ruleId: string;
-    optionIds: string[];
-    manualNote?: string;
-  }>;
+  ruleChoices: RuleChoiceInput[];
   attacks: CharacterAttackInput[];
   spellcasting: CharacterSpellcastingInput | null;
   features: CharacterFeatureInput[];
@@ -145,6 +158,18 @@ type CreateCharacterV2RequestDTO = {
 
 The request contains source inputs and explicit decisions. It does not contain owner identity,
 current HP, a complete resulting CharacterSheetV2, or authoritative calculated values.
+
+`ruleChoices` carries both Race and class decisions. The backend validates each rule ID against its
+canonical owner, selected Race/Class and level, prerequisites, selection count, distinct options,
+allowed option IDs, and manual-fallback policy. A choice belonging to another Race or class is
+invalid even when its option ID exists elsewhere.
+
+For `abilityScores.mode === 'calculated'`, the server resolves final scores from `base` plus fixed
+Race/subrace bonuses and validated selectable Race bonuses. For `imported`, `values` are already
+final: the server records imported provenance and does not apply Race bonuses again. Imported
+values survive Race and rule-choice changes until the player explicitly selects Reset to
+calculated. Reset requires retained usable base scores and a currently valid canonical Race choice
+set. Manual or unsupported Races never receive invented bonuses.
 
 ### Structured request items
 
@@ -278,6 +303,8 @@ Concept input.
 The frontend shows immediate suggestions from generated TypeScript rules. The backend repeats every
 authoritative calculation from generated Go rules and rejects mismatches or invalid choices.
 
+- Final ability scores: base values plus canonical fixed and selected Race/subrace bonuses in
+  calculated mode, or unchanged final values in imported mode.
 - Ability modifier: `floor((score - 10) / 2)`.
 - Proficiency: canonical class-level record for the single total level.
 - Initiative: Dexterity modifier plus machine-readable supported modifiers.
@@ -298,7 +325,10 @@ an explicit Reset to calculated action.
 
 - Decode V1 or V2 by the versioned request shape.
 - Obtain owner ID only from the authenticated session.
-- Validate all rule selections against generated Go rules.
+- Validate every Race and class rule choice against generated Go rules, including rule owner,
+  availability, prerequisites, selection count, distinctness, options, and manual policy.
+- Resolve calculated final ability scores on the server. Preserve imported final scores without
+  applying Race bonuses again.
 - Build CharacterSheetV2 server-side. Never trust a client-supplied full payload.
 - Validate the complete V2 envelope and top-level parity before `Repository.Create`.
 - Persist top-level fields and JSONB in the existing insert. No partial write is possible.
@@ -312,7 +342,8 @@ an explicit Reset to calculated action.
 
 1. Choose guided or manual entry.
 2. Collect Basics: name, Gender, Race, Class, level, conditional Subclass, background.
-3. Collect abilities and proficiency decisions.
+3. Collect calculated base scores or imported final scores, Race/class rule choices, and
+   proficiency decisions.
 4. Show calculated combat suggestions and override controls.
 5. Collect Attacks, Spells, Features and traits, Equipment, and Other.
 6. Review all selections, calculations, provenance, and manual fallbacks.
