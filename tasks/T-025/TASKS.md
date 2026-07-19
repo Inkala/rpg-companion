@@ -31,50 +31,50 @@ Status: approved
 
 ## Slice 2: CharacterSheetV2 contracts and calculations
 
-- [ ] Add exact V2 creation, saved, domain, structured-section, and provenance types.
-- [ ] Replace class-only choices with unified bounded Race/class `ruleChoices`.
-- [ ] Add calculated-base and imported-final ability-score input modes.
-- [ ] Add exact conditional defense unions and persisted AC source inputs.
-- [ ] Add explicit attack ability/proficiency inputs and bounded manual attack overrides.
-- [ ] Add fully populated persisted canonical/manual spell and feature contracts.
-- [ ] Add bounded manual Race, manual Class, and combined fallback contracts.
-- [ ] Add the exact lossless canonical/manual persisted-feature union.
-- [ ] Add exact subclass timing and level-N HP progression contracts.
-- [ ] Add strict frontend and Go V2 parsing and validation.
-- [ ] Implement generated-rule calculations and override preservation.
-- [ ] Test calculated base scores plus fixed Race bonuses.
-- [ ] Test Half-Elf selects two distinct available +1 bonuses and rejects duplicates.
-- [ ] Test canonical subrace bonuses are applied exactly once.
-- [ ] Test imported final scores are unchanged and survive Race changes.
-- [ ] Test Reset to calculated requires usable base scores and valid Race choices.
-- [ ] Test invalid, duplicate, unavailable, wrong-owner, wrong-count, and failed-prerequisite rule
+- [x] Add exact V2 creation, saved, domain, structured-section, and provenance types.
+- [x] Replace class-only choices with unified bounded Race/class `ruleChoices`.
+- [x] Add calculated-base and imported-final ability-score input modes.
+- [x] Add exact conditional defense unions and persisted AC source inputs.
+- [x] Add explicit attack ability/proficiency inputs and bounded manual attack overrides.
+- [x] Add fully populated persisted canonical/manual spell and feature contracts.
+- [x] Add bounded manual Race, manual Class, and combined fallback contracts.
+- [x] Add the exact lossless canonical/manual persisted-feature union.
+- [x] Add exact subclass timing and level-N HP progression contracts.
+- [x] Add strict frontend and Go V2 parsing and validation.
+- [x] Implement generated-rule calculations and override preservation.
+- [x] Test calculated base scores plus fixed Race bonuses.
+- [x] Test Half-Elf selects two distinct available +1 bonuses and rejects duplicates.
+- [x] Test canonical subrace bonuses are applied exactly once.
+- [x] Test imported final scores are unchanged and survive Race changes.
+- [x] Test Reset to calculated requires usable base scores and valid Race choices.
+- [x] Test invalid, duplicate, unavailable, wrong-owner, wrong-count, and failed-prerequisite rule
   choices.
-- [ ] Test manual Race receives no invented automation.
-- [ ] Test frontend and Go ability-score calculation parity.
-- [ ] Test armor, shield, unarmored-formula, manual-defense, equipped-item, and inert-manual-equipment
+- [x] Test manual Race receives no invented automation.
+- [x] Test frontend and Go ability-score calculation parity.
+- [x] Test armor, shield, unarmored-formula, manual-defense, equipped-item, and inert-manual-equipment
   validation.
-- [ ] Test Strength, Dexterity, spellcasting, proficiency, manual override, and no-name-inference
+- [x] Test Strength, Dexterity, spellcasting, proficiency, manual override, and no-name-inference
   attack-bonus behavior.
-- [ ] Test complete canonical/manual spell fields, explicit state, higher-level/material text, and
+- [x] Test complete canonical/manual spell fields, explicit state, higher-level/material text, and
   prepared-ID references.
-- [ ] Test canonical Race/Class/Subclass feature ownership, level availability, resolved display
+- [x] Test canonical Race/Class/Subclass feature ownership, level availability, resolved display
   fields, and provenance.
-- [ ] Test subclass null-before, required-at/after, cross-Class rejection, and Ranger Hunter.
-- [ ] Test exact level-2-through-N HP gains and reject missing, duplicate, level-1, or future gains.
-- [ ] Test TypeScript/Go exact nested-union key parity, including empty and zero-valued extra fields.
-- [ ] Test complete persisted-sheet revalidation of every authoritative derived value and retained
+- [x] Test subclass null-before, required-at/after, cross-Class rejection, and Ranger Hunter.
+- [x] Test exact level-2-through-N HP gains and reject missing, duplicate, level-1, or future gains.
+- [x] Test TypeScript/Go exact nested-union key parity, including empty and zero-valued extra fields.
+- [x] Test complete persisted-sheet revalidation of every authoritative derived value and retained
   source input.
-- [ ] Test manual Race with canonical Class builds with imported scores and Speed override, preserves
+- [x] Test manual Race with canonical Class builds with imported scores and Speed override, preserves
   Class automation, and rejects Race automation.
-- [ ] Test manual Class derives universal proficiency, requires maximum-HP override, supports valid
+- [x] Test manual Class derives universal proficiency, requires maximum-HP override, supports valid
   defense, rejects Class/Subclass automation, and requires null spellcasting.
-- [ ] Test combined manual Race/Class builds only with imported scores, Speed override, and
+- [x] Test combined manual Race/Class builds only with imported scores, Speed override, and
   maximum-HP override.
-- [ ] Test missing manual-identity imports or overrides fail safely without persistence.
-- [ ] Test manual feature ID, category, description, and provenance round-trip exactly in TypeScript
+- [x] Test missing manual-identity imports or overrides fail safely without persistence.
+- [x] Test manual feature ID, category, description, and provenance round-trip exactly in TypeScript
   and Go, including exact-key and persisted-sheet parity.
-- [ ] Add V1/V2 discriminated parsing and Mara compatibility tests.
-- [ ] Stop for review before commit or Slice 3.
+- [x] Add V1/V2 discriminated parsing and Mara compatibility tests.
+- [x] Stop for review before commit or Slice 3.
 
 ## Slice 3: backend persistence and privacy
 

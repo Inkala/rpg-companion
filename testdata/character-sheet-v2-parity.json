@@ -1,0 +1,249 @@
+{
+  "snapshotId": "srd-5-1-2014-levels-1-5-2026-07-19",
+  "coverage": {
+    "classIndexes": ["barbarian", "bard", "cleric", "druid", "fighter", "monk", "paladin", "ranger", "rogue", "sorcerer", "warlock", "wizard"],
+    "levels": [1, 2, 3, 4, 5],
+    "raceIndexes": ["dragonborn", "dwarf", "elf", "gnome", "half-elf", "half-orc", "halfling", "human", "tiefling"],
+    "subraceIndexes": ["high-elf", "hill-dwarf", "lightfoot-halfling", "rock-gnome"],
+    "abilityModes": ["calculated", "imported"],
+    "defenseVariants": ["armor", "unarmored", "manual"],
+    "casterTypes": ["full", "half", "pact", "none"],
+    "featureModifierIds": [
+      "barbarian-fast-movement-speed",
+      "barbarian-unarmored-defense-ac",
+      "bard-expertise-skills",
+      "bard-jack-of-all-trades-initiative",
+      "draconic-resilience-ac",
+      "draconic-resilience-maximum-hit-points",
+      "fighter-defense-style-ac",
+      "half-elf-skill-versatility",
+      "half-orc-menacing",
+      "high-elf-keen-senses",
+      "hill-dwarf-dwarven-toughness-maximum-hit-points",
+      "lore-bonus-proficiencies",
+      "monk-unarmored-defense-ac",
+      "monk-unarmored-movement-speed",
+      "paladin-defense-style-ac",
+      "ranger-defense-style-ac",
+      "rogue-expertise-skills",
+      "warlock-beguiling-influence-deception",
+      "warlock-beguiling-influence-persuasion"
+    ]
+  },
+  "cases": [
+    {
+      "input": {
+        "id": "barbarian-hill-dwarf-5",
+        "classIndex": "barbarian",
+        "subclassIndex": "berserker",
+        "level": 5,
+        "race": {"source": "srd", "index": "dwarf"},
+        "subraceIndex": "hill-dwarf",
+        "abilityScores": {"mode": "calculated", "base": {"strength": 12, "dexterity": 14, "constitution": 14, "intelligence": 10, "wisdom": 10, "charisma": 10}},
+        "ruleChoices": [],
+        "proficiencies": {"perception": "none", "skills": []},
+        "hitPointProgression": {"levelGains": [{"level": 2, "mode": "fixed-average"}, {"level": 3, "mode": "fixed-average"}, {"level": 4, "mode": "fixed-average"}, {"level": 5, "mode": "fixed-average"}]},
+        "defense": {"mode": "unarmored", "shieldIndex": "shield", "formulaId": "barbarian-unarmored-defense"},
+        "equipment": [{"source": "srd", "index": "shield", "quantity": 1, "equipped": true}]
+      },
+      "expected": {
+        "id": "barbarian-hill-dwarf-5",
+        "finalAbilityScores": {"strength": 12, "dexterity": 14, "constitution": 16, "intelligence": 10, "wisdom": 11, "charisma": 10},
+        "abilityModifiers": {"strength": 1, "dexterity": 2, "constitution": 3, "intelligence": 0, "wisdom": 0, "charisma": 0},
+        "proficiencyBonus": 3,
+        "initiative": 2,
+        "passivePerception": 10,
+        "speedFt": 35,
+        "maximumHitPoints": 60,
+        "armorClass": 17,
+        "spellcasting": null
+      }
+    },
+    {
+      "input": {
+        "id": "draconic-rock-gnome-5-imported",
+        "classIndex": "sorcerer",
+        "subclassIndex": "draconic",
+        "level": 5,
+        "race": {"source": "srd", "index": "gnome"},
+        "subraceIndex": "rock-gnome",
+        "abilityScores": {"mode": "imported", "values": {"strength": 8, "dexterity": 16, "constitution": 12, "intelligence": 12, "wisdom": 10, "charisma": 16}, "reason": "Transferred from an existing sheet."},
+        "ruleChoices": [],
+        "proficiencies": {"perception": "none", "skills": []},
+        "hitPointProgression": {"levelGains": [{"level": 2, "mode": "fixed-average"}, {"level": 3, "mode": "fixed-average"}, {"level": 4, "mode": "fixed-average"}, {"level": 5, "mode": "fixed-average"}]},
+        "defense": {"mode": "unarmored", "formulaId": "draconic-resilience"},
+        "equipment": [{"source": "manual", "id": "paper-shield", "name": "Other Shield", "category": "Other", "quantity": 1, "equipped": true}]
+      },
+      "expected": {
+        "id": "draconic-rock-gnome-5-imported",
+        "finalAbilityScores": {"strength": 8, "dexterity": 16, "constitution": 12, "intelligence": 12, "wisdom": 10, "charisma": 16},
+        "abilityModifiers": {"strength": -1, "dexterity": 3, "constitution": 1, "intelligence": 1, "wisdom": 0, "charisma": 3},
+        "proficiencyBonus": 3,
+        "initiative": 3,
+        "passivePerception": 10,
+        "speedFt": 25,
+        "maximumHitPoints": 32,
+        "armorClass": 16,
+        "spellcasting": {"ability": "charisma", "spellSaveDC": 14, "spellAttackBonus": 6, "slots": [4, 3, 2], "availableSpellLevels": [1, 2, 3]}
+      }
+    },
+    {
+      "input": {
+        "id": "human-fighter-1-armor",
+        "classIndex": "fighter",
+        "subclassIndex": null,
+        "level": 1,
+        "race": {"source": "srd", "index": "human"},
+        "subraceIndex": null,
+        "abilityScores": {"mode": "calculated", "base": {"strength": 15, "dexterity": 14, "constitution": 13, "intelligence": 10, "wisdom": 12, "charisma": 8}},
+        "ruleChoices": [{"ruleId": "fighter-fighting-style", "optionIds": ["fighter-fighting-style-defense"]}],
+        "proficiencies": {"perception": "none", "skills": []},
+        "hitPointProgression": {"levelGains": []},
+        "defense": {"mode": "armor", "armorIndex": "chain-mail", "shieldIndex": "shield"},
+        "equipment": [{"source": "srd", "index": "chain-mail", "quantity": 1, "equipped": true}, {"source": "srd", "index": "shield", "quantity": 1, "equipped": true}]
+      },
+      "expected": {
+        "id": "human-fighter-1-armor",
+        "finalAbilityScores": {"strength": 16, "dexterity": 15, "constitution": 14, "intelligence": 11, "wisdom": 13, "charisma": 9},
+        "abilityModifiers": {"strength": 3, "dexterity": 2, "constitution": 2, "intelligence": 0, "wisdom": 1, "charisma": -1},
+        "proficiencyBonus": 2,
+        "initiative": 2,
+        "passivePerception": 11,
+        "speedFt": 30,
+        "maximumHitPoints": 12,
+        "armorClass": 19,
+        "spellcasting": null
+      }
+    },
+    {
+      "input": {
+        "id": "high-elf-monk-2",
+        "classIndex": "monk",
+        "subclassIndex": null,
+        "level": 2,
+        "race": {"source": "srd", "index": "elf"},
+        "subraceIndex": "high-elf",
+        "abilityScores": {"mode": "calculated", "base": {"strength": 10, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 10, "charisma": 10}},
+        "ruleChoices": [],
+        "proficiencies": {"perception": "none", "skills": []},
+        "hitPointProgression": {"levelGains": [{"level": 2, "mode": "fixed-average"}]},
+        "defense": {"mode": "unarmored", "formulaId": "monk-unarmored-defense"},
+        "equipment": []
+      },
+      "expected": {
+        "id": "high-elf-monk-2",
+        "finalAbilityScores": {"strength": 10, "dexterity": 12, "constitution": 10, "intelligence": 11, "wisdom": 10, "charisma": 10},
+        "abilityModifiers": {"strength": 0, "dexterity": 1, "constitution": 0, "intelligence": 0, "wisdom": 0, "charisma": 0},
+        "proficiencyBonus": 2,
+        "initiative": 1,
+        "passivePerception": 12,
+        "speedFt": 40,
+        "maximumHitPoints": 13,
+        "armorClass": 11,
+        "spellcasting": null
+      }
+    },
+    {
+      "input": {
+        "id": "half-elf-bard-2",
+        "classIndex": "bard",
+        "subclassIndex": null,
+        "level": 2,
+        "race": {"source": "srd", "index": "half-elf"},
+        "subraceIndex": null,
+        "abilityScores": {"mode": "calculated", "base": {"strength": 10, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 10, "charisma": 10}},
+        "ruleChoices": [{"ruleId": "half-elf-ability-bonuses", "optionIds": ["strength", "wisdom"]}, {"ruleId": "half-elf-skill-versatility", "optionIds": ["skill-perception", "skill-stealth"]}],
+        "proficiencies": {"perception": "none", "skills": []},
+        "hitPointProgression": {"levelGains": [{"level": 2, "mode": "fixed-average"}]},
+        "defense": {"mode": "manual", "armorClass": 12, "reason": "Fixture transfer."},
+        "equipment": []
+      },
+      "expected": {
+        "id": "half-elf-bard-2",
+        "finalAbilityScores": {"strength": 11, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 11, "charisma": 12},
+        "abilityModifiers": {"strength": 0, "dexterity": 0, "constitution": 0, "intelligence": 0, "wisdom": 0, "charisma": 1},
+        "proficiencyBonus": 2,
+        "initiative": 1,
+        "passivePerception": 12,
+        "speedFt": 30,
+        "maximumHitPoints": 13,
+        "armorClass": 12,
+        "spellcasting": {"ability": "charisma", "spellSaveDC": 11, "spellAttackBonus": 3, "slots": [3, 0, 0], "availableSpellLevels": [1]}
+      }
+    }
+  ],
+  "contractCase": {
+    "input": {
+      "schemaVersion": "CharacterSheetV2",
+      "creationSource": "guided",
+      "identity": {"name": "Parity Wizard", "gender": "Other", "race": {"source": "srd", "index": "human"}, "background": "Sage", "class": {"source": "srd", "index": "wizard"}, "level": 1, "subclass": null},
+      "abilityScores": {"mode": "calculated", "base": {"strength": 10, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 10, "charisma": 10}},
+      "proficiencies": {"perception": "none", "skills": []},
+      "hitPointProgression": {"levelGains": []},
+      "combat": {"defense": {"mode": "manual", "armorClass": 14, "reason": "Parity transfer."}},
+      "ruleChoices": [{"ruleId": "human-extra-language", "optionIds": ["dwarvish"]}],
+      "attacks": [{"id": "fire-bolt", "name": "Fire Bolt", "attackBonus": {"mode": "calculated", "ability": "spellcasting", "proficient": true}, "damage": [{"dice": "1d10", "bonus": 0, "type": "fire"}]}],
+      "spellcasting": {"spells": [{"id": "spell-magic-missile", "source": "srd", "index": "magic-missile", "state": "prepared"}], "preparedSpellIds": ["spell-magic-missile"]},
+      "features": [{"source": "srd", "index": "spellcasting-wizard"}],
+      "equipment": [],
+      "other": []
+    },
+    "expected": {
+      "defense": {"mode": "manual", "armorClass": 14, "reason": "Parity transfer."},
+      "proficiencyBonus": {"value": 2, "provenance": {"kind": "calculated", "ruleId": "proficiency-bonus"}},
+      "armorClass": {"value": 14, "provenance": {"kind": "manual-override", "reason": "Parity transfer."}},
+      "attack": {"id": "fire-bolt", "attackBonus": {"value": 2, "provenance": {"kind": "calculated", "ruleId": "attack-bonus"}}, "attackBonusInput": {"ability": "spellcasting", "proficient": true}, "damage": [{"dice": "1d10", "bonus": 0, "type": "fire"}]},
+      "spell": {"id": "spell-magic-missile", "canonicalIndex": "magic-missile", "name": "Magic Missile", "level": 1, "school": "evocation", "castingTime": "1 action", "range": "120 feet", "components": ["V", "S"], "materialComponent": null, "duration": "Instantaneous", "concentration": false, "ritual": false, "description": "You create three glowing darts of magical force. Each dart hits a creature of your choice that you can see within range. A dart deals 1d4 + 1 force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.", "higherLevelText": "When you cast this spell using a spell slot of 2nd level or higher, the spell creates one more dart for each slot level above 1st.", "state": "prepared", "provenance": {"kind": "calculated", "ruleId": "spell-canonical"}},
+      "preparedSpellIds": ["spell-magic-missile"],
+      "feature": {"id": "spellcasting-wizard", "source": "srd", "canonicalIndex": "spellcasting-wizard", "ownerKind": "class", "name": "Spellcasting: Wizard", "category": "class", "description": "As a student of arcane magic, you have a spellbook containing spells that show the first glimmerings of your true power.", "provenance": {"kind": "calculated", "ruleId": "feature-canonical"}},
+      "subclass": null,
+      "hitPointLevelGains": []
+    },
+    "invalidUnionKeys": ["RuleSelection", "AbilityScoreInput", "DefenseInput", "HitPointLevelGain", "AttackBonusInput", "CharacterSpellInput", "CharacterFeatureInput", "CharacterEquipmentInput"]
+  },
+  "fallbackCases": [
+    {
+      "id": "manual-race-canonical-class",
+      "input": {
+        "schemaVersion": "CharacterSheetV2", "creationSource": "manual-transfer",
+        "identity": {"name": "Fallback One", "gender": "Other", "race": {"source": "manual", "name": "Custom lineage"}, "background": "Soldier", "class": {"source": "srd", "index": "fighter"}, "level": 1, "subclass": null},
+        "abilityScores": {"mode": "imported", "values": {"strength": 15, "dexterity": 14, "constitution": 13, "intelligence": 10, "wisdom": 12, "charisma": 8}, "reason": "Transferred final scores."},
+        "proficiencies": {"perception": "none", "skills": []},
+        "hitPointProgression": {"levelGains": []},
+        "combat": {"defense": {"mode": "unarmored", "formulaId": "standard-unarmored"}, "speedOverride": {"value": 35, "reason": "Transferred Race speed."}},
+        "ruleChoices": [{"ruleId": "fighter-fighting-style", "optionIds": ["fighter-fighting-style-archery"]}],
+        "attacks": [], "spellcasting": null,
+        "features": [{"source": "srd", "index": "second-wind"}], "equipment": [], "other": []
+      },
+      "expected": {"proficiencyBonus": 2, "maximumHitPoints": 11, "speedFt": 35, "armorClass": 12, "spellcasting": null, "featureIds": ["second-wind"], "featureSources": ["srd"], "featureCategories": ["class"]}
+    },
+    {
+      "id": "canonical-race-manual-class",
+      "input": {
+        "schemaVersion": "CharacterSheetV2", "creationSource": "manual-transfer",
+        "identity": {"name": "Fallback Two", "gender": "Other", "race": {"source": "srd", "index": "human"}, "background": "Wanderer", "class": {"source": "manual", "name": "Warden"}, "level": 5, "subclass": null},
+        "abilityScores": {"mode": "calculated", "base": {"strength": 10, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 10, "charisma": 10}},
+        "proficiencies": {"perception": "none", "skills": []},
+        "hitPointProgression": {"levelGains": [], "maximumOverride": {"value": 41, "reason": "Transferred maximum HP."}},
+        "combat": {"defense": {"mode": "unarmored", "formulaId": "standard-unarmored"}},
+        "ruleChoices": [{"ruleId": "human-extra-language", "optionIds": ["dwarvish"]}],
+        "attacks": [], "spellcasting": null,
+        "features": [{"source": "manual", "id": "custom-heritage", "name": "Ancestral Memory", "category": "Heritage Gift", "description": "Recall one carefully bounded ancestral memory."}], "equipment": [], "other": []
+      },
+      "expected": {"proficiencyBonus": 3, "maximumHitPoints": 41, "speedFt": 30, "armorClass": 10, "spellcasting": null, "featureIds": ["custom-heritage"], "featureSources": ["manual"], "featureCategories": ["Heritage Gift"]}
+    },
+    {
+      "id": "combined-manual-identities",
+      "input": {
+        "schemaVersion": "CharacterSheetV2", "creationSource": "manual-transfer",
+        "identity": {"name": "Fallback Three", "gender": "Other", "race": {"source": "manual", "name": "Custom lineage"}, "background": "Wanderer", "class": {"source": "manual", "name": "Warden"}, "level": 5, "subclass": null},
+        "abilityScores": {"mode": "imported", "values": {"strength": 12, "dexterity": 12, "constitution": 12, "intelligence": 12, "wisdom": 12, "charisma": 12}, "reason": "Transferred final scores."},
+        "proficiencies": {"perception": "none", "skills": []},
+        "hitPointProgression": {"levelGains": [], "maximumOverride": {"value": 41, "reason": "Transferred maximum HP."}},
+        "combat": {"defense": {"mode": "unarmored", "formulaId": "standard-unarmored"}, "speedOverride": {"value": 35, "reason": "Transferred Race speed."}},
+        "ruleChoices": [], "attacks": [], "spellcasting": null, "features": [], "equipment": [], "other": []
+      },
+      "expected": {"proficiencyBonus": 3, "maximumHitPoints": 41, "speedFt": 35, "armorClass": 11, "spellcasting": null, "featureIds": [], "featureSources": [], "featureCategories": []}
+    }
+  ]
+}
