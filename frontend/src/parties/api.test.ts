@@ -32,6 +32,7 @@ const partyDetail = {
 
 const partyInvite = {
   token: 'opaque-invite-token',
+  code: 'ABCD-EFGH',
   createdAt: '2026-07-12T10:00:00Z',
   expiresAt: '2026-07-19T10:00:00Z',
 };
@@ -132,6 +133,28 @@ describe('parties API client', () => {
     expect(fetchMock.mock.calls[0][0]).not.toContain(token);
   });
 
+  it('inspects an invitation code only in the authenticated JSON request body', async () => {
+    const code = 'ABCDEFGH';
+    const inspection = {
+      party: { id: 'party-1', name: 'The Lantern Guard' },
+      expiresAt: '2026-07-19T10:00:00Z',
+    };
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(inspection));
+    const client = createClient(fetchMock);
+
+    await expect(client.inspectPartyInviteByCode({ code })).resolves.toEqual(inspection);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.hunin.test/party-invites/code/inspect',
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      },
+    );
+    expect(fetchMock.mock.calls[0][0]).not.toContain(code);
+  });
+
   it('joins a party with the token and character id only in the JSON body', async () => {
     const token = 'opaque/token?with=sensitive-data';
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(joinResponse, 201));
@@ -147,6 +170,26 @@ describe('parties API client', () => {
       body: JSON.stringify({ token, characterId: 'character-1' }),
     });
     expect(fetchMock.mock.calls[0][0]).not.toContain(token);
+  });
+
+  it('joins with an invitation code only in the authenticated JSON request body', async () => {
+    const code = 'ABCDEFGH';
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(joinResponse, 201));
+    const client = createClient(fetchMock);
+
+    await expect(
+      client.joinPartyByCode({ code, characterId: 'character-1' }),
+    ).resolves.toEqual(joinResponse);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.hunin.test/party-invites/code/join',
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, characterId: 'character-1' }),
+      },
+    );
+    expect(fetchMock.mock.calls[0][0]).not.toContain(code);
   });
 
   it('gets a party character with both path segments encoded', async () => {
@@ -240,6 +283,30 @@ describe('parties API client', () => {
     expect(error).not.toHaveProperty('url');
     expect(error).not.toHaveProperty('body');
     expect(error).not.toHaveProperty('token');
+  });
+
+  it('never retains a submitted invitation code in API errors', async () => {
+    const code = 'ABCDEFGH';
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      jsonResponse(
+        { error: `invite code ${code} is unavailable`, code: 'invite_unavailable' },
+        400,
+      ),
+    );
+    const client = createClient(fetchMock);
+
+    const error = await client.inspectPartyInviteByCode({ code }).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toEqual(
+      new PartiesApiError('This party invite is unavailable.', 400, 'invite_unavailable'),
+    );
+    expect(String(error)).not.toContain(code);
+    expect(JSON.stringify(error)).not.toContain(code);
+    expect(error).not.toHaveProperty('url');
+    expect(error).not.toHaveProperty('body');
+    expect(error).not.toHaveProperty('code', code);
   });
 });
 

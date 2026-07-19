@@ -61,6 +61,7 @@ type PartyMemberCharacter struct {
 
 type PartyInvite struct {
 	Token     string
+	Code      string
 	CreatedAt time.Time
 	ExpiresAt time.Time
 }

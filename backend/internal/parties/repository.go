@@ -19,19 +19,25 @@ var ErrCharacterNotFound = errors.New("character not found")
 var ErrAlreadyMember = errors.New("user is already a Party member")
 var ErrCharacterAlreadyLinked = errors.New("character is already linked to a Party")
 
+const maxInviteCredentialAttempts = 8
+
 type Repository struct {
-	pool           *pgxpool.Pool
-	newID          func() uuid.UUID
-	newInviteToken func() (string, error)
-	now            func() time.Time
+	pool              *pgxpool.Pool
+	newID             func() uuid.UUID
+	newInviteToken    func() (string, error)
+	newInviteCode     func() (string, error)
+	inviteCodeHashKey InviteCodeHashKey
+	now               func() time.Time
 }
 
-func NewRepository(pool *pgxpool.Pool) *Repository {
-	return newRepository(
+func NewRepository(pool *pgxpool.Pool, inviteCodeHashKey InviteCodeHashKey) *Repository {
+	repository := newRepository(
 		pool,
 		uuid.New,
 		func() time.Time { return time.Now().UTC() },
 	)
+	repository.inviteCodeHashKey = inviteCodeHashKey
+	return repository
 }
 
 func newRepository(pool *pgxpool.Pool, newID func() uuid.UUID, now func() time.Time) *Repository {
@@ -39,6 +45,7 @@ func newRepository(pool *pgxpool.Pool, newID func() uuid.UUID, now func() time.T
 		pool:           pool,
 		newID:          newID,
 		newInviteToken: NewInviteToken,
+		newInviteCode:  NewInviteCode,
 		now:            now,
 	}
 }
@@ -322,18 +329,15 @@ FOR UPDATE OF p`
 		return PartyInvite{}, ErrPartyForbidden
 	}
 
-	rawToken, err := repository.newInviteToken()
+	credentialPair, err := repository.newInviteCredentialPair()
 	if err != nil {
-		return PartyInvite{}, errors.New("could not generate invite token")
-	}
-	tokenHash, err := InviteTokenHash(rawToken)
-	if err != nil {
-		return PartyInvite{}, err
+		return PartyInvite{}, errors.New("could not generate invite credentials")
 	}
 
 	createdAt := repository.now().UTC()
 	invite := PartyInvite{
-		Token:     rawToken,
+		Token:     credentialPair.rawToken,
+		Code:      credentialPair.formattedCode,
 		CreatedAt: createdAt,
 		ExpiresAt: createdAt.Add(7 * 24 * time.Hour),
 	}
@@ -349,24 +353,78 @@ WHERE party_id = $1::uuid
 
 	const insertInvite = `
 INSERT INTO party_invites (
-  id, party_id, created_by_user_id, token_hash, created_at, expires_at, revoked_at
-) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, NULL)`
-	if _, err := transaction.Exec(ctx, insertInvite,
-		repository.newID().String(),
-		partyID.String(),
-		requesterID.String(),
-		tokenHash,
-		invite.CreatedAt,
-		invite.ExpiresAt,
-	); err != nil {
-		return PartyInvite{}, err
+  id, party_id, created_by_user_id, token_hash, code_hash, created_at, expires_at, revoked_at
+) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, NULL)
+ON CONFLICT (code_hash) WHERE code_hash IS NOT NULL DO NOTHING`
+	for attempt := 0; attempt < maxInviteCredentialAttempts; attempt++ {
+		if attempt > 0 {
+			credentialPair, err = repository.newInviteCredentialPair()
+			if err != nil {
+				return PartyInvite{}, errors.New("could not generate invite credentials")
+			}
+			invite.Token = credentialPair.rawToken
+			invite.Code = credentialPair.formattedCode
+		}
+
+		result, err := transaction.Exec(ctx, insertInvite,
+			repository.newID().String(),
+			partyID.String(),
+			requesterID.String(),
+			credentialPair.tokenHash,
+			credentialPair.codeHash,
+			invite.CreatedAt,
+			invite.ExpiresAt,
+		)
+		if err != nil {
+			return PartyInvite{}, err
+		}
+		if result.RowsAffected() == 1 {
+			if err := transaction.Commit(ctx); err != nil {
+				return PartyInvite{}, err
+			}
+			return invite, nil
+		}
 	}
 
-	if err := transaction.Commit(ctx); err != nil {
-		return PartyInvite{}, err
+	return PartyInvite{}, errors.New("could not create unique invite credentials")
+}
+
+type inviteCredentialPair struct {
+	rawToken      string
+	formattedCode string
+	tokenHash     []byte
+	codeHash      []byte
+}
+
+func (repository *Repository) newInviteCredentialPair() (inviteCredentialPair, error) {
+	rawToken, err := repository.newInviteToken()
+	if err != nil {
+		return inviteCredentialPair{}, err
+	}
+	tokenHash, err := InviteTokenHash(rawToken)
+	if err != nil {
+		return inviteCredentialPair{}, err
 	}
 
-	return invite, nil
+	rawCode, err := repository.newInviteCode()
+	if err != nil {
+		return inviteCredentialPair{}, err
+	}
+	formattedCode, err := FormatInviteCode(rawCode)
+	if err != nil {
+		return inviteCredentialPair{}, err
+	}
+	codeHash, err := InviteCodeHash(repository.inviteCodeHashKey, rawCode)
+	if err != nil {
+		return inviteCredentialPair{}, err
+	}
+
+	return inviteCredentialPair{
+		rawToken:      rawToken,
+		formattedCode: formattedCode,
+		tokenHash:     tokenHash,
+		codeHash:      codeHash,
+	}, nil
 }
 
 func (repository *Repository) InspectInvite(ctx context.Context, rawToken string) (InviteInspection, error) {
@@ -374,8 +432,51 @@ func (repository *Repository) InspectInvite(ctx context.Context, rawToken string
 	if err != nil {
 		return InviteInspection{}, ErrInviteUnavailable
 	}
+	return repository.inspectInviteByCredentialHash(ctx, inviteTokenCredential, tokenHash)
+}
 
-	const query = `
+func (repository *Repository) InspectInviteByCode(ctx context.Context, rawCode string) (InviteInspection, error) {
+	codeHash, err := InviteCodeHash(repository.inviteCodeHashKey, rawCode)
+	if err != nil {
+		return InviteInspection{}, ErrInviteUnavailable
+	}
+	return repository.inspectInviteByCredentialHash(ctx, inviteCodeCredential, codeHash)
+}
+
+func (repository *Repository) inspectInviteByCredentialHash(
+	ctx context.Context,
+	credential inviteCredential,
+	credentialHash []byte,
+) (InviteInspection, error) {
+	query := inviteInspectionQuery(credential)
+
+	var partyID string
+	var inspection InviteInspection
+	err := repository.pool.QueryRow(ctx, query, credentialHash, repository.now().UTC()).Scan(
+		&partyID,
+		&inspection.PartyName,
+		&inspection.ExpiresAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return InviteInspection{}, ErrInviteUnavailable
+	}
+	if err != nil {
+		return InviteInspection{}, fmt.Errorf("inspect Party invitation: %w", err)
+	}
+
+	parsedPartyID, err := uuid.Parse(partyID)
+	if err != nil {
+		return InviteInspection{}, fmt.Errorf("parse inspected Party ID: %w", err)
+	}
+	inspection.PartyID = parsedPartyID
+
+	return inspection, nil
+}
+
+func inviteInspectionQuery(credential inviteCredential) string {
+	switch credential {
+	case inviteTokenCredential:
+		return `
 SELECT
   p.id::text,
   p.name,
@@ -385,28 +486,20 @@ JOIN parties p ON p.id = invite.party_id
 WHERE invite.token_hash = $1
   AND invite.revoked_at IS NULL
   AND invite.expires_at > $2`
-
-	var partyID string
-	var inspection InviteInspection
-	err = repository.pool.QueryRow(ctx, query, tokenHash, repository.now().UTC()).Scan(
-		&partyID,
-		&inspection.PartyName,
-		&inspection.ExpiresAt,
-	)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return InviteInspection{}, ErrInviteUnavailable
+	case inviteCodeCredential:
+		return `
+SELECT
+  p.id::text,
+  p.name,
+  invite.expires_at
+FROM party_invites invite
+JOIN parties p ON p.id = invite.party_id
+WHERE invite.code_hash = $1
+  AND invite.revoked_at IS NULL
+  AND invite.expires_at > $2`
+	default:
+		panic("unsupported Party invitation credential")
 	}
-	if err != nil {
-		return InviteInspection{}, err
-	}
-
-	parsedPartyID, err := uuid.Parse(partyID)
-	if err != nil {
-		return InviteInspection{}, err
-	}
-	inspection.PartyID = parsedPartyID
-
-	return inspection, nil
 }
 
 func (repository *Repository) JoinParty(
@@ -419,29 +512,56 @@ func (repository *Repository) JoinParty(
 	if err != nil {
 		return JoinPartyResult{}, ErrInviteUnavailable
 	}
+	return repository.joinPartyByCredentialHash(ctx, inviteTokenCredential, tokenHash, requesterID, characterID)
+}
+
+func (repository *Repository) JoinPartyByCode(
+	ctx context.Context,
+	rawCode string,
+	requesterID uuid.UUID,
+	characterID uuid.UUID,
+) (JoinPartyResult, error) {
+	codeHash, err := InviteCodeHash(repository.inviteCodeHashKey, rawCode)
+	if err != nil {
+		return JoinPartyResult{}, ErrInviteUnavailable
+	}
+	return repository.joinPartyByCredentialHash(ctx, inviteCodeCredential, codeHash, requesterID, characterID)
+}
+
+type inviteCredential uint8
+
+const (
+	inviteTokenCredential inviteCredential = iota
+	inviteCodeCredential
+)
+
+func (repository *Repository) joinPartyByCredentialHash(
+	ctx context.Context,
+	credential inviteCredential,
+	credentialHash []byte,
+	requesterID uuid.UUID,
+	characterID uuid.UUID,
+) (JoinPartyResult, error) {
 
 	transaction, err := repository.pool.Begin(ctx)
 	if err != nil {
-		return JoinPartyResult{}, err
+		return JoinPartyResult{}, fmt.Errorf("begin Party join: %w", err)
 	}
 	defer func() { _ = transaction.Rollback(ctx) }()
 
-	const findInviteParty = `
-SELECT party_id::text
-FROM party_invites
-WHERE token_hash = $1`
+	findInviteParty := findInvitePartyQuery(credential)
 	var partyIDText string
-	err = transaction.QueryRow(ctx, findInviteParty, tokenHash).Scan(&partyIDText)
+	err = transaction.QueryRow(ctx, findInviteParty, credentialHash).Scan(&partyIDText)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return JoinPartyResult{}, ErrInviteUnavailable
 	}
 	if err != nil {
-		return JoinPartyResult{}, err
+		return JoinPartyResult{}, fmt.Errorf("find Party invitation: %w", err)
 	}
 
 	partyID, err := uuid.Parse(partyIDText)
 	if err != nil {
-		return JoinPartyResult{}, err
+		return JoinPartyResult{}, fmt.Errorf("parse invited Party ID: %w", err)
 	}
 
 	const lockParty = `
@@ -455,25 +575,18 @@ FOR UPDATE`
 		return JoinPartyResult{}, ErrInviteUnavailable
 	}
 	if err != nil {
-		return JoinPartyResult{}, err
+		return JoinPartyResult{}, fmt.Errorf("lock invited Party: %w", err)
 	}
 
 	joinedAt := repository.now().UTC()
-	const lockCurrentInvite = `
-SELECT party_id::text
-FROM party_invites
-WHERE token_hash = $1
-  AND party_id = $2::uuid
-  AND revoked_at IS NULL
-  AND expires_at > $3
-FOR UPDATE`
+	lockCurrentInvite := lockCurrentInviteQuery(credential)
 	var currentInvitePartyID string
-	err = transaction.QueryRow(ctx, lockCurrentInvite, tokenHash, partyID.String(), joinedAt).Scan(&currentInvitePartyID)
+	err = transaction.QueryRow(ctx, lockCurrentInvite, credentialHash, partyID.String(), joinedAt).Scan(&currentInvitePartyID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return JoinPartyResult{}, ErrInviteUnavailable
 	}
 	if err != nil {
-		return JoinPartyResult{}, err
+		return JoinPartyResult{}, fmt.Errorf("lock current Party invitation: %w", err)
 	}
 
 	const lockOwnedCharacter = `
@@ -488,12 +601,12 @@ FOR UPDATE`
 		return JoinPartyResult{}, ErrCharacterNotFound
 	}
 	if err != nil {
-		return JoinPartyResult{}, err
+		return JoinPartyResult{}, fmt.Errorf("lock owned Party character: %w", err)
 	}
 
 	existing, found, err := loadExistingPartyMembership(ctx, transaction, partyID, requesterID)
 	if err != nil {
-		return JoinPartyResult{}, err
+		return JoinPartyResult{}, fmt.Errorf("load existing Party membership: %w", err)
 	}
 	if found {
 		if existing.Role == RolePlayer && existing.CharacterID == characterID {
@@ -513,7 +626,7 @@ FOR UPDATE`
 		return JoinPartyResult{}, ErrCharacterAlreadyLinked
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
-		return JoinPartyResult{}, err
+		return JoinPartyResult{}, fmt.Errorf("check linked Party character: %w", err)
 	}
 
 	membership := PartyMembership{
@@ -541,14 +654,56 @@ VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5::uuid, $6)`
 		return JoinPartyResult{}, ErrCharacterAlreadyLinked
 	}
 	if err != nil {
-		return JoinPartyResult{}, err
+		return JoinPartyResult{}, fmt.Errorf("insert Party membership: %w", err)
 	}
 
 	if err := transaction.Commit(ctx); err != nil {
-		return JoinPartyResult{}, err
+		return JoinPartyResult{}, fmt.Errorf("commit Party join: %w", err)
 	}
 
 	return JoinPartyResult{Membership: membership, Created: true}, nil
+}
+
+func findInvitePartyQuery(credential inviteCredential) string {
+	switch credential {
+	case inviteTokenCredential:
+		return `
+SELECT party_id::text
+FROM party_invites
+WHERE token_hash = $1`
+	case inviteCodeCredential:
+		return `
+SELECT party_id::text
+FROM party_invites
+WHERE code_hash = $1`
+	default:
+		panic("unsupported Party invitation credential")
+	}
+}
+
+func lockCurrentInviteQuery(credential inviteCredential) string {
+	switch credential {
+	case inviteTokenCredential:
+		return `
+SELECT party_id::text
+FROM party_invites
+WHERE token_hash = $1
+  AND party_id = $2::uuid
+  AND revoked_at IS NULL
+  AND expires_at > $3
+FOR UPDATE`
+	case inviteCodeCredential:
+		return `
+SELECT party_id::text
+FROM party_invites
+WHERE code_hash = $1
+  AND party_id = $2::uuid
+  AND revoked_at IS NULL
+  AND expires_at > $3
+FOR UPDATE`
+	default:
+		panic("unsupported Party invitation credential")
+	}
 }
 
 func loadExistingPartyMembership(

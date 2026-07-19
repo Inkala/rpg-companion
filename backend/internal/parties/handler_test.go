@@ -9,7 +9,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -285,6 +288,7 @@ func TestHandlerCreateOrRegenerateInviteReturnsTokenOnce(t *testing.T) {
 	requesterID := uuid.New()
 	partyID := uuid.New()
 	rawToken := strings.Repeat("A", 43)
+	rawCode := "ABCD-EFGH"
 	location := time.FixedZone("test-offset", 2*60*60)
 	createdAt := time.Date(2026, 7, 13, 10, 30, 0, 0, location)
 	expiresAt := createdAt.Add(7 * 24 * time.Hour)
@@ -293,7 +297,7 @@ func TestHandlerCreateOrRegenerateInviteReturnsTokenOnce(t *testing.T) {
 			if requestedPartyID != partyID || userID != requesterID {
 				t.Fatal("invite creation did not use the authenticated scoped identifiers")
 			}
-			return PartyInvite{Token: rawToken, CreatedAt: createdAt, ExpiresAt: expiresAt}, nil
+			return PartyInvite{Token: rawToken, Code: rawCode, CreatedAt: createdAt, ExpiresAt: expiresAt}, nil
 		},
 	}
 	request := authenticatedPartyRequest(http.MethodPost, "/parties/"+partyID.String()+"/invites", "", requesterID)
@@ -302,7 +306,87 @@ func TestHandlerCreateOrRegenerateInviteReturnsTokenOnce(t *testing.T) {
 
 	NewHandler(repository).CreateOrRegenerateInvite(response, request)
 
-	assertInviteCreationResponse(t, response, rawToken, "2026-07-13T08:30:00Z", "2026-07-20T08:30:00Z")
+	assertInviteCreationResponse(t, response, rawToken, rawCode, "2026-07-13T08:30:00Z", "2026-07-20T08:30:00Z")
+}
+
+func TestHandlerInspectInviteByCodeReturnsExactPrivacySafeContract(t *testing.T) {
+	requesterID := uuid.New()
+	partyID := uuid.New()
+	rawCode := "abcd-efgh"
+	expiresAt := time.Date(2026, 7, 20, 10, 30, 0, 0, time.FixedZone("test-offset", 2*60*60))
+	repository := &stubPartyHandlerRepository{
+		inspectInviteByCode: func(_ context.Context, suppliedCode string) (InviteInspection, error) {
+			if suppliedCode != rawCode {
+				t.Fatal("code inspection did not pass the submitted code unchanged to repository normalization")
+			}
+			return InviteInspection{PartyID: partyID, PartyName: "Moon Keep", ExpiresAt: expiresAt}, nil
+		},
+	}
+	response := executeCodeInspectRequest(NewHandler(repository), requesterID, rawCode)
+
+	assertInviteInspectionResponse(t, response, rawCode, partyID, "Moon Keep", "2026-07-20T08:30:00Z")
+}
+
+func TestHandlerCodeEndpointsMakeUnavailableCodesIndistinguishable(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	codes := []string{"", "not-a-code", "ABCD2345", "WXYZ-6789", "2345-ABCD"}
+	var firstInspectBody string
+	var firstJoinBody string
+
+	for _, code := range codes {
+		repository := &stubPartyHandlerRepository{
+			inspectInviteByCode: func(context.Context, string) (InviteInspection, error) {
+				return InviteInspection{}, ErrInviteUnavailable
+			},
+			joinPartyByCode: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+				return JoinPartyResult{}, ErrInviteUnavailable
+			},
+		}
+		inspectResponse := executeCodeInspectRequest(NewHandler(repository), requesterID, code)
+		joinResponse := executeCodeJoinRequest(NewHandler(repository), requesterID, code, characterID)
+		assertSensitivePartyError(t, inspectResponse, http.StatusBadRequest, "invite_unavailable")
+		assertSensitivePartyError(t, joinResponse, http.StatusBadRequest, "invite_unavailable")
+		if code != "" {
+			assertPartyResponseExcludes(t, inspectResponse, code)
+			assertPartyResponseExcludes(t, joinResponse, code)
+		}
+		if firstInspectBody == "" {
+			firstInspectBody = inspectResponse.Body.String()
+			firstJoinBody = joinResponse.Body.String()
+		} else if inspectResponse.Body.String() != firstInspectBody || joinResponse.Body.String() != firstJoinBody {
+			t.Fatal("unavailable code states returned distinguishable public errors")
+		}
+	}
+}
+
+func TestHandlerCodeJoinReturnsCreationAndReplayStatuses(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawCode := "abcd-efgh"
+	membership := joinHandlerMembership(characterID)
+
+	for _, tt := range []struct {
+		name       string
+		created    bool
+		wantStatus int
+	}{
+		{name: "new membership", created: true, wantStatus: http.StatusCreated},
+		{name: "identical replay", created: false, wantStatus: http.StatusOK},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			repository := &stubPartyHandlerRepository{
+				joinPartyByCode: func(_ context.Context, suppliedCode string, userID uuid.UUID, suppliedCharacterID uuid.UUID) (JoinPartyResult, error) {
+					if suppliedCode != rawCode || userID != requesterID || suppliedCharacterID != characterID {
+						t.Fatal("code join changed an approved repository argument")
+					}
+					return JoinPartyResult{Membership: membership, Created: tt.created}, nil
+				},
+			}
+			response := executeCodeJoinRequest(NewHandler(repository), requesterID, rawCode, characterID)
+			assertJoinResponse(t, response, tt.wantStatus, rawCode, requesterID, membership)
+		})
+	}
 }
 
 func TestHandlerCreateOrRegenerateInviteEnforcesRoleAndPrivacy(t *testing.T) {
@@ -451,6 +535,251 @@ func TestHandlerInspectInviteUsesStrictBoundedJSON(t *testing.T) {
 	}
 }
 
+func TestHandlerCodeAttemptLimiterRunsBeforeBodyDecodingAndIsSharedAcrossEndpoints(t *testing.T) {
+	requesterID := uuid.New()
+	rawCode := "ABCD-EFGH"
+	repositoryCalls := 0
+	repository := &stubPartyHandlerRepository{
+		inspectInviteByCode: func(context.Context, string) (InviteInspection, error) {
+			repositoryCalls++
+			return InviteInspection{}, ErrInviteUnavailable
+		},
+		joinPartyByCode: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+			repositoryCalls++
+			return JoinPartyResult{}, ErrInviteUnavailable
+		},
+	}
+	now := time.Date(2026, 7, 18, 12, 0, 0, 0, time.UTC)
+	limiter := auth.NewSlidingWindowLimiter(func() time.Time { return now })
+	handler := newHandlerWithLimiters(repository, auth.NewSlidingWindowLimiter(func() time.Time { return now }), limiter)
+
+	invalidRequests := []struct {
+		invoke      func(http.ResponseWriter, *http.Request)
+		path        string
+		body        string
+		contentType bool
+		status      int
+	}{
+		{invoke: handler.InspectInviteByCode, path: "/party-invites/code/inspect", body: `{"code":"` + rawCode + `"}`, status: http.StatusUnsupportedMediaType},
+		{invoke: handler.JoinByCode, path: "/party-invites/code/join", body: `{"code":"` + rawCode + `","characterId":"bad"}`, contentType: true, status: http.StatusBadRequest},
+		{invoke: handler.InspectInviteByCode, path: "/party-invites/code/inspect", body: `{"code":"` + rawCode + `","extra":true}`, contentType: true, status: http.StatusBadRequest},
+		{invoke: handler.JoinByCode, path: "/party-invites/code/join", body: strings.Repeat(" ", int(partyRequestBodyLimit)+1), contentType: true, status: http.StatusRequestEntityTooLarge},
+		{invoke: handler.InspectInviteByCode, path: "/party-invites/code/inspect", body: `{"code":"` + rawCode + `"} {}`, contentType: true, status: http.StatusBadRequest},
+	}
+	for _, fixture := range invalidRequests {
+		request := authenticatedPartyRequest(http.MethodPost, fixture.path, fixture.body, requesterID)
+		if fixture.contentType {
+			request.Header.Set("Content-Type", "application/json")
+		}
+		response := httptest.NewRecorder()
+		fixture.invoke(response, request)
+		assertSensitivePartyError(t, response, fixture.status, "validation_error")
+		assertPartyResponseExcludes(t, response, rawCode)
+	}
+	if repositoryCalls != 0 {
+		t.Fatal("structural code requests reached the repository")
+	}
+
+	response := executeCodeInspectRequest(handler, requesterID, rawCode)
+	assertSensitivePartyError(t, response, http.StatusTooManyRequests, "rate_limited")
+	if repositoryCalls != 0 {
+		t.Fatal("shared code-attempt throttle rejection reached the repository")
+	}
+}
+
+func TestHandlerCodeAttemptLimiterEnforcesHourlyAndGlobalRules(t *testing.T) {
+	rawCode := "ABCD-EFGH"
+	repository := &stubPartyHandlerRepository{
+		inspectInviteByCode: func(context.Context, string) (InviteInspection, error) {
+			return InviteInspection{}, ErrInviteUnavailable
+		},
+	}
+	now := time.Date(2026, 7, 18, 12, 0, 0, 0, time.UTC)
+	limiter := auth.NewSlidingWindowLimiter(func() time.Time { return now })
+	handler := newHandlerWithLimiters(repository, auth.NewSlidingWindowLimiter(func() time.Time { return now }), limiter)
+	hourlyUser := uuid.New()
+	for minute := 0; minute < 5; minute++ {
+		for attempt := 0; attempt < 4; attempt++ {
+			response := executeCodeInspectRequest(handler, hourlyUser, rawCode)
+			assertSensitivePartyError(t, response, http.StatusBadRequest, "invite_unavailable")
+		}
+		now = now.Add(time.Minute)
+	}
+	hourlyResponse := executeCodeInspectRequest(handler, hourlyUser, rawCode)
+	assertSensitivePartyError(t, hourlyResponse, http.StatusTooManyRequests, "rate_limited")
+	retryAfter, err := strconv.Atoi(hourlyResponse.Header().Get("Retry-After"))
+	if err != nil || retryAfter < 1 || retryAfter > 3600 {
+		t.Fatal("hourly code limit returned an invalid bounded Retry-After")
+	}
+
+	now = now.Add(time.Hour)
+	for attempt := 0; attempt < codeGlobalMinuteLimit; attempt++ {
+		response := executeCodeInspectRequest(handler, uuid.New(), rawCode)
+		assertSensitivePartyError(t, response, http.StatusBadRequest, "invite_unavailable")
+	}
+	globalResponse := executeCodeInspectRequest(handler, uuid.New(), rawCode)
+	assertSensitivePartyError(t, globalResponse, http.StatusTooManyRequests, "rate_limited")
+	if globalResponse.Header().Get("Retry-After") != "60" {
+		t.Fatal("global code limit did not return its full one-minute retry window")
+	}
+}
+
+func TestHandlerCodeAttemptLimiterCountsSuccessAndFailureWithoutReset(t *testing.T) {
+	requesterID := uuid.New()
+	partyID := uuid.New()
+	rawCode := "ABCD-EFGH"
+	expiresAt := time.Date(2026, 7, 25, 12, 0, 0, 0, time.UTC)
+	repositoryCalls := 0
+	repository := &stubPartyHandlerRepository{
+		inspectInviteByCode: func(context.Context, string) (InviteInspection, error) {
+			repositoryCalls++
+			if repositoryCalls <= 2 {
+				return InviteInspection{PartyID: partyID, PartyName: "Moon Keep", ExpiresAt: expiresAt}, nil
+			}
+			return InviteInspection{}, ErrInviteUnavailable
+		},
+	}
+	now := time.Date(2026, 7, 18, 12, 0, 0, 0, time.UTC)
+	handler := newHandlerWithLimiters(
+		repository,
+		auth.NewSlidingWindowLimiter(func() time.Time { return now }),
+		auth.NewSlidingWindowLimiter(func() time.Time { return now }),
+	)
+	for attempt := 0; attempt < codeUserMinuteLimit; attempt++ {
+		response := executeCodeInspectRequest(handler, requesterID, rawCode)
+		if attempt < 2 {
+			assertInviteInspectionResponse(t, response, rawCode, partyID, "Moon Keep", "2026-07-25T12:00:00Z")
+		} else {
+			assertSensitivePartyError(t, response, http.StatusBadRequest, "invite_unavailable")
+		}
+	}
+	response := executeCodeInspectRequest(handler, requesterID, rawCode)
+	assertSensitivePartyError(t, response, http.StatusTooManyRequests, "rate_limited")
+	if repositoryCalls != codeUserMinuteLimit {
+		t.Fatal("successful code inspection reset the shared attempt limiter")
+	}
+}
+
+func TestHandlerCodeAttemptLimiterIsAtomicUnderConcurrentInspectAndJoin(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawCode := "ABCD-EFGH"
+	var repositoryCalls atomic.Int64
+	repository := &stubPartyHandlerRepository{
+		inspectInviteByCode: func(context.Context, string) (InviteInspection, error) {
+			repositoryCalls.Add(1)
+			return InviteInspection{}, ErrInviteUnavailable
+		},
+		joinPartyByCode: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+			repositoryCalls.Add(1)
+			return JoinPartyResult{}, ErrInviteUnavailable
+		},
+	}
+	now := time.Date(2026, 7, 18, 14, 0, 0, 0, time.UTC)
+	handler := newHandlerWithLimiters(
+		repository,
+		auth.NewSlidingWindowLimiter(func() time.Time { return now }),
+		auth.NewSlidingWindowLimiter(func() time.Time { return now }),
+	)
+
+	var allowed atomic.Int64
+	var throttled atomic.Int64
+	var waitGroup sync.WaitGroup
+	for attempt := 0; attempt < 100; attempt++ {
+		waitGroup.Add(1)
+		go func(index int) {
+			defer waitGroup.Done()
+			var response *httptest.ResponseRecorder
+			if index%2 == 0 {
+				response = executeCodeInspectRequest(handler, requesterID, rawCode)
+			} else {
+				response = executeCodeJoinRequest(handler, requesterID, rawCode, characterID)
+			}
+			switch response.Code {
+			case http.StatusBadRequest:
+				allowed.Add(1)
+			case http.StatusTooManyRequests:
+				throttled.Add(1)
+			default:
+				t.Errorf("unexpected concurrent code-attempt status %d", response.Code)
+			}
+		}(attempt)
+	}
+	waitGroup.Wait()
+	if allowed.Load() != codeUserMinuteLimit || throttled.Load() != 100-codeUserMinuteLimit || repositoryCalls.Load() != codeUserMinuteLimit {
+		t.Fatal("concurrent code attempts bypassed the atomic shared limiter")
+	}
+}
+
+func TestHandlerCodeAttemptLimiterUsesOnlyApprovedPrivateKeysAndRules(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawCode := "ABCD-EFGH"
+	limiter := &recordingCodeAttemptLimiter{result: auth.LimitResult{Allowed: true}}
+	repository := &stubPartyHandlerRepository{
+		joinPartyByCode: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+			return JoinPartyResult{}, ErrInviteUnavailable
+		},
+	}
+	handler := newHandlerWithLimiters(repository, auth.NewSlidingWindowLimiter(time.Now), limiter)
+	response := executeCodeJoinRequest(handler, requesterID, rawCode, characterID)
+	assertSensitivePartyError(t, response, http.StatusBadRequest, "invite_unavailable")
+
+	if len(limiter.calls) != 1 || len(limiter.calls[0]) != 3 {
+		t.Fatal("code endpoint did not atomically evaluate exactly three limiter rules")
+	}
+	digest := sha256.Sum256([]byte(requesterID.String()))
+	digestText := hex.EncodeToString(digest[:])
+	want := []auth.LimitRule{
+		{Key: "party-invite-code:user-minute:" + digestText, Limit: 5, Window: time.Minute},
+		{Key: "party-invite-code:user-hour:" + digestText, Limit: 20, Window: time.Hour},
+		{Key: "party-invite-code:global-minute", Limit: 100, Window: time.Minute},
+	}
+	if !reflect.DeepEqual(limiter.calls[0], want) {
+		t.Fatal("code endpoint used an unexpected layered limiter contract")
+	}
+	for _, rule := range limiter.calls[0] {
+		for _, forbidden := range []string{rawCode, requesterID.String(), characterID.String(), "handler-user", "example.com"} {
+			if strings.Contains(rule.Key, forbidden) {
+				t.Fatal("code limiter key exposed user or credential data")
+			}
+		}
+	}
+
+	unauthenticated := httptest.NewRequest(http.MethodPost, "/party-invites/code/inspect", strings.NewReader(`{"code":"`+rawCode+`"}`))
+	unauthenticated.Header.Set("Content-Type", "application/json")
+	unauthenticatedResponse := httptest.NewRecorder()
+	handler.InspectInviteByCode(unauthenticatedResponse, unauthenticated)
+	assertSensitivePartyError(t, unauthenticatedResponse, http.StatusUnauthorized, "authentication_required")
+	if len(limiter.calls) != 1 {
+		t.Fatal("authentication failure consumed a code-attempt limit")
+	}
+}
+
+func TestHandlerCodeAttemptRetryAfterIsClampedThroughOneHour(t *testing.T) {
+	requesterID := uuid.New()
+	rawCode := "ABCD-EFGH"
+	for _, tt := range []struct {
+		name       string
+		retryAfter time.Duration
+		wantHeader string
+	}{
+		{name: "zero", retryAfter: 0, wantHeader: "1"},
+		{name: "fraction", retryAfter: 1500 * time.Millisecond, wantHeader: "2"},
+		{name: "above hour", retryAfter: 90 * time.Minute, wantHeader: "3600"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			limiter := &recordingCodeAttemptLimiter{result: auth.LimitResult{Allowed: false, RetryAfter: tt.retryAfter, Window: time.Hour}}
+			handler := newHandlerWithLimiters(&stubPartyHandlerRepository{}, auth.NewSlidingWindowLimiter(time.Now), limiter)
+			response := executeCodeInspectRequest(handler, requesterID, rawCode)
+			assertSensitivePartyError(t, response, http.StatusTooManyRequests, "rate_limited")
+			if response.Header().Get("Retry-After") != tt.wantHeader {
+				t.Fatal("code attempt throttle returned an unbounded Retry-After value")
+			}
+		})
+	}
+}
+
 func TestInviteHandlersMapRepositoryFailuresToGenericServerErrors(t *testing.T) {
 	requesterID := uuid.New()
 	partyID := uuid.New()
@@ -489,6 +818,29 @@ func TestInviteHandlersMapRepositoryFailuresToGenericServerErrors(t *testing.T) 
 		assertPartyResponseExcludes(t, response, rawToken)
 		assertPartyResponseExcludes(t, response, databaseError.Error())
 	})
+}
+
+func TestCodeInviteHandlersMapRepositoryFailuresToGenericServerErrors(t *testing.T) {
+	requesterID := uuid.New()
+	characterID := uuid.New()
+	rawCode := "ABCD-EFGH"
+	databaseError := errors.New("private-code-database-detail")
+	repository := &stubPartyHandlerRepository{
+		inspectInviteByCode: func(context.Context, string) (InviteInspection, error) {
+			return InviteInspection{}, databaseError
+		},
+		joinPartyByCode: func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error) {
+			return JoinPartyResult{}, databaseError
+		},
+	}
+
+	inspectResponse := executeCodeInspectRequest(NewHandler(repository), requesterID, rawCode)
+	joinResponse := executeCodeJoinRequest(NewHandler(repository), requesterID, rawCode, characterID)
+	for _, response := range []*httptest.ResponseRecorder{inspectResponse, joinResponse} {
+		assertSensitivePartyError(t, response, http.StatusInternalServerError, "server_error")
+		assertPartyResponseExcludes(t, response, rawCode)
+		assertPartyResponseExcludes(t, response, databaseError.Error())
+	}
 }
 
 func TestHandlerJoinReturnsCreationAndReplayStatusesWithoutChangingDTO(t *testing.T) {
@@ -842,12 +1194,14 @@ func TestHandlerMapsRepositoryFailuresToGenericServerErrors(t *testing.T) {
 }
 
 type stubPartyHandlerRepository struct {
-	createParty   func(context.Context, uuid.UUID, string) (Party, error)
-	listParties   func(context.Context, uuid.UUID) ([]PartySummary, error)
-	getParty      func(context.Context, uuid.UUID, uuid.UUID) (PartyDetail, error)
-	createInvite  func(context.Context, uuid.UUID, uuid.UUID) (PartyInvite, error)
-	inspectInvite func(context.Context, string) (InviteInspection, error)
-	joinParty     func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error)
+	createParty         func(context.Context, uuid.UUID, string) (Party, error)
+	listParties         func(context.Context, uuid.UUID) ([]PartySummary, error)
+	getParty            func(context.Context, uuid.UUID, uuid.UUID) (PartyDetail, error)
+	createInvite        func(context.Context, uuid.UUID, uuid.UUID) (PartyInvite, error)
+	inspectInvite       func(context.Context, string) (InviteInspection, error)
+	inspectInviteByCode func(context.Context, string) (InviteInspection, error)
+	joinParty           func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error)
+	joinPartyByCode     func(context.Context, string, uuid.UUID, uuid.UUID) (JoinPartyResult, error)
 }
 
 func (repository *stubPartyHandlerRepository) CreateParty(ctx context.Context, creatorID uuid.UUID, name string) (Party, error) {
@@ -885,6 +1239,13 @@ func (repository *stubPartyHandlerRepository) InspectInvite(ctx context.Context,
 	return repository.inspectInvite(ctx, rawToken)
 }
 
+func (repository *stubPartyHandlerRepository) InspectInviteByCode(ctx context.Context, rawCode string) (InviteInspection, error) {
+	if repository.inspectInviteByCode == nil {
+		panic("unexpected InspectInviteByCode call")
+	}
+	return repository.inspectInviteByCode(ctx, rawCode)
+}
+
 func (repository *stubPartyHandlerRepository) JoinParty(
 	ctx context.Context,
 	rawToken string,
@@ -897,11 +1258,33 @@ func (repository *stubPartyHandlerRepository) JoinParty(
 	return repository.joinParty(ctx, rawToken, requesterID, characterID)
 }
 
+func (repository *stubPartyHandlerRepository) JoinPartyByCode(
+	ctx context.Context,
+	rawCode string,
+	requesterID uuid.UUID,
+	characterID uuid.UUID,
+) (JoinPartyResult, error) {
+	if repository.joinPartyByCode == nil {
+		panic("unexpected JoinPartyByCode call")
+	}
+	return repository.joinPartyByCode(ctx, rawCode, requesterID, characterID)
+}
+
 type recordingJoinLimiter struct {
 	keys    []string
 	limits  []int
 	windows []time.Duration
 	result  auth.LimitResult
+}
+
+type recordingCodeAttemptLimiter struct {
+	calls  [][]auth.LimitRule
+	result auth.LimitResult
+}
+
+func (limiter *recordingCodeAttemptLimiter) AllowAll(rules []auth.LimitRule) auth.LimitResult {
+	limiter.calls = append(limiter.calls, append([]auth.LimitRule(nil), rules...))
+	return limiter.result
 }
 
 func (limiter *recordingJoinLimiter) Allow(key string, limit int, window time.Duration) auth.LimitResult {
@@ -973,6 +1356,16 @@ func assertPartyResponseExcludes(t *testing.T, response *httptest.ResponseRecord
 	if strings.Contains(response.Body.String(), forbidden) {
 		t.Fatal("public response exposed a private request value or database detail")
 	}
+	for name, values := range response.Header() {
+		if strings.Contains(name, forbidden) {
+			t.Fatal("public response header name exposed a private request value or database detail")
+		}
+		for _, value := range values {
+			if strings.Contains(value, forbidden) {
+				t.Fatal("public response header value exposed a private request value or database detail")
+			}
+		}
+	}
 }
 
 func assertSensitivePartyError(t *testing.T, response *httptest.ResponseRecorder, wantStatus int, wantCode string) {
@@ -1004,6 +1397,7 @@ func assertInviteCreationResponse(
 	t *testing.T,
 	response *httptest.ResponseRecorder,
 	rawToken string,
+	rawCode string,
 	wantCreatedAt string,
 	wantExpiresAt string,
 ) {
@@ -1023,14 +1417,14 @@ func assertInviteCreationResponse(
 	if err := json.Unmarshal(response.Body.Bytes(), &fields); err != nil {
 		t.Fatal("invite-creation response was not a JSON object")
 	}
-	if len(fields) != 3 || fields["token"] == nil || fields["createdAt"] == nil || fields["expiresAt"] == nil {
+	if len(fields) != 4 || fields["token"] == nil || fields["code"] == nil || fields["createdAt"] == nil || fields["expiresAt"] == nil {
 		t.Fatal("invite-creation response exposed an unexpected field set")
 	}
-	if body.Token != rawToken || body.CreatedAt != wantCreatedAt || body.ExpiresAt != wantExpiresAt {
+	if body.Token != rawToken || body.Code != rawCode || body.CreatedAt != wantCreatedAt || body.ExpiresAt != wantExpiresAt {
 		t.Fatal("invite-creation response did not preserve the approved values")
 	}
-	if strings.Count(response.Body.String(), rawToken) != 1 {
-		t.Fatal("invite-creation response must serialize the raw token exactly once")
+	if strings.Count(response.Body.String(), rawToken) != 1 || strings.Count(response.Body.String(), rawCode) != 1 {
+		t.Fatal("invite-creation response must serialize each raw credential exactly once")
 	}
 }
 
@@ -1074,6 +1468,30 @@ func executeJoinRequest(handler Handler, requesterID uuid.UUID, rawToken string,
 	request.Header.Set("Content-Type", "application/json")
 	response := httptest.NewRecorder()
 	handler.Join(response, request)
+	return response
+}
+
+func executeCodeInspectRequest(handler Handler, requesterID uuid.UUID, rawCode string) *httptest.ResponseRecorder {
+	body, err := json.Marshal(map[string]string{"code": rawCode})
+	if err != nil {
+		panic("could not build code-inspection request fixture")
+	}
+	request := authenticatedPartyRequest(http.MethodPost, "/party-invites/code/inspect", string(body), requesterID)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	handler.InspectInviteByCode(response, request)
+	return response
+}
+
+func executeCodeJoinRequest(handler Handler, requesterID uuid.UUID, rawCode string, characterID uuid.UUID) *httptest.ResponseRecorder {
+	body, err := json.Marshal(map[string]string{"code": rawCode, "characterId": characterID.String()})
+	if err != nil {
+		panic("could not build code-join request fixture")
+	}
+	request := authenticatedPartyRequest(http.MethodPost, "/party-invites/code/join", string(body), requesterID)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	handler.JoinByCode(response, request)
 	return response
 }
 

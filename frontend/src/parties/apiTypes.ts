@@ -45,12 +45,17 @@ export type PartyDetailDTO = {
 
 export type PartyInviteDTO = {
   token: string;
+  code: string;
   createdAt: string;
   expiresAt: string;
 };
 
 export type PartyInviteInspectionRequestDTO = {
   token: string;
+};
+
+export type PartyInviteCodeInspectionRequestDTO = {
+  code: string;
 };
 
 export type PartyInviteInspectionResponseDTO = {
@@ -63,6 +68,11 @@ export type PartyInviteInspectionResponseDTO = {
 
 export type JoinPartyRequestDTO = {
   token: string;
+  characterId: string;
+};
+
+export type JoinPartyByCodeRequestDTO = {
+  code: string;
   characterId: string;
 };
 

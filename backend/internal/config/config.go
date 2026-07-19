@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"net"
 	"net/url"
@@ -9,12 +10,39 @@ import (
 	"strings"
 )
 
+const inviteCodeHashKeyByteLength = 32
+
+type InviteCodeHashKey struct {
+	value [inviteCodeHashKeyByteLength]byte
+}
+
+func (key InviteCodeHashKey) Bytes() [inviteCodeHashKeyByteLength]byte {
+	return key.value
+}
+
+func (InviteCodeHashKey) String() string {
+	return "[REDACTED]"
+}
+
+func (InviteCodeHashKey) GoString() string {
+	return "[REDACTED]"
+}
+
+func (InviteCodeHashKey) MarshalJSON() ([]byte, error) {
+	return nil, errors.New("invite code hash key cannot be serialized")
+}
+
+func (InviteCodeHashKey) MarshalText() ([]byte, error) {
+	return nil, errors.New("invite code hash key cannot be serialized")
+}
+
 type Config struct {
-	Port           string
-	AppEnv         string
-	DatabaseURL    string
-	AllowedOrigins []string
-	CookieSecure   bool
+	Port              string
+	AppEnv            string
+	DatabaseURL       string
+	AllowedOrigins    []string
+	CookieSecure      bool
+	InviteCodeHashKey InviteCodeHashKey
 }
 
 func FromEnv() (Config, error) {
@@ -26,6 +54,11 @@ func FromEnv() (Config, error) {
 	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
 	if !isValidDatabaseURL(databaseURL) {
 		return Config{}, errors.New("DATABASE_URL is invalid")
+	}
+
+	inviteCodeHashKey, err := parseInviteCodeHashKey(os.Getenv("INVITE_CODE_HASH_KEY"))
+	if err != nil {
+		return Config{}, err
 	}
 
 	allowedOrigins, err := parseAllowedOrigins(os.Getenv("ALLOWED_ORIGINS"), appEnv)
@@ -43,12 +76,27 @@ func FromEnv() (Config, error) {
 	}
 
 	return Config{
-		Port:           port,
-		AppEnv:         appEnv,
-		DatabaseURL:    databaseURL,
-		AllowedOrigins: allowedOrigins,
-		CookieSecure:   appEnv == "production",
+		Port:              port,
+		AppEnv:            appEnv,
+		DatabaseURL:       databaseURL,
+		AllowedOrigins:    allowedOrigins,
+		CookieSecure:      appEnv == "production",
+		InviteCodeHashKey: inviteCodeHashKey,
 	}, nil
+}
+
+func parseInviteCodeHashKey(value string) (InviteCodeHashKey, error) {
+	decoded, err := base64.RawURLEncoding.DecodeString(value)
+	if err != nil || len(decoded) != inviteCodeHashKeyByteLength {
+		return InviteCodeHashKey{}, errors.New("INVITE_CODE_HASH_KEY is invalid")
+	}
+	if base64.RawURLEncoding.EncodeToString(decoded) != value {
+		return InviteCodeHashKey{}, errors.New("INVITE_CODE_HASH_KEY is invalid")
+	}
+
+	var key InviteCodeHashKey
+	copy(key.value[:], decoded)
+	return key, nil
 }
 
 func isSupportedAppEnvironment(appEnv string) bool {

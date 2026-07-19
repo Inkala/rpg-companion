@@ -281,7 +281,7 @@ func TestProductionSignInSessionCookieIsSecure(t *testing.T) {
 	pool := setupIntegrationDatabase(t)
 	handler := New(
 		characters.NewRepository(pool),
-		parties.NewRepository(pool),
+		parties.NewRepository(pool, serverTestInviteCodeHashKey()),
 		auth.NewRepository(pool),
 		Options{
 			AllowedOrigins: []string{localOrigin},
@@ -597,6 +597,8 @@ func TestPartyRoutesRequireSessionAndSetNoStore(t *testing.T) {
 		{name: "create or regenerate invite", method: http.MethodPost, path: "/parties/" + partyID + "/invites"},
 		{name: "inspect invite", method: http.MethodPost, path: "/party-invites/inspect"},
 		{name: "join", method: http.MethodPost, path: "/party-invites/join"},
+		{name: "inspect invite code", method: http.MethodPost, path: "/party-invites/code/inspect"},
+		{name: "join by invite code", method: http.MethodPost, path: "/party-invites/code/join"},
 		{name: "GM character reference", method: http.MethodGet, path: "/parties/" + partyID + "/characters/" + characterID},
 	}
 
@@ -636,6 +638,8 @@ func TestPartyPathsSetNoStoreForAllResponseStatuses(t *testing.T) {
 		"/parties/00000000-0000-0000-0000-000000000001/invites",
 		"/party-invites/inspect",
 		"/party-invites/join",
+		"/party-invites/code/inspect",
+		"/party-invites/code/join",
 	}
 
 	for _, path := range paths {
@@ -682,6 +686,8 @@ func TestUnsupportedPartyMethodsDoNotReachHandlers(t *testing.T) {
 		"/parties/" + partyID + "/invites",
 		"/party-invites/inspect",
 		"/party-invites/join",
+		"/party-invites/code/inspect",
+		"/party-invites/code/join",
 		"/parties/" + partyID + "/characters/" + characterID,
 	}
 	methods := []string{http.MethodPut, http.MethodPatch, http.MethodDelete}
@@ -1092,6 +1098,72 @@ WHERE id = $1::uuid`, playerCharacter.ID); err != nil {
 	}
 }
 
+func TestAuthenticatedPartyInvitationCodeFlowPreservesTokenCompatibilityAndPrivacy(t *testing.T) {
+	pool := setupIntegrationDatabase(t)
+	handler := newTestServer(pool)
+	gmCookie, _ := registerTestUser(t, handler, "code-flow-gm")
+	playerCookie, _ := registerTestUser(t, handler, "code-flow-player")
+	playerCharacter, _ := createServerCharacter(t, handler, playerCookie)
+	party := createServerParty(t, handler, gmCookie, "Code Flow Party")
+
+	var serverLogs bytes.Buffer
+	previousLogWriter := log.Writer()
+	log.SetOutput(&serverLogs)
+	t.Cleanup(func() { log.SetOutput(previousLogWriter) })
+
+	firstInvite := decodeServerInvite(t, createServerInvite(t, handler, gmCookie, party.ID))
+	signedOut := performServerJSONRequest(t, handler, nil, http.MethodPost, "/party-invites/code/inspect", map[string]any{"code": firstInvite.Code})
+	requireServerStatus(t, signedOut, http.StatusUnauthorized)
+	assertServerResponseExcludes(t, signedOut, firstInvite.Code, firstInvite.Token)
+
+	codeInput := strings.ToLower(strings.ReplaceAll(firstInvite.Code, "-", ""))
+	codeInspection := performServerJSONRequest(t, handler, playerCookie, http.MethodPost, "/party-invites/code/inspect", map[string]any{"code": codeInput})
+	requireServerStatus(t, codeInspection, http.StatusOK)
+	assertInviteInspectionPrivacy(t, codeInspection)
+	assertServerResponseExcludes(t, codeInspection, firstInvite.Code, codeInput, firstInvite.Token)
+
+	tokenInspection := performServerJSONRequest(t, handler, playerCookie, http.MethodPost, "/party-invites/inspect", map[string]any{"token": firstInvite.Token})
+	requireServerStatus(t, tokenInspection, http.StatusOK)
+	if !bytes.Equal(codeInspection.Body.Bytes(), tokenInspection.Body.Bytes()) {
+		t.Fatal("code and token inspection did not reuse the exact public response contract")
+	}
+
+	replacement := decodeServerInvite(t, createServerInvite(t, handler, gmCookie, party.ID))
+	for _, unavailable := range []struct {
+		path string
+		body map[string]any
+		raw  string
+	}{
+		{path: "/party-invites/code/inspect", body: map[string]any{"code": firstInvite.Code}, raw: firstInvite.Code},
+		{path: "/party-invites/inspect", body: map[string]any{"token": firstInvite.Token}, raw: firstInvite.Token},
+	} {
+		response := performServerJSONRequest(t, handler, playerCookie, http.MethodPost, unavailable.path, unavailable.body)
+		assertServerPartyError(t, response, http.StatusBadRequest, "invite_unavailable", "invite unavailable")
+		assertServerResponseExcludes(t, response, unavailable.raw)
+	}
+
+	joinResponse := performServerJSONRequest(t, handler, playerCookie, http.MethodPost, "/party-invites/code/join", map[string]any{
+		"code": replacement.Code, "characterId": playerCharacter.ID,
+	})
+	requireServerStatus(t, joinResponse, http.StatusCreated)
+	assertExactServerJSONFields(t, joinResponse, "partyId", "membershipId", "role", "characterId", "joinedAt")
+	assertServerResponseExcludes(t, joinResponse, replacement.Code, replacement.Token)
+
+	replayResponse := performServerJSONRequest(t, handler, playerCookie, http.MethodPost, "/party-invites/code/join", map[string]any{
+		"code": strings.ToLower(replacement.Code), "characterId": playerCharacter.ID,
+	})
+	requireServerStatus(t, replayResponse, http.StatusOK)
+	if !bytes.Equal(joinResponse.Body.Bytes(), replayResponse.Body.Bytes()) {
+		t.Fatal("code join replay changed the frozen membership response")
+	}
+	assertInviteCredentialsNotStoredRaw(t, pool, firstInvite.Token, firstInvite.Code, replacement.Token, replacement.Code)
+	for _, credential := range []string{firstInvite.Token, firstInvite.Code, codeInput, replacement.Token, replacement.Code} {
+		if strings.Contains(serverLogs.String(), credential) {
+			t.Fatal("server logs exposed an invitation credential")
+		}
+	}
+}
+
 func TestPartyInviteUnavailableStatesThroughServer(t *testing.T) {
 	pool := setupIntegrationDatabase(t)
 	handler := newTestServer(pool)
@@ -1323,6 +1395,7 @@ type partyMemberCharacterHTTPResponse struct {
 
 type partyInviteHTTPResponse struct {
 	Token     string `json:"token"`
+	Code      string `json:"code"`
 	CreatedAt string `json:"createdAt"`
 	ExpiresAt string `json:"expiresAt"`
 }
@@ -1464,7 +1537,7 @@ func createServerInvite(t *testing.T, handler http.Handler, cookie *http.Cookie,
 	t.Helper()
 	response := performServerJSONRequest(t, handler, cookie, http.MethodPost, "/parties/"+partyID+"/invites", nil)
 	requireServerStatus(t, response, http.StatusCreated)
-	assertExactServerJSONFields(t, response, "token", "createdAt", "expiresAt")
+	assertExactServerJSONFields(t, response, "token", "code", "createdAt", "expiresAt")
 	return response
 }
 
@@ -1475,8 +1548,12 @@ func decodeServerInvite(t *testing.T, response *httptest.ResponseRecorder) party
 	if _, err := parties.InviteTokenHash(invite.Token); err != nil {
 		t.Fatal("invite creation response did not contain a valid credential")
 	}
-	if !strings.Contains(response.Body.String(), invite.Token) {
-		t.Fatal("invite creation response omitted its one-time credential")
+	formattedCode, err := parties.FormatInviteCode(invite.Code)
+	if err != nil || formattedCode != invite.Code {
+		t.Fatal("invite creation response did not contain a valid formatted code")
+	}
+	if strings.Count(response.Body.String(), invite.Token) != 1 || strings.Count(response.Body.String(), invite.Code) != 1 {
+		t.Fatal("invite creation response did not return each credential exactly once")
 	}
 	return invite
 }
@@ -1549,21 +1626,22 @@ WHERE party_id = $1::uuid AND revoked_at IS NULL`, partyID).Scan(&count); err !=
 
 func assertInviteCredentialsNotStoredRaw(t *testing.T, pool *pgxpool.Pool, credentials ...string) {
 	t.Helper()
-	rows, err := pool.Query(context.Background(), `SELECT token_hash FROM party_invites`)
+	rows, err := pool.Query(context.Background(), `SELECT token_hash, code_hash FROM party_invites`)
 	if err != nil {
 		t.Fatalf("load persisted invite hashes: %v", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var stored []byte
-		if err := rows.Scan(&stored); err != nil {
+		var storedTokenHash []byte
+		var storedCodeHash []byte
+		if err := rows.Scan(&storedTokenHash, &storedCodeHash); err != nil {
 			t.Fatalf("scan persisted invite hash: %v", err)
 		}
-		if len(stored) != sha256.Size {
-			t.Fatal("persisted invite hash did not contain exactly 32 bytes")
+		if len(storedTokenHash) != sha256.Size || (storedCodeHash != nil && len(storedCodeHash) != sha256.Size) {
+			t.Fatal("persisted invite hashes did not contain exactly 32 bytes")
 		}
 		for _, credential := range credentials {
-			if bytes.Equal(stored, []byte(credential)) {
+			if bytes.Equal(storedTokenHash, []byte(credential)) || bytes.Equal(storedCodeHash, []byte(credential)) {
 				t.Fatal("PostgreSQL retained a raw invite credential")
 			}
 		}
@@ -1678,13 +1756,21 @@ func decodeServerJSON(t *testing.T, response *httptest.ResponseRecorder, destina
 func newTestServer(pool *pgxpool.Pool) http.Handler {
 	return New(
 		characters.NewRepository(pool),
-		parties.NewRepository(pool),
+		parties.NewRepository(pool, serverTestInviteCodeHashKey()),
 		auth.NewRepository(pool),
 		Options{
 			AllowedOrigins: []string{localOrigin},
 			PasswordConfig: testPasswordConfig(),
 		},
 	)
+}
+
+func serverTestInviteCodeHashKey() parties.InviteCodeHashKey {
+	var keyBytes [32]byte
+	for index := range keyBytes {
+		keyBytes[index] = byte(index + 1)
+	}
+	return parties.NewInviteCodeHashKey(keyBytes)
 }
 
 func testPasswordConfig() auth.PasswordConfig {

@@ -40,6 +40,8 @@ func New(characterRepository *characters.Repository, partyRepository *parties.Re
 	mux.Handle("POST /parties/{partyId}/invites", authenticator.RequireSession(http.HandlerFunc(partyHandler.CreateOrRegenerateInvite)))
 	mux.Handle("POST /party-invites/inspect", authenticator.RequireSession(http.HandlerFunc(partyHandler.InspectInvite)))
 	mux.Handle("POST /party-invites/join", authenticator.RequireSession(http.HandlerFunc(partyHandler.Join)))
+	mux.Handle("POST /party-invites/code/inspect", authenticator.RequireSession(http.HandlerFunc(partyHandler.InspectInviteByCode)))
+	mux.Handle("POST /party-invites/code/join", authenticator.RequireSession(http.HandlerFunc(partyHandler.JoinByCode)))
 	mux.Handle("GET /parties/{partyId}/characters/{characterId}", authenticator.RequireSession(http.HandlerFunc(characterHandler.GetByIDForPartyGM)))
 
 	handler := withCORS(mux, options.AllowedOrigins)

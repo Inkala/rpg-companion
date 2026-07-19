@@ -34,7 +34,10 @@ func main() {
 	}
 
 	characterRepository := characters.NewRepository(pool)
-	partyRepository := parties.NewRepository(pool)
+	partyRepository := parties.NewRepository(
+		pool,
+		parties.NewInviteCodeHashKey(cfg.InviteCodeHashKey.Bytes()),
+	)
 	authRepository := auth.NewRepository(pool)
 	serverOptions := server.Options{
 		AllowedOrigins: cfg.AllowedOrigins,

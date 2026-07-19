@@ -166,21 +166,35 @@ func TestPartyDetailResponseMappingIsRosterScopedAndPrivacySafe(t *testing.T) {
 
 func TestInviteResponseMappingsUseCanonicalTimestampsAndLimitRawToken(t *testing.T) {
 	rawToken := "raw-private-invite-token"
+	rawCode := "ABCD-2345"
 	partyID := uuid.MustParse("71000000-0000-0000-0000-000000000003")
 	sourceTime := time.Date(2026, 7, 14, 15, 30, 0, 123, time.FixedZone("test-offset", 2*60*60))
 	expiresAt := sourceTime.Add(7 * 24 * time.Hour)
 
 	creationJSON := marshalResponseMap(t, responseFromPartyInvite(PartyInvite{
 		Token:     rawToken,
+		Code:      rawCode,
 		CreatedAt: sourceTime,
 		ExpiresAt: expiresAt,
 	}))
-	requireJSONKeys(t, creationJSON, "token", "createdAt", "expiresAt")
+	requireJSONKeys(t, creationJSON, "token", "code", "createdAt", "expiresAt")
 	if creationJSON["token"] != rawToken {
 		t.Fatal("invite creation response did not contain the one-time raw token")
 	}
+	if creationJSON["code"] != rawCode {
+		t.Fatal("invite creation response did not contain the one-time formatted code")
+	}
 	if creationJSON["createdAt"] != "2026-07-14T13:30:00Z" || creationJSON["expiresAt"] != "2026-07-21T13:30:00Z" {
 		t.Fatal("invite creation timestamps are not canonical UTC RFC3339")
+	}
+	serializedCreation := marshalResponseString(t, creationJSON)
+	if strings.Count(serializedCreation, rawToken) != 1 || strings.Count(serializedCreation, rawCode) != 1 {
+		t.Fatal("invite creation response must serialize each one-time credential exactly once")
+	}
+	for _, forbidden := range []string{"tokenHash", "codeHash", "partyId", "userId", "hashKey", "link"} {
+		if strings.Contains(serializedCreation, forbidden) {
+			t.Fatalf("invite creation response exposed forbidden field %q", forbidden)
+		}
 	}
 
 	inspectionResponse := responseFromInviteInspection(InviteInspection{

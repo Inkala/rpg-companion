@@ -8,12 +8,14 @@ const secondToken = 'b'.repeat(43);
 
 const firstInvite: PartyInviteDTO = {
   token: firstToken,
+  code: 'ABCD-EFGH',
   createdAt: '2026-07-12T10:00:00Z',
   expiresAt: '2026-07-19T10:00:00Z',
 };
 
 const secondInvite: PartyInviteDTO = {
   token: secondToken,
+  code: 'JKLM-NPQR',
   createdAt: '2026-07-13T10:00:00Z',
   expiresAt: '2026-07-20T10:00:00Z',
 };
@@ -35,12 +37,12 @@ describe('PartyInvitePanel', () => {
     const buildInviteURL = vi.fn((path: string) => `https://hunin.test${path}`);
 
     renderPanel({ createInvite, buildInviteURL });
-    const generateButton = screen.getByRole('button', { name: 'Generate invite link' });
+    const generateButton = screen.getByRole('button', { name: 'Generate invitation' });
     fireEvent.click(generateButton);
     fireEvent.click(generateButton);
 
-    expect(screen.getByRole('status')).toHaveTextContent('Creating invite link...');
-    expect(screen.getByRole('button', { name: 'Generating invite link...' })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Creating invitation...');
+    expect(screen.getByRole('button', { name: 'Generating invitation...' })).toBeDisabled();
     expect(createInvite).toHaveBeenCalledOnce();
     expect(createInvite).toHaveBeenCalledWith('party-1');
 
@@ -72,10 +74,27 @@ describe('PartyInvitePanel', () => {
     expect(inviteInput).toHaveAttribute('readonly');
     expect(inviteInput.closest('label')).toHaveClass('party-invite-panel__field');
 
-    expect(within(panel).getByRole('button', { name: 'Copy invite link' })).toBeInTheDocument();
+    expect(within(panel).getByText('ABCD-EFGH')).toBeInTheDocument();
+    expect(within(panel).getByRole('button', { name: 'Copy code' })).toBeInTheDocument();
+    expect(within(panel).getByRole('button', { name: 'Copy invitation link' })).toBeInTheDocument();
     expect(
-      within(panel).getByRole('button', { name: 'Regenerate invite link' }),
+      within(panel).getByRole('button', { name: 'Regenerate invitation' }),
     ).toBeInTheDocument();
+  });
+
+  it('copies code and link separately with fixed feedback that omits credentials', async () => {
+    const copyText = vi.fn().mockResolvedValue(undefined);
+    await renderGeneratedInvite({ copyText });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy code' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Invitation code copied.'));
+    expect(copyText).toHaveBeenLastCalledWith('ABCD-EFGH');
+    expect(screen.getByRole('status')).not.toHaveTextContent('ABCD-EFGH');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy invitation link' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Invitation link copied.'));
+    expect(copyText).toHaveBeenLastCalledWith(`https://hunin.test/parties/join#${firstToken}`);
+    expect(screen.getByRole('status')).not.toHaveTextContent(firstToken);
   });
 
   it('shows a safe recoverable generation error and retries', async () => {
@@ -85,10 +104,10 @@ describe('PartyInvitePanel', () => {
       .mockResolvedValueOnce(firstInvite);
 
     renderPanel({ createInvite });
-    fireEvent.click(screen.getByRole('button', { name: 'Generate invite link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generate invitation' }));
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Could not create an invite link. Please try again.');
+    expect(alert).toHaveTextContent('Could not create an invitation. Please try again.');
     expect(alert).not.toHaveTextContent(firstToken);
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
@@ -102,11 +121,11 @@ describe('PartyInvitePanel', () => {
     const copyText = vi.fn().mockResolvedValue(undefined);
     await renderGeneratedInvite({ copyText });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Copy invite link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy invitation link' }));
 
     await waitFor(() => {
       expect(copyText).toHaveBeenCalledWith(`https://hunin.test/parties/join#${firstToken}`);
-      expect(screen.getByRole('status')).toHaveTextContent('Invite link copied.');
+      expect(screen.getByRole('status')).toHaveTextContent('Invitation link copied.');
     });
   });
 
@@ -114,10 +133,12 @@ describe('PartyInvitePanel', () => {
     const copyText = vi.fn().mockRejectedValue(new Error(`clipboard leaked ${firstToken}`));
     await renderGeneratedInvite({ copyText });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Copy invite link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy invitation link' }));
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Could not copy the invite link. Copy it manually instead.');
+    expect(alert).toHaveTextContent(
+      'Could not copy the invitation link. Copy it manually instead.',
+    );
     expect(alert).not.toHaveTextContent('clipboard leaked');
   });
 
@@ -129,11 +150,13 @@ describe('PartyInvitePanel', () => {
       .mockReturnValueOnce(regeneration.promise);
     await renderGeneratedInvite({ createInvite });
 
-    expect(screen.getByText('Regenerating invalidates the previous link.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Regenerate invite link' }));
+    expect(
+      screen.getByText('Regenerating invalidates the previous code and link.'),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerate invitation' }));
 
     expect(screen.queryByDisplayValue(/parties\/join/)).not.toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Creating invite link...');
+    expect(screen.getByRole('status')).toHaveTextContent('Creating invitation...');
 
     await act(async () => {
       regeneration.resolve(secondInvite);
@@ -146,12 +169,103 @@ describe('PartyInvitePanel', () => {
     expect(screen.queryByDisplayValue(`https://hunin.test/parties/join#${firstToken}`)).not.toBeInTheDocument();
   });
 
+  it('invalidates pending code-copy feedback when regeneration starts', async () => {
+    const pendingCopy = deferred<void>();
+    const regeneration = deferred<PartyInviteDTO>();
+    const createInvite = vi
+      .fn()
+      .mockResolvedValueOnce(firstInvite)
+      .mockReturnValueOnce(regeneration.promise);
+    await renderGeneratedInvite({
+      createInvite,
+      copyText: vi.fn().mockReturnValue(pendingCopy.promise),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy code' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerate invitation' }));
+    await act(async () => {
+      pendingCopy.resolve(undefined);
+      await pendingCopy.promise;
+    });
+
+    expect(screen.queryByText('Invitation code copied.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Could not copy the invitation code/)).not.toBeInTheDocument();
+
+    await act(async () => {
+      regeneration.resolve(secondInvite);
+      await regeneration.promise;
+    });
+    expect(screen.getByText(secondInvite.code)).toBeInTheDocument();
+    expect(screen.queryByText('Invitation code copied.')).not.toBeInTheDocument();
+  });
+
+  it('ignores old link-copy feedback after replacement credentials load', async () => {
+    const pendingCopy = deferred<void>();
+    const createInvite = vi
+      .fn()
+      .mockResolvedValueOnce(firstInvite)
+      .mockResolvedValueOnce(secondInvite);
+    await renderGeneratedInvite({
+      createInvite,
+      copyText: vi.fn().mockReturnValue(pendingCopy.promise),
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy invitation link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerate invitation' }));
+    expect(await screen.findByText(secondInvite.code)).toBeInTheDocument();
+
+    await act(async () => {
+      pendingCopy.resolve(undefined);
+      await pendingCopy.promise;
+    });
+
+    expect(screen.getByLabelText('Shareable invite URL')).toHaveValue(
+      `https://hunin.test/parties/join#${secondToken}`,
+    );
+    expect(screen.queryByText('Invitation link copied.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Could not copy the invitation link/)).not.toBeInTheDocument();
+  });
+
+  it('does not recover one-time credentials after remount', async () => {
+    const props = defaultProps();
+    const { unmount } = render(<PartyInvitePanel {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Generate invitation' }));
+    expect(await screen.findByText('ABCD-EFGH')).toBeInTheDocument();
+
+    unmount();
+    render(<PartyInvitePanel {...props} />);
+
+    expect(screen.queryByText('ABCD-EFGH')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Shareable invite URL')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy invitation link' })).not.toBeInTheDocument();
+    expect(screen.getByText(/shown only once and cannot be recovered/i)).toBeInTheDocument();
+  });
+
+  it('does not restore old credentials after regeneration fails', async () => {
+    const createInvite = vi
+      .fn()
+      .mockResolvedValueOnce(firstInvite)
+      .mockRejectedValueOnce(new Error(`private ${firstToken}`));
+    await renderGeneratedInvite({ createInvite });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerate invitation' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not create an invitation. Please try again.',
+    );
+    expect(document.body).not.toHaveTextContent(firstToken);
+    expect(document.body).not.toHaveTextContent('ABCD-EFGH');
+    expect(screen.queryByRole('button', { name: 'Copy code' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy invitation link' })).not.toBeInTheDocument();
+  });
+
   it.each(['partyId', 'role', 'creator', 'builder'] as const)(
     'immediately hides stale invite data when %s changes',
     async (changedProperty) => {
       const props = defaultProps();
       const { rerender } = render(<PartyInvitePanel {...props} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Generate invite link' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Generate invitation' }));
       expect(await screen.findByLabelText('Shareable invite URL')).toBeInTheDocument();
 
       const changedProps = {
@@ -175,7 +289,7 @@ describe('PartyInvitePanel', () => {
     const props = defaultProps({ createInvite, buildInviteURL });
     const { rerender } = render(<PartyInvitePanel {...props} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Generate invite link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generate invitation' }));
     rerender(<PartyInvitePanel {...props} partyId="party-2" />);
     pendingInvite.resolve(firstInvite);
 
@@ -190,9 +304,9 @@ describe('PartyInvitePanel', () => {
     const copyText = vi.fn().mockReturnValue(pendingCopy.promise);
     const props = defaultProps({ copyText });
     const { rerender } = render(<PartyInvitePanel {...props} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Generate invite link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generate invitation' }));
     await screen.findByLabelText('Shareable invite URL');
-    fireEvent.click(screen.getByRole('button', { name: 'Copy invite link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy invitation link' }));
 
     rerender(
       <PartyInvitePanel
@@ -203,7 +317,7 @@ describe('PartyInvitePanel', () => {
     pendingCopy.resolve(undefined);
 
     await waitFor(() => {
-      expect(screen.queryByText('Invite link copied.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Invitation link copied.')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Shareable invite URL')).not.toBeInTheDocument();
     });
   });
@@ -212,7 +326,7 @@ describe('PartyInvitePanel', () => {
     const pendingInvite = deferred<PartyInviteDTO>();
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { unmount } = renderPanel({ createInvite: vi.fn().mockReturnValue(pendingInvite.promise) });
-    fireEvent.click(screen.getByRole('button', { name: 'Generate invite link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Generate invitation' }));
 
     unmount();
     pendingInvite.resolve(firstInvite);
@@ -229,7 +343,7 @@ describe('PartyInvitePanel', () => {
     const { unmount } = await renderGeneratedInvite({
       copyText: vi.fn().mockReturnValue(pendingCopy.promise),
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Copy invite link' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Copy invitation link' }));
 
     unmount();
     pendingCopy.resolve(undefined);
@@ -249,7 +363,7 @@ const renderGeneratedInvite = async (
   overrides: Partial<Parameters<typeof PartyInvitePanel>[0]> = {},
 ) => {
   const result = renderPanel(overrides);
-  fireEvent.click(screen.getByRole('button', { name: 'Generate invite link' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Generate invitation' }));
   await screen.findByLabelText('Shareable invite URL');
   return result;
 };
@@ -267,9 +381,11 @@ const defaultProps = (
 
 const deferred = <T,>() => {
   let resolve: (value: T) => void = () => {};
-  const promise = new Promise<T>((resolvePromise) => {
+  let reject: (reason?: unknown) => void = () => {};
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
     resolve = resolvePromise;
+    reject = rejectPromise;
   });
 
-  return { promise, resolve };
+  return { promise, reject, resolve };
 };

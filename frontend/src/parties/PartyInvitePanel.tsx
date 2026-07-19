@@ -25,12 +25,13 @@ type InviteState = InviteContextKey & (
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'loaded'; inviteURL: string; expiresAt: string }
+  | { status: 'loaded'; inviteURL: string; code: string; expiresAt: string }
 );
 
 type CopyContextKey = InviteContextKey & {
   requestedCopyText: CopyText;
-  requestedInviteURL: string;
+  requestedKind: 'code' | 'link';
+  requestedValue: string;
 };
 
 type CopyState = CopyContextKey & {
@@ -57,29 +58,12 @@ export const PartyInvitePanel = ({
   const visibleInviteState = inviteKeysMatch(inviteState, currentInviteKey)
     ? inviteState
     : ({ status: 'idle', ...currentInviteKey } as InviteState);
-  const displayedInviteURL =
-    currentUserRole === 'gm' && visibleInviteState.status === 'loaded'
-      ? visibleInviteState.inviteURL
-      : null;
-  const currentCopyKey: CopyContextKey | null = displayedInviteURL
-    ? {
-      ...currentInviteKey,
-      requestedCopyText: copyText,
-      requestedInviteURL: displayedInviteURL,
-    }
-    : null;
   const [copyState, setCopyState] = useState<CopyState | null>(null);
-  const visibleCopyState =
-    currentCopyKey && copyState && copyKeysMatch(copyState, currentCopyKey)
-      ? copyState
-      : null;
   const currentInviteKeyRef = useRef(currentInviteKey);
-  const currentCopyKeyRef = useRef(currentCopyKey);
   const activeGenerationRef = useRef<InviteContextKey | null>(null);
   const activeCopyRef = useRef<CopyContextKey | null>(null);
   const isMountedRef = useRef(true);
   currentInviteKeyRef.current = currentInviteKey;
-  currentCopyKeyRef.current = currentCopyKey;
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -87,6 +71,29 @@ export const PartyInvitePanel = ({
       isMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    const nextInviteKey: InviteContextKey = {
+      requestedPartyId: partyId,
+      requestedRole: currentUserRole,
+      requestedCreator: createInvite,
+      requestedURLBuilder: buildInviteURL,
+    };
+    if (inviteKeysMatch(inviteState, nextInviteKey)) {
+      return;
+    }
+
+    activeGenerationRef.current = null;
+    activeCopyRef.current = null;
+    setInviteState({ status: 'idle', ...nextInviteKey });
+    setCopyState(null);
+  }, [
+    buildInviteURL,
+    createInvite,
+    currentUserRole,
+    inviteState,
+    partyId,
+  ]);
 
   const generateInvite = async () => {
     if (
@@ -98,6 +105,7 @@ export const PartyInvitePanel = ({
 
     const generationKey = currentInviteKey;
     activeGenerationRef.current = generationKey;
+    activeCopyRef.current = null;
     setInviteState({ status: 'loading', ...generationKey });
     setCopyState(null);
 
@@ -114,6 +122,7 @@ export const PartyInvitePanel = ({
       setInviteState({
         status: 'loaded',
         inviteURL,
+        code: invite.code,
         expiresAt: invite.expiresAt,
         ...generationKey,
       });
@@ -134,10 +143,17 @@ export const PartyInvitePanel = ({
     }
   };
 
-  const copyInvite = async () => {
-    if (!currentCopyKey) {
+  const copyCredential = async (kind: 'code' | 'link', value: string) => {
+    if (visibleInviteState.status !== 'loaded') {
       return;
     }
+
+    const currentCopyKey: CopyContextKey = {
+      ...currentInviteKey,
+      requestedCopyText: copyText,
+      requestedKind: kind,
+      requestedValue: value,
+    };
 
     if (activeCopyRef.current && copyKeysMatch(activeCopyRef.current, currentCopyKey)) {
       return;
@@ -148,19 +164,21 @@ export const PartyInvitePanel = ({
     setCopyState({ status: 'copying', ...copyKey });
 
     try {
-      await copyText(copyKey.requestedInviteURL);
+      await copyText(copyKey.requestedValue);
       if (
         isMountedRef.current &&
-        currentCopyKeyRef.current &&
-        copyKeysMatch(currentCopyKeyRef.current, copyKey)
+        activeCopyRef.current &&
+        copyKeysMatch(activeCopyRef.current, copyKey) &&
+        inviteKeysMatch(currentInviteKeyRef.current, copyKey)
       ) {
         setCopyState({ status: 'success', ...copyKey });
       }
     } catch {
       if (
         isMountedRef.current &&
-        currentCopyKeyRef.current &&
-        copyKeysMatch(currentCopyKeyRef.current, copyKey)
+        activeCopyRef.current &&
+        copyKeysMatch(activeCopyRef.current, copyKey) &&
+        inviteKeysMatch(currentInviteKeyRef.current, copyKey)
       ) {
         setCopyState({ status: 'error', ...copyKey });
       }
@@ -178,9 +196,9 @@ export const PartyInvitePanel = ({
   if (visibleInviteState.status === 'loading') {
     return (
       <InvitePanelLayout>
-        <p role="status">Creating invite link...</p>
+        <p role="status">Creating invitation...</p>
         <button type="button" className="button button--primary" disabled>
-          Generating invite link...
+          Generating invitation...
         </button>
       </InvitePanelLayout>
     );
@@ -189,7 +207,7 @@ export const PartyInvitePanel = ({
   if (visibleInviteState.status === 'error') {
     return (
       <InvitePanelLayout>
-        <p role="alert">Could not create an invite link. Please try again.</p>
+        <p role="alert">Could not create an invitation. Please try again.</p>
         <button type="button" className="button button--secondary" onClick={generateInvite}>
           Retry
         </button>
@@ -198,8 +216,36 @@ export const PartyInvitePanel = ({
   }
 
   if (visibleInviteState.status === 'loaded') {
+    const codeCopyKey: CopyContextKey = {
+      ...currentInviteKey,
+      requestedCopyText: copyText,
+      requestedKind: 'code',
+      requestedValue: visibleInviteState.code,
+    };
+    const linkCopyKey: CopyContextKey = {
+      ...currentInviteKey,
+      requestedCopyText: copyText,
+      requestedKind: 'link',
+      requestedValue: visibleInviteState.inviteURL,
+    };
+    const codeCopyState = copyState && copyKeysMatch(copyState, codeCopyKey)
+      ? copyState
+      : null;
+    const linkCopyState = copyState && copyKeysMatch(copyState, linkCopyKey)
+      ? copyState
+      : null;
+    const visibleCopyState = codeCopyState ?? linkCopyState;
     return (
       <InvitePanelLayout>
+        <p className="party-invite-panel__notice">
+          This code and link are shown only once. Save them now. If you lose them, regenerate the invitation.
+        </p>
+        <div className="party-invite-panel__credential">
+          <span className="party-invite-panel__label">Invitation code</span>
+          <code className="party-invite-panel__code" aria-label="Invitation code">
+            {visibleInviteState.code}
+          </code>
+        </div>
         <label className="party-invite-panel__field">
           <span className="party-invite-panel__label">Shareable invite URL</span>
           <input
@@ -216,22 +262,42 @@ export const PartyInvitePanel = ({
             {formatExpiration(visibleInviteState.expiresAt)}
           </time>
         </p>
-        <button
-          type="button"
-          className="button button--primary"
-          onClick={copyInvite}
-          disabled={visibleCopyState?.status === 'copying'}
-        >
-          {visibleCopyState?.status === 'copying' ? 'Copying invite link...' : 'Copy invite link'}
-        </button>
+        <div className="party-actions party-invite-panel__copy-actions">
+          <button
+            type="button"
+            className="button button--primary"
+            onClick={() => void copyCredential('code', visibleInviteState.code)}
+            disabled={codeCopyState?.status === 'copying'}
+          >
+            {codeCopyState?.status === 'copying' ? 'Copying code...' : 'Copy code'}
+          </button>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={() => void copyCredential('link', visibleInviteState.inviteURL)}
+            disabled={linkCopyState?.status === 'copying'}
+          >
+            {linkCopyState?.status === 'copying'
+              ? 'Copying invitation link...'
+              : 'Copy invitation link'}
+          </button>
+        </div>
         {visibleCopyState?.status === 'success' ? (
-          <p role="status">Invite link copied.</p>
+          <p role="status">
+            {visibleCopyState.requestedKind === 'code'
+              ? 'Invitation code copied.'
+              : 'Invitation link copied.'}
+          </p>
         ) : visibleCopyState?.status === 'error' ? (
-          <p role="alert">Could not copy the invite link. Copy it manually instead.</p>
+          <p role="alert">
+            {visibleCopyState.requestedKind === 'code'
+              ? 'Could not copy the invitation code. Copy it manually instead.'
+              : 'Could not copy the invitation link. Copy it manually instead.'}
+          </p>
         ) : null}
-        <p>Regenerating invalidates the previous link.</p>
+        <p>Regenerating invalidates the previous code and link.</p>
         <button type="button" className="button button--secondary" onClick={generateInvite}>
-          Regenerate invite link
+          Regenerate invitation
         </button>
       </InvitePanelLayout>
     );
@@ -239,9 +305,11 @@ export const PartyInvitePanel = ({
 
   return (
     <InvitePanelLayout>
-      <p>Create a shareable link and send it manually to your players.</p>
+      <p>
+        Generate a code and invitation link to share. They are shown only once and cannot be recovered after you leave this page.
+      </p>
       <button type="button" className="button button--primary" onClick={generateInvite}>
-        Generate invite link
+        Generate invitation
       </button>
     </InvitePanelLayout>
   );
@@ -269,7 +337,8 @@ const copyKeysMatch = (left: CopyContextKey, right: CopyContextKey) => {
   return (
     inviteKeysMatch(left, right) &&
     left.requestedCopyText === right.requestedCopyText &&
-    left.requestedInviteURL === right.requestedInviteURL
+    left.requestedKind === right.requestedKind &&
+    left.requestedValue === right.requestedValue
   );
 };
 

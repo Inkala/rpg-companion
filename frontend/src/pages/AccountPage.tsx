@@ -10,6 +10,7 @@ interface AccountPageProps {
   onAuthenticated: (user: AuthUser) => void;
   onModeChange: (mode: AccountMode) => void;
   onRegistrationSuccess: () => void;
+  onAuthenticationFailure?: () => boolean;
   onSignOut: () => void;
 }
 
@@ -21,6 +22,7 @@ export const AccountPage = ({
   onAuthenticated,
   onModeChange,
   onRegistrationSuccess,
+  onAuthenticationFailure,
   onSignOut,
 }: AccountPageProps) => {
   return (
@@ -38,6 +40,7 @@ export const AccountPage = ({
         onAuthenticated={onAuthenticated}
         onModeChange={onModeChange}
         onRegistrationSuccess={onRegistrationSuccess}
+        onAuthenticationFailure={onAuthenticationFailure}
         onSignOut={onSignOut}
       />
     </main>
