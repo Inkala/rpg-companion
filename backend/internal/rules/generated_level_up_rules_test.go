@@ -49,8 +49,11 @@ func TestGeneratedRulesSnapshotAndChecksumParity(t *testing.T) {
 		t.Fatalf("snapshot mismatch: JSON=%q Go=%q", fixture.Metadata.SnapshotID, SnapshotID)
 	}
 	digest := sha256.Sum256([]byte(CanonicalJSON))
-	if got := hex.EncodeToString(digest[:]); got != Checksum {
-		t.Fatalf("checksum mismatch: computed=%q generated=%q", got, Checksum)
+	if got := hex.EncodeToString(digest[:]); got != ProjectionChecksum {
+		t.Fatalf("projection checksum mismatch: computed=%q generated=%q", got, ProjectionChecksum)
+	}
+	if Checksum != CharacterCreationRulesChecksum {
+		t.Fatalf("canonical checksum differs across projections: level-up=%q character-creation=%q", Checksum, CharacterCreationRulesChecksum)
 	}
 }
 

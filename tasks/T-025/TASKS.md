@@ -11,23 +11,23 @@ Status: approved
 - [x] T-026 rules foundation is deployed.
 - [x] T-028 is integrated on `origin/main` at
   `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`.
-- [ ] Record T-028 production smoke only after its rollout report is confirmed.
-- [ ] Create one dedicated T-025 worktree from a main revision containing T-026 and T-028.
+- [x] Record T-028 production smoke only after its rollout report is confirmed.
+- [x] Create one dedicated T-025 worktree from a main revision containing T-026 and T-028.
 
 ## Slice 1: canonical SRD extension
 
-- [ ] Extend the existing canonical JSON with Race, the complete SRD equipment catalog,
+- [x] Extend the existing canonical JSON with Race, the complete SRD equipment catalog,
   armor/shield rules, supported modifier data, and complete spell-detail data.
-- [ ] Preserve stable equipment identifiers, categories, weight, cost, weapon properties, damage,
+- [x] Preserve stable equipment identifiers, categories, weight, cost, weapon properties, damage,
   armor data, and other reusable source fields where available.
-- [ ] Prove manual equipment cannot silently affect calculated statistics.
-- [ ] Extend the existing JSON Schema and checksum.
-- [ ] Preserve source URLs, import date, transformation record, snapshot identity, and CC-BY-4.0
+- [x] Prove manual equipment cannot silently affect calculated statistics.
+- [x] Extend the existing JSON Schema and checksum.
+- [x] Preserve source URLs, import date, transformation record, snapshot identity, and CC-BY-4.0
   attribution.
-- [ ] Generate frontend and Go creation projections from the same canonical JSON.
-- [ ] Add schema, parity, checksum, freshness, deterministic-order, and record-count tests.
-- [ ] Update `docs/rules-data.md`.
-- [ ] Stop for review before commit or Slice 2.
+- [x] Generate frontend and Go creation projections from the same canonical JSON.
+- [x] Add schema, parity, checksum, freshness, deterministic-order, and record-count tests.
+- [x] Update `docs/rules-data.md`.
+- [x] Stop for review before commit or Slice 2.
 
 ## Slice 2: CharacterSheetV2 contracts and calculations
 
