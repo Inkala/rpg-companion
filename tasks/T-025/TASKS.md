@@ -1,20 +1,82 @@
-# T-025 Tasks: Character-Sheet Fidelity, SRD Data, and Derived Calculations
+# T-025 Tasks: Structured Character Creation and Derived Values
 
-Status: deferred
+Status: approved
 
-- [ ] Wait for explicit post-TFM implementation approval from Marcela.
-- [ ] Reconfirm SRD 5.1 attribution wording before implementation.
-- [ ] Design and document the normalized rules snapshot shape.
-- [ ] Add `docs/rules-data.md`.
-- [ ] Implement development-time SRD import tooling.
-- [ ] Commit a versioned local snapshot.
-- [ ] Add Gender selector with `Male`, `Female`, `Other`.
-- [ ] Replace visible `Ancestry` terminology with `Race`.
-- [ ] Add Race/Class/Subclass dropdowns and manual fallbacks.
+## Approval and implementation gate
+
+- [x] Marcela approves the levels 1 through 5 V2 creation boundary.
+- [x] Marcela approves importing the complete SRD 5.1 equipment catalog into the existing canonical
+  snapshot.
+- [x] Marcela approves current HP defaulting to resolved maximum HP for new characters.
+- [x] T-026 rules foundation is deployed.
+- [x] T-028 is integrated on `origin/main` at
+  `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`.
+- [ ] Record T-028 production smoke only after its rollout report is confirmed.
+- [ ] Create one dedicated T-025 worktree from a main revision containing T-026 and T-028.
+
+## Slice 1: canonical SRD extension
+
+- [ ] Extend the existing canonical JSON with Race, the complete SRD equipment catalog,
+  armor/shield rules, supported modifier data, and complete spell-detail data.
+- [ ] Preserve stable equipment identifiers, categories, weight, cost, weapon properties, damage,
+  armor data, and other reusable source fields where available.
+- [ ] Prove manual equipment cannot silently affect calculated statistics.
+- [ ] Extend the existing JSON Schema and checksum.
+- [ ] Preserve source URLs, import date, transformation record, snapshot identity, and CC-BY-4.0
+  attribution.
+- [ ] Generate frontend and Go creation projections from the same canonical JSON.
+- [ ] Add schema, parity, checksum, freshness, deterministic-order, and record-count tests.
+- [ ] Update `docs/rules-data.md`.
+- [ ] Stop for review before commit or Slice 2.
+
+## Slice 2: CharacterSheetV2 contracts and calculations
+
+- [ ] Add exact V2 creation, saved, domain, structured-section, and provenance types.
+- [ ] Add strict frontend and Go V2 parsing and validation.
+- [ ] Implement generated-rule calculations and override preservation.
+- [ ] Add V1/V2 discriminated parsing and Mara compatibility tests.
+- [ ] Stop for review before commit or Slice 3.
+
+## Slice 3: backend persistence and privacy
+
+- [ ] Extend authenticated `POST /characters` for the versioned V2 request without trusting a full
+  client-built payload.
+- [ ] Build and validate V2 server-side from canonical choices and bounded manual inputs.
+- [ ] Persist top-level fields and V2 JSONB atomically with current HP equal to maximum HP.
+- [ ] Extend owner and Party-GM read validation to V1/V2.
+- [ ] Add exact-key privacy, authorization, rollback, and PostgreSQL round-trip tests.
+- [ ] Confirm no SQL migration is required or stop for renewed approval.
+- [ ] Stop for review before commit or Slice 4.
+
+## Slice 4: structured creation UI
+
+- [ ] Add Class, Race, conditional Subclass, and required Gender dropdowns.
+- [ ] Replace visible Ancestry with Race.
 - [ ] Remove Concept, Notes, and Current HP from creation.
-- [ ] Add derived calculations with calculated/manual/imported provenance.
-- [ ] Add structured Attacks, Spells, Features and traits, Equipment, and Other sections.
-- [ ] Update Character Reference detail contract.
-- [ ] Preserve display-only CharacterSheetV1 compatibility.
-- [ ] Keep Mara compatibility tested.
-- [ ] Run complete frontend and backend validation.
+- [ ] Add calculated values, visible provenance, overrides, and Reset to calculated.
+- [ ] Add structured Attacks, Spells, spell slots, Features and traits, Equipment, and Other.
+- [ ] Populate SRD spell metadata from the local generated rules.
+- [ ] Convert guided Fighter presets and manual entry to V2.
+- [ ] Add a complete review step.
+- [ ] Stop for review before commit or Slice 5.
+
+## Slice 5: reference and integration completion
+
+- [ ] Render V2 in owner and GM-read-only Character Reference.
+- [ ] Preserve V1 and Mara rendering.
+- [ ] Adapt T-026 Level up to preserve valid V2 data and provenance.
+- [ ] Regression-test ordinary save navigation instead of reimplementing it.
+- [ ] Regression-test T-028 invite-launched automatic join, retry-only join, stale-result handling,
+  and token privacy.
+- [ ] Run focused and complete frontend/backend validation.
+- [ ] Run disposable PostgreSQL validation.
+- [ ] Run accessibility and browser QA at 320px, 390px, 720px, and desktop.
+- [ ] Run CI, deployment, and public smoke validation.
+- [ ] Stop for final review before PR, merge, or deployment.
+
+## Coordination
+
+- [ ] Do not edit T-023 evaluator documentation during T-025 implementation.
+- [ ] After T-025 deployment, provide final SHA, CI, deployment, screenshots, test count, and smoke
+  evidence to T-023.
+- [ ] T-023 rebases and merges last.
