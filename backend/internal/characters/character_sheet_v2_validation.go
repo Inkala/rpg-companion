@@ -26,7 +26,7 @@ var v2Identifier = regexp.MustCompile(`^[a-z0-9-]{1,128}$`)
 var v2Dice = regexp.MustCompile(`^[0-9]{1,2}d[0-9]{1,3}$`)
 
 func ParseCharacterSheetDocument(raw json.RawMessage) (ParsedCharacterSheetDocument, error) {
-	if len(raw) == 0 || len(raw) > 262144 {
+	if len(raw) == 0 || len(raw) > maxV2StoredReferencePayloadBytes {
 		return ParsedCharacterSheetDocument{}, fmt.Errorf("character sheet document has an invalid size")
 	}
 	var discriminator struct {
@@ -37,6 +37,9 @@ func ParseCharacterSheetDocument(raw json.RawMessage) (ParsedCharacterSheetDocum
 	}
 	switch discriminator.SchemaVersion {
 	case "CharacterSheetV1":
+		if len(raw) > maxV1ReferencePayloadBytes {
+			return ParsedCharacterSheetDocument{}, fmt.Errorf("CharacterSheetV1 has an invalid size")
+		}
 		expected, err := inferV1ExpectedValues(raw)
 		if err != nil || len(validateCharacterSheetV1Envelope(raw, expected)) > 0 {
 			return ParsedCharacterSheetDocument{}, fmt.Errorf("CharacterSheetV1 is invalid")
@@ -60,7 +63,7 @@ func ParseCharacterSheetDocument(raw json.RawMessage) (ParsedCharacterSheetDocum
 }
 
 func ParseCreateCharacterV2Request(raw json.RawMessage) (CreateCharacterV2RequestDTO, error) {
-	if len(raw) == 0 || len(raw) > 131072 {
+	if len(raw) == 0 || len(raw) > maxV2RequestPayloadBytes {
 		return CreateCharacterV2RequestDTO{}, fmt.Errorf("CreateCharacterV2 request has an invalid size")
 	}
 	if !hasExactRequiredJSONFields(raw, v2RequestFields) || !validateCreateV2RawKeys(raw) {

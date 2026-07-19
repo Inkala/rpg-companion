@@ -405,7 +405,7 @@ func buildLeveledCharacter(character Character, request levelUpRequest) (Charact
 		return Character{}, ErrLevelUpUnsupported
 	}
 	updatedPayload, err := json.Marshal(sheet)
-	if err != nil || len(updatedPayload) > maxReferencePayloadBytes {
+	if err != nil || len(updatedPayload) > maxV1ReferencePayloadBytes {
 		return Character{}, ErrLevelUpUnsupported
 	}
 	result.ReferencePayload = updatedPayload

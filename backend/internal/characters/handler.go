@@ -12,11 +12,12 @@ import (
 	"github.com/google/uuid"
 )
 
-const characterRequestBodyLimit int64 = 131072
+const characterRequestBodyLimit int64 = maxV2RequestPayloadBytes
 
 type Handler struct {
 	repository             *Repository
 	createCharacter        func(context.Context, Character) (Character, error)
+	getCharacterForOwner   func(context.Context, uuid.UUID, uuid.UUID) (Character, error)
 	getCharacterForPartyGM func(context.Context, uuid.UUID, uuid.UUID, uuid.UUID) (Character, error)
 	levelUpCharacter       func(context.Context, uuid.UUID, uuid.UUID, time.Time, levelUpRequest) (Character, error)
 }
@@ -25,6 +26,7 @@ func NewHandler(repository *Repository) Handler {
 	handler := Handler{repository: repository}
 	if repository != nil {
 		handler.createCharacter = repository.Create
+		handler.getCharacterForOwner = repository.GetByIDForOwner
 		handler.getCharacterForPartyGM = repository.GetByIDForPartyGM
 		handler.levelUpCharacter = repository.LevelUp
 	}
@@ -88,8 +90,8 @@ func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var request createCharacterRequest
-	err := httpjson.Decode(w, r, &request, characterRequestBodyLimit)
+	var raw json.RawMessage
+	err := httpjson.Decode(w, r, &raw, characterRequestBodyLimit)
 	if errors.Is(err, httpjson.ErrUnsupportedMediaType) {
 		writeError(w, http.StatusUnsupportedMediaType, "Content-Type must be application/json")
 		return
@@ -103,6 +105,23 @@ func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
+		writeError(w, http.StatusBadRequest, "request body must be valid character JSON")
+		return
+	}
+	var discriminator struct {
+		SchemaVersion *string `json:"schemaVersion"`
+	}
+	if err := json.Unmarshal(raw, &discriminator); err != nil {
+		writeError(w, http.StatusBadRequest, "request body must be valid character JSON")
+		return
+	}
+	if discriminator.SchemaVersion != nil {
+		handler.createV2(w, r, raw, ownerID)
+		return
+	}
+
+	var request createCharacterRequest
+	if err := strictDecodeJSON(raw, &request); err != nil {
 		writeError(w, http.StatusBadRequest, "request body must be valid character JSON")
 		return
 	}
@@ -138,6 +157,45 @@ func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, responseFromCharacter(created))
 }
 
+func (handler Handler) createV2(w http.ResponseWriter, r *http.Request, raw json.RawMessage, ownerID uuid.UUID) {
+	request, err := ParseCreateCharacterV2Request(raw)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "character validation failed")
+		return
+	}
+	character, err := characterFromV2Request(request, time.Now().UTC())
+	if errors.Is(err, ErrInvalidCharacterData) {
+		writeError(w, http.StatusBadRequest, "character validation failed")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "character validation failed")
+		return
+	}
+	character.OwnerSubjectID = &ownerID
+
+	created, err := handler.createCharacter(r.Context(), character)
+	if errors.Is(err, ErrInvalidCharacterData) {
+		writeError(w, http.StatusBadRequest, "character validation failed")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not persist character")
+		return
+	}
+	parsed, err := parseStoredCharacter(created)
+	if err != nil || parsed.V2 == nil {
+		writeError(w, http.StatusInternalServerError, "could not persist character")
+		return
+	}
+	response, err := characterV2DTOFromStored(created, *parsed.V2)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not persist character")
+		return
+	}
+	writeJSON(w, http.StatusCreated, response)
+}
+
 func (handler Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	if handler.repository == nil {
 		writeError(w, http.StatusServiceUnavailable, "character persistence is not configured")
@@ -155,7 +213,11 @@ func (handler Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	character, err := handler.repository.GetByIDForOwner(r.Context(), id, ownerID)
+	if handler.getCharacterForOwner == nil {
+		writeError(w, http.StatusServiceUnavailable, "character persistence is not configured")
+		return
+	}
+	character, err := handler.getCharacterForOwner(r.Context(), id, ownerID)
 	if errors.Is(err, ErrNotFound) {
 		writeError(w, http.StatusNotFound, "character not found")
 		return
@@ -165,7 +227,9 @@ func (handler Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, responseFromCharacter(character))
+	if err := writeStoredCharacterResponse(w, http.StatusOK, character, true); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load character")
+	}
 }
 
 func (handler Handler) GetByIDForPartyGM(w http.ResponseWriter, r *http.Request) {
@@ -199,14 +263,30 @@ func (handler Handler) GetByIDForPartyGM(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusInternalServerError, "could not load character")
 		return
 	}
-	if err := validateStoredCharacterForPartyGM(character); err != nil {
+	if err := writeStoredCharacterResponse(w, http.StatusOK, character, false); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not load character")
-		return
 	}
+}
 
+func writeStoredCharacterResponse(w http.ResponseWriter, status int, character Character, includeV1Owner bool) error {
+	parsed, err := parseStoredCharacter(character)
+	if err != nil {
+		return err
+	}
+	if parsed.V2 != nil {
+		response, err := characterV2DTOFromStored(character, *parsed.V2)
+		if err != nil {
+			return err
+		}
+		writeJSON(w, status, response)
+		return nil
+	}
 	response := responseFromCharacter(character)
-	response.OwnerSubjectID = nil
-	writeJSON(w, http.StatusOK, response)
+	if !includeV1Owner {
+		response.OwnerSubjectID = nil
+	}
+	writeJSON(w, status, response)
+	return nil
 }
 
 func (handler Handler) List(w http.ResponseWriter, r *http.Request) {

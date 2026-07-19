@@ -168,7 +168,7 @@ func TestGetByIDForPartyGMFailsClosedForUnsafeStoredPayloads(t *testing.T) {
 		},
 		{
 			name:      "oversized",
-			payload:   json.RawMessage(`{"marker":"private-oversized-payload","padding":"` + strings.Repeat("x", maxReferencePayloadBytes) + `"}`),
+			payload:   json.RawMessage(`{"marker":"private-oversized-payload","padding":"` + strings.Repeat("x", maxV2StoredReferencePayloadBytes) + `"}`),
 			forbidden: "private-oversized-payload",
 		},
 		{

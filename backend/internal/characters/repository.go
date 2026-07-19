@@ -78,7 +78,7 @@ INSERT INTO characters (
 		character.UpdatedAt,
 	)
 	if err != nil {
-		return Character{}, mapCharacterCreateError(err)
+		return Character{}, fmt.Errorf("insert character: %w", mapCharacterCreateError(err))
 	}
 
 	return character, nil

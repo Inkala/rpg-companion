@@ -78,14 +78,14 @@ Status: approved
 
 ## Slice 3: backend persistence and privacy
 
-- [ ] Extend authenticated `POST /characters` for the versioned V2 request without trusting a full
+- [x] Extend authenticated `POST /characters` for the versioned V2 request without trusting a full
   client-built payload.
-- [ ] Build and validate V2 server-side from canonical choices and bounded manual inputs.
-- [ ] Persist top-level fields and V2 JSONB atomically with current HP equal to maximum HP.
-- [ ] Extend owner and Party-GM read validation to V1/V2.
-- [ ] Add exact-key privacy, authorization, rollback, and PostgreSQL round-trip tests.
-- [ ] Confirm no SQL migration is required or stop for renewed approval.
-- [ ] Stop for review before commit or Slice 4.
+- [x] Build and validate V2 server-side from canonical choices and bounded manual inputs.
+- [x] Persist top-level fields and V2 JSONB atomically with current HP equal to maximum HP.
+- [x] Extend owner and Party-GM read validation to V1/V2.
+- [x] Add exact-key privacy, authorization, rollback, and PostgreSQL round-trip tests.
+- [x] Confirm no SQL migration is required or stop for renewed approval.
+- [x] Stop for review before commit or Slice 4.
 
 ## Slice 4: structured creation UI
 
