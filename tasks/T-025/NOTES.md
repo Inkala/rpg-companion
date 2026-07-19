@@ -81,6 +81,26 @@ sheet as truth.
 - Slice 2 includes fixed Race, Half-Elf distinct choices, subrace, imported-value persistence,
   reset, invalid-choice, manual-Race, and TypeScript/Go parity regressions.
 
+## Slice 2 implementation-review correction
+
+- Defense is an exact armor, unarmored, or manual union. Canonical armor and shield indexes must
+  reference equipped canonical equipment; manual equipment is inert. The persisted sheet retains
+  the selected formula or manual reason needed to verify AC.
+- A calculated attack explicitly selects Strength, Dexterity, or the supported spellcasting
+  ability and states whether proficiency applies. Exceptional attacks use a bounded manual value
+  and reason. Names never imply an ability.
+- Persisted spells carry all approved generated-rule fields, explicit state, canonical index when
+  applicable, and provenance. Manual spells provide the same visible fields with imported
+  provenance.
+- Canonical features retain index plus resolved display data and must belong to the selected Race,
+  Class, or Subclass at the current level.
+- Canonical subclass is null before its decision level and required at or after it. Cross-Class
+  subclasses are invalid; Ranger Hunter remains covered.
+- HP gains contain exactly levels 2 through N.
+- TypeScript and Go reject extra nested union fields even when empty or zero-valued.
+- Complete saved-sheet validation rederives every authoritative value from retained inputs and
+  verifies prepared spell references, attack provenance, and feature ownership.
+
 ## Risks
 
 - V2 affects creation, Character Reference, Party-GM reads, summaries, and Level up. Partial rollout

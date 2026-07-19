@@ -105,6 +105,35 @@ type AbilityScoreInput =
       values: AbilityScoresDTO;
       reason: string;
     };
+
+type DefenseInput =
+  | {
+      mode: 'armor';
+      armorIndex: string;
+      shieldIndex?: string;
+    }
+  | {
+      mode: 'unarmored';
+      formulaId: string;
+      shieldIndex?: string;
+    }
+  | {
+      mode: 'manual';
+      armorClass: number;
+      reason: string;
+    };
+
+type AttackBonusInput =
+  | {
+      mode: 'calculated';
+      ability: 'strength' | 'dexterity' | 'spellcasting';
+      proficient: boolean;
+    }
+  | {
+      mode: 'manual-override';
+      value: number;
+      reason: string;
+    };
 ```
 
 Manual reasons and notes are length-bounded, plain text, and never interpreted as rules.
@@ -141,11 +170,10 @@ type CreateCharacterV2RequestDTO = {
     maximumOverride?: { value: number; reason: string };
   };
   combat: {
-    defenseMode: 'armor' | 'unarmored' | 'manual';
+    defense: DefenseInput;
     initiativeOverride?: { value: number; reason: string };
     passivePerceptionOverride?: { value: number; reason: string };
     speedOverride?: { value: number; reason: string };
-    armorClassOverride?: { value: number; reason: string };
   };
   ruleChoices: RuleChoiceInput[];
   attacks: CharacterAttackInput[];
@@ -177,17 +205,19 @@ set. Manual or unsupported Races never receive invented bonuses.
 type CharacterAttackInput = {
   id: string;
   name: string;
-  attackBonus: { mode: 'calculated' } | { mode: 'manual-override'; value: number; reason: string };
+  attackBonus: AttackBonusInput;
   damage: Array<{ dice: string; bonus: number; type: string }>;
 };
 
 type CharacterSpellInput =
   | {
+      id: string;
       source: 'srd';
       index: string;
       state: 'known' | 'prepared' | 'spellbook' | 'always-prepared';
     }
   | {
+      id: string;
       source: 'manual';
       name: string;
       level: number;
@@ -195,8 +225,12 @@ type CharacterSpellInput =
       castingTime: string;
       range: string;
       components: string[];
+      materialComponent?: string;
       duration: string;
+      concentration: boolean;
+      ritual: boolean;
       description: string;
+      higherLevelText?: string;
       state: 'known' | 'prepared' | 'spellbook' | 'always-prepared';
     };
 
@@ -220,7 +254,52 @@ type CharacterEquipmentInput =
       quantity: number;
       equipped: boolean;
     };
+
+type CharacterSheetV2Attack = {
+  id: string;
+  name: string;
+  attackBonus: ResolvedValue<number>;
+  attackBonusInput:
+    | { ability: 'strength' | 'dexterity' | 'spellcasting'; proficient: boolean }
+    | null;
+  damage: Array<{ dice: string; bonus: number; type: string }>;
+};
+
+type CharacterSheetV2Spell = {
+  id: string;
+  canonicalIndex: string | null;
+  name: string;
+  level: number;
+  school: string;
+  castingTime: string;
+  range: string;
+  components: string[];
+  materialComponent: string | null;
+  duration: string;
+  concentration: boolean;
+  ritual: boolean;
+  description: string;
+  higherLevelText: string | null;
+  state: 'known' | 'prepared' | 'spellbook' | 'always-prepared';
+  provenance: ValueProvenance;
+};
+
+type CharacterSheetV2Feature = {
+  canonicalIndex: string | null;
+  name: string;
+  category: 'race' | 'class' | 'subclass' | 'manual';
+  description: string;
+  provenance: ValueProvenance;
+};
 ```
+
+Canonical spell inputs are resolved into every `CharacterSheetV2Spell` field from generated rules.
+Manual spell inputs provide the same visible fields and persist imported provenance. Prepared spell
+IDs must reference IDs in the persisted spell collection.
+
+Canonical feature indexes are valid only when their generated owner and availability match the
+selected Race, Class, Subclass, and level. The persisted feature retains both its canonical index
+and resolved display data. A valid index from another owner or unavailable level is rejected.
 
 ## Exact saved DTO
 
@@ -285,7 +364,8 @@ V2 contains:
 - structured identity with Gender, Race selection, single Class selection, and conditional
   Subclass selection;
 - ability scores plus calculated modifiers;
-- resolved combat values using `ResolvedValue<T>`;
+- resolved combat values using `ResolvedValue<T>`, plus the validated `DefenseInput` needed to
+  reproduce Armor Class;
 - proficiencies, including the information required for Passive Perception;
 - structured attacks;
 - spellcasting values, slots by spell level, and fully populated spells;
@@ -315,6 +395,8 @@ authoritative calculation from generated Go rules and rejects mismatches or inva
   Constitution modifier, minimum 1 per level.
 - AC: selected armor base formula, Dexterity cap, equipped shield, and supported feature modifiers,
   or a documented unarmored formula. The player selects the active formula if several are legal.
+- Attack bonus: the selected Strength, Dexterity, or supported spellcasting modifier, plus
+  proficiency only when requested, unless a bounded manual override is supplied.
 - Spell save DC: 8 + proficiency + spellcasting ability modifier.
 - Spell attack bonus: proficiency + spellcasting ability modifier.
 
@@ -327,10 +409,23 @@ an explicit Reset to calculated action.
 - Obtain owner ID only from the authenticated session.
 - Validate every Race and class rule choice against generated Go rules, including rule owner,
   availability, prerequisites, selection count, distinctness, options, and manual policy.
+- Enforce canonical subclass timing: `null` before the decision level and exactly one compatible
+  SRD or bounded manual selection at or after it.
 - Resolve calculated final ability scores on the server. Preserve imported final scores without
   applying Race bonuses again.
+- Require exactly one HP gain for every level from 2 through the selected level.
+- Validate each defense union variant and require canonical armor/shield selections to match
+  equipped canonical equipment. Manual equipment remains inert.
+- Calculate attack bonuses only from the explicit ability/proficiency input, never from attack
+  names.
+- Resolve canonical spells and features into complete persisted display data while validating
+  membership, ownership, and level availability.
 - Build CharacterSheetV2 server-side. Never trust a client-supplied full payload.
-- Validate the complete V2 envelope and top-level parity before `Repository.Create`.
+- Reject unknown or cross-variant keys at every nested union boundary, including empty and
+  zero-valued fields. TypeScript and Go validators must enforce equivalent exact-key rules.
+- Validate the complete V2 envelope and top-level parity before `Repository.Create`. Recalculate
+  every authoritative derived value from retained inputs, verify prepared spell IDs reference
+  stored spells, and verify attack provenance and canonical feature ownership.
 - Persist top-level fields and JSONB in the existing insert. No partial write is possible.
 - Preserve generic database errors and existing authorization behavior.
 - Extend owner and Party-GM read validation to a strict V1/V2 union.

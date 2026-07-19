@@ -29,7 +29,9 @@ records, and keep ordinary-save and Party-invite outcomes unchanged.
 - Hunter is the SRD Ranger subclass/archetype.
 - Offer only SRD 5.1/2014 subclasses as automated choices. `Other` reveals a bounded manual name
   input.
-- Never require a subclass before its class receives one.
+- For a canonical Class, Subclass must be `null` before the canonical subclass decision level.
+- At or after that level, exactly one compatible SRD subclass or bounded manual `Other` selection is
+  required. A subclass owned by another Class is invalid.
 - Gender is required and uses the exact closed values `Male`, `Female`, and `Other`.
 - Remove Concept, Notes, and Current HP from character creation.
 - New characters start with current HP equal to calculated or overridden maximum HP.
@@ -153,9 +155,24 @@ calculated suggestion.
   1 HP.
 - For each level after 1, the player chooses the canonical fixed average or enters a bounded rolled
   result. A manual maximum-HP override is available for imported or exceptional sheets.
+- For a level-N character, `levelGains` contains exactly one entry for every level from 2 through N,
+  in level order. Missing, duplicate, level-1, or future entries are invalid.
 - Constitution applies at every character level.
 - Current HP is not entered during creation. The server persists current HP equal to the resolved
   maximum HP.
+
+## Defense calculation inputs
+
+- Armor mode requires one canonical armor index and may include one canonical shield index.
+- Each selected armor or shield index must correspond to an equipped canonical equipment entry in
+  the same request. Manual equipment is inert and cannot satisfy this requirement.
+- Unarmored mode requires one supported canonical formula ID. When several formulas are legal, the
+  selected formula is retained. It may include a canonical equipped shield only when that formula
+  permits one, and it cannot include equipped armor as the AC source.
+- Manual mode requires a bounded AC value and reason. It does not apply canonical armor, shield, or
+  unarmored calculations.
+- The persisted CharacterSheetV2 retains the validated defense mode, armor index, shield index,
+  unarmored formula ID, or manual override needed to reproduce and verify AC later.
 
 ## Structured content
 
@@ -164,21 +181,33 @@ calculated suggestion.
 Each attack stores:
 
 - name;
-- attack bonus with provenance;
+- attack bonus with provenance and retained source input;
 - one or more damage expressions containing dice, numeric bonus, and damage type.
+
+A calculated attack bonus requires an explicit selected ability (`strength`, `dexterity`, or
+`spellcasting`) and whether proficiency applies. The server never infers an ability from the attack
+name. `spellcasting` is valid only when the character has a supported spellcasting ability. An
+exceptional attack uses a bounded manual override value and reason.
 
 ### Spells
 
 - SRD spells are selected from the class and level-filtered local dropdown.
 - Selecting an SRD spell fills its name, level, school, casting time, range, components, duration,
-  concentration/ritual flags, and complete normalized description/effect.
+  material component when present, concentration/ritual flags, complete normalized
+  description/effect, and higher-level text when present.
 - Spell slots are stored separately by spell level.
 - Known, prepared, spellbook, subclass, and Pact Magic states remain explicit.
-- Manual spell entry requires the same visible display fields and uses imported provenance.
+- Manual spell entry requires the same visible fields: name, level, school, casting time, range,
+  components, optional material component, duration, concentration, ritual, complete description,
+  optional higher-level text, and explicit spell state. It uses imported provenance.
 
 ### Features and traits
 
-- Canonical class, subclass, and race features use SRD indexes and generated descriptions.
+- Canonical Race, Class, and Subclass features use SRD indexes and generated descriptions. The
+  backend rejects a globally valid feature owned by another Race, Class, Subclass, or unavailable
+  level.
+- Persisted canonical features retain index, resolved name, category, complete description, and
+  calculated provenance for Character Reference rendering and later validation.
 - Manual features store a bounded name, category, and description with imported provenance.
 
 ### Equipment
@@ -225,6 +254,12 @@ Each attack stores:
   request.
 - The server validates canonical indexes, manual fallback bounds, deterministic calculations,
   overrides, provenance, and the complete server-built CharacterSheetV2 before persistence.
+- TypeScript and Go validators enforce exact keys for every nested discriminated-union variant.
+  Fields belonging to another variant are rejected even when empty, false, or zero-valued.
+- Complete persisted-sheet validation rederives and verifies final abilities and modifiers,
+  proficiency, Initiative, Passive Perception, Speed, maximum HP, Armor Class, spell DC, spell
+  attack bonus, available spell levels and slots, prepared-spell references, attack-bonus
+  provenance, and canonical feature ownership from the retained source inputs.
 - Exact-key response tests must prove that owner IDs, emails, Party data, invite credentials, and
   unrelated account data are absent from the new V2 response.
 - Generic database errors and existing owner/GM authorization boundaries remain unchanged.
