@@ -97,6 +97,38 @@ T-025 must extend that same source with:
 - Every dropdown has a visible label, keyboard operation, a description/help affordance, and a
   programmatically associated error.
 
+## Manual Race and Class fallback
+
+### Manual Race with canonical Class
+
+- Ability-score input must use imported final values with a bounded reason.
+- Speed must use a manual override with a bounded reason.
+- The server applies no canonical Race or subrace bonuses, traits, choices, features, or other Race
+  automation.
+- Canonical Class calculations and canonical Class spellcasting may still run when their other
+  required inputs are valid.
+- Race features must be manual entries with imported provenance.
+
+### Manual Class
+
+- Proficiency bonus still derives from total level using the universal 2014 level progression.
+- Maximum HP requires a bounded manual override and reason because the class Hit Die is unknown.
+- The server applies no canonical Class, Subclass, feature, choice, or spell-progression automation.
+- Canonical armor defense, the universal standard-unarmored formula, or manual defense remains
+  available when its normal inputs are valid. Class-owned unarmored formulas are unavailable.
+- Class and Subclass features must be manual entries with imported provenance.
+- Canonical Class choices and canonical Class/Subclass features are invalid.
+- Subclass is either `null` or a bounded manual name and receives no automation.
+- In the current bounded V2 contract, `spellcasting` must be `null` for a manual Class. Automated
+  spellcasting remains unavailable unless a separately approved imported spellcasting contract is
+  added later.
+
+### Manual Race and manual Class
+
+- Both sets of requirements apply together: imported final ability scores, manual Speed with a
+  reason, manual maximum HP with a reason, and no invented Race or Class rules.
+- Missing required imported values or overrides fail validation without persistence.
+
 ## Rule choices and ability-score input
 
 - CharacterSheetV2 creation uses one bounded `ruleChoices` collection for both Race and class
@@ -209,6 +241,8 @@ exceptional attack uses a bounded manual override value and reason.
 - Persisted canonical features retain index, resolved name, category, complete description, and
   calculated provenance for Character Reference rendering and later validation.
 - Manual features store a bounded name, category, and description with imported provenance.
+- Persisted manual features retain the original stable entry ID and original user-entered category.
+  The server must not invent a replacement ID or replace that category with `manual`.
 
 ### Equipment
 
