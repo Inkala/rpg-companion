@@ -3,37 +3,56 @@ import type { CharacterSummaryDTO } from '../characters/apiTypes';
 import { PartiesApiError } from './api';
 import type {
   JoinPartyRequestDTO,
+  JoinPartyByCodeRequestDTO,
   JoinPartyResponseDTO,
   PartyInviteInspectionRequestDTO,
+  PartyInviteCodeInspectionRequestDTO,
   PartyInviteInspectionResponseDTO,
 } from './apiTypes';
+import {
+  inviteCredentialsMatch,
+  normalizeInviteCode,
+  type InviteCredential,
+} from './inviteCode';
 import './parties.css';
 
 type InspectInvite = (
   input: PartyInviteInspectionRequestDTO,
 ) => Promise<PartyInviteInspectionResponseDTO>;
+type InspectInviteByCode = (
+  input: PartyInviteCodeInspectionRequestDTO,
+) => Promise<PartyInviteInspectionResponseDTO>;
 type LoadCharacters = () => Promise<CharacterSummaryDTO[]>;
 type JoinParty = (input: JoinPartyRequestDTO) => Promise<JoinPartyResponseDTO>;
+type JoinPartyByCode = (input: JoinPartyByCodeRequestDTO) => Promise<JoinPartyResponseDTO>;
 
 type JoinPartyPageProps = {
-  token: string | null;
+  credential?: InviteCredential | null;
+  token?: string | null;
+  showUnavailable?: boolean;
   isSignedIn: boolean;
   inspectInvite: InspectInvite;
+  inspectInviteByCode?: InspectInviteByCode;
   loadCharacters: LoadCharacters;
   joinParty: JoinParty;
+  joinPartyByCode?: JoinPartyByCode;
   onSignIn: () => void;
+  onCreateAccount?: () => void;
+  onSubmitCode?: (code: string) => void;
   onCreateCharacter: () => void;
   onJoined: (partyId: string) => void;
   onCancel: () => void;
-  onInviteUnavailable: (token: string) => void;
+  onInviteUnavailable: (credential: InviteCredential) => void;
+  onTryAnotherCode?: () => void;
   savedCharacterJoinState?: 'joining' | 'error';
   onRetrySavedCharacterJoin?: () => void;
 };
 
 type LoadKey = {
-  requestedToken: string | null;
+  requestedCredential: InviteCredential | null;
   requestedIsSignedIn: boolean;
   requestedInspector: InspectInvite;
+  requestedCodeInspector: InspectInviteByCode | undefined;
   requestedCharacterLoader: LoadCharacters;
   requestedAttempt: number;
 };
@@ -49,7 +68,10 @@ type LoadState = LoadKey & (
   | { status: 'error' }
 );
 
-type InteractionKey = LoadKey & { requestedJoiner: JoinParty };
+type InteractionKey = LoadKey & {
+  requestedJoiner: JoinParty;
+  requestedCodeJoiner: JoinPartyByCode | undefined;
+};
 
 type InteractionState = InteractionKey & {
   selectedCharacterId: string | null;
@@ -61,30 +83,46 @@ type InteractionState = InteractionKey & {
 const characterSelectionErrorId = 'party-character-selection-error';
 
 export const JoinPartyPage = ({
+  credential: suppliedCredential,
   token,
+  showUnavailable = false,
   isSignedIn,
   inspectInvite,
+  inspectInviteByCode,
   loadCharacters,
   joinParty,
+  joinPartyByCode,
   onSignIn,
+  onCreateAccount,
+  onSubmitCode,
   onCreateCharacter,
   onJoined,
   onCancel,
   onInviteUnavailable,
+  onTryAnotherCode,
   savedCharacterJoinState,
   onRetrySavedCharacterJoin,
 }: JoinPartyPageProps) => {
+  const credential = suppliedCredential === undefined
+    ? token === null || token === undefined
+      ? null
+      : { kind: 'token' as const, value: token }
+    : suppliedCredential;
+  const credentialKind = credential?.kind;
+  const credentialValue = credential?.value;
   const [loadAttempt, setLoadAttempt] = useState(0);
   const currentLoadKey: LoadKey = {
-    requestedToken: token,
+    requestedCredential: credential,
     requestedIsSignedIn: isSignedIn,
     requestedInspector: inspectInvite,
+    requestedCodeInspector: credential?.kind === 'code' ? inspectInviteByCode : undefined,
     requestedCharacterLoader: loadCharacters,
     requestedAttempt: loadAttempt,
   };
   const currentInteractionKey: InteractionKey = {
     ...currentLoadKey,
     requestedJoiner: joinParty,
+    requestedCodeJoiner: credential?.kind === 'code' ? joinPartyByCode : undefined,
   };
   const [loadState, setLoadState] = useState<LoadState>({
     status: 'loading',
@@ -119,10 +157,16 @@ export const JoinPartyPage = ({
 
   useEffect(() => {
     let isActive = true;
+    const requestCredential: InviteCredential | null =
+      credentialKind && credentialValue
+        ? { kind: credentialKind, value: credentialValue }
+        : null;
     const requestKey: LoadKey = {
-      requestedToken: token,
+      requestedCredential: requestCredential,
       requestedIsSignedIn: isSignedIn,
       requestedInspector: inspectInvite,
+      requestedCodeInspector:
+        requestCredential?.kind === 'code' ? inspectInviteByCode : undefined,
       requestedCharacterLoader: loadCharacters,
       requestedAttempt: loadAttempt,
     };
@@ -133,7 +177,7 @@ export const JoinPartyPage = ({
       };
     }
 
-    if (!isSignedIn || token === null) {
+    if (!isSignedIn || requestCredential === null) {
       setLoadState({ status: 'loading', ...requestKey });
       return () => {
         isActive = false;
@@ -142,7 +186,7 @@ export const JoinPartyPage = ({
 
     setLoadState({ status: 'loading', ...requestKey });
     Promise.all([
-      inspectInvite({ token }).catch((error) => {
+      inspectCredential(requestCredential, inspectInvite, inspectInviteByCode).catch((error) => {
         throw new InviteInspectionFailure(error);
       }),
       loadCharacters(),
@@ -164,7 +208,7 @@ export const JoinPartyPage = ({
             isUnavailableInviteError(error.cause)
           ) {
             setLoadState({ status: 'unavailable', ...requestKey });
-            onInviteUnavailable(token);
+            onInviteUnavailable(requestCredential);
             return;
           }
 
@@ -182,7 +226,9 @@ export const JoinPartyPage = ({
     loadCharacters,
     onInviteUnavailable,
     savedCharacterJoinState,
-    token,
+    credentialKind,
+    credentialValue,
+    inspectInviteByCode,
   ]);
 
   const selectCharacter = (characterId: string) => {
@@ -198,15 +244,13 @@ export const JoinPartyPage = ({
   const submitJoin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (
-      activeJoinKeyRef.current &&
-      interactionKeysMatch(activeJoinKeyRef.current, currentInteractionKey)
-    ) {
+    const activeJoinKey = activeJoinKeyRef.current;
+    if (activeJoinKey && interactionKeysMatch(activeJoinKey, currentInteractionKey)) {
       return;
     }
 
     const selectedCharacterId = visibleInteractionState.selectedCharacterId;
-    if (selectedCharacterId === null || token === null) {
+    if (selectedCharacterId === null || credential === null) {
       setInteractionState({
         ...currentInteractionKey,
         selectedCharacterId,
@@ -229,7 +273,12 @@ export const JoinPartyPage = ({
     });
 
     try {
-      const joined = await joinParty({ token, characterId: selectedCharacterId });
+      const joined = await joinWithCredential(
+        credential,
+        selectedCharacterId,
+        joinParty,
+        joinPartyByCode,
+      );
       if (
         isMountedRef.current &&
         interactionKeysMatch(currentInteractionKeyRef.current, joinKey)
@@ -243,7 +292,7 @@ export const JoinPartyPage = ({
       ) {
         if (isUnavailableJoinError(error)) {
           setLoadState({ status: 'unavailable', ...joinKey });
-          onInviteUnavailable(token);
+          onInviteUnavailable(credential);
           return;
         }
 
@@ -274,16 +323,24 @@ export const JoinPartyPage = ({
 
   return (
     <main className="app-shell account-page party-page party-join-page">
-      <header className="reference-nav">
-        <button type="button" className="back-button" onClick={onCancel}>
-          Cancel
-        </button>
-      </header>
+      {credential !== null && !showUnavailable ? (
+        <header className="reference-nav">
+          <button type="button" className="back-button" onClick={onCancel}>
+            Cancel
+          </button>
+        </header>
+      ) : null}
 
-      {token === null ? (
-        <UnavailableInviteState />
+      {credential === null && showUnavailable ? (
+        <UnavailableInviteState
+          isSignedIn={isSignedIn}
+          onTryAnotherCode={onTryAnotherCode}
+          onExit={onCancel}
+        />
+      ) : credential === null ? (
+        <InviteCodeEntryState onSubmitCode={onSubmitCode} onCancel={onCancel} />
       ) : !isSignedIn ? (
-        <SignedOutJoinState onSignIn={onSignIn} />
+        <SignedOutJoinState onSignIn={onSignIn} onCreateAccount={onCreateAccount} />
       ) : savedCharacterJoinState !== undefined ? (
         <SavedCharacterJoinState
           status={savedCharacterJoinState}
@@ -292,7 +349,11 @@ export const JoinPartyPage = ({
       ) : visibleLoadState.status === 'loading' ? (
         <LoadingInviteState />
       ) : visibleLoadState.status === 'unavailable' ? (
-        <UnavailableInviteState />
+        <UnavailableInviteState
+          isSignedIn={isSignedIn}
+          onTryAnotherCode={onTryAnotherCode}
+          onExit={onCancel}
+        />
       ) : visibleLoadState.status === 'error' ? (
         <InviteLoadError onRetry={() => setLoadAttempt((current) => current + 1)} />
       ) : visibleLoadState.characters.length === 0 ? (
@@ -314,7 +375,13 @@ export const JoinPartyPage = ({
   );
 };
 
-const SignedOutJoinState = ({ onSignIn }: { onSignIn: () => void }) => (
+const SignedOutJoinState = ({
+  onSignIn,
+  onCreateAccount,
+}: {
+  onSignIn: () => void;
+  onCreateAccount?: () => void;
+}) => (
   <section
     className="account-card party-state-card party-join-state"
     aria-labelledby="signed-out-invite-title"
@@ -324,11 +391,98 @@ const SignedOutJoinState = ({ onSignIn }: { onSignIn: () => void }) => (
       Sign in to use this party invite
     </h1>
     <p>Sign in before Hunin checks this private invitation.</p>
-    <button type="button" className="button button--primary" onClick={onSignIn}>
-      Sign in
-    </button>
+    <div className="party-actions">
+      <button type="button" className="button button--primary" onClick={onSignIn}>
+        Sign in
+      </button>
+      {onCreateAccount ? (
+        <button type="button" className="button button--secondary" onClick={onCreateAccount}>
+          Create account
+        </button>
+      ) : null}
+    </div>
   </section>
 );
+
+const InviteCodeEntryState = ({
+  onSubmitCode,
+  onCancel,
+}: {
+  onSubmitCode?: (code: string) => void;
+  onCancel: () => void;
+}) => {
+  const [codeInput, setCodeInput] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const focusTimer = window.setTimeout(() => inputRef.current?.focus(), 0);
+    return () => window.clearTimeout(focusTimer);
+  }, []);
+
+  const submitCode = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalized = normalizeInviteCode(codeInput);
+    if (!normalized.ok) {
+      setCodeError(normalized.error);
+      inputRef.current?.focus();
+      return;
+    }
+
+    setCodeInput('');
+    setCodeError(null);
+    onSubmitCode?.(normalized.value);
+  };
+
+  return (
+    <section
+      className="account-card party-state-card party-join-state"
+      aria-labelledby="join-party-code-title"
+    >
+      <p className="eyebrow">Party invite</p>
+      <h1 id="join-party-code-title" className="account-title">Join a party</h1>
+      <p>Enter the invitation code shared by your GM.</p>
+      <form className="party-join-form" onSubmit={submitCode} noValidate>
+        <label className="party-form__field" htmlFor="party-invitation-code">
+          <span>Invitation code</span>
+          <input
+            ref={inputRef}
+            id="party-invitation-code"
+            className="form-input party-form__input party-invite-code__input"
+            type="text"
+            value={codeInput}
+            onChange={(event) => {
+              setCodeInput(event.target.value);
+              setCodeError(null);
+            }}
+            autoComplete="off"
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="characters"
+            inputMode="text"
+            maxLength={24}
+            aria-describedby={`party-invite-code-hint${codeError ? ' party-invite-code-error' : ''}`}
+            aria-invalid={codeError ? 'true' : undefined}
+          />
+        </label>
+        <p id="party-invite-code-hint" className="form-hint">
+          Eight letters or numbers, shown as XXXX-XXXX.
+        </p>
+        {codeError ? (
+          <p id="party-invite-code-error" className="form-error" role="alert">
+            {codeError}
+          </p>
+        ) : null}
+        <div className="party-actions">
+          <button type="submit" className="button button--primary">Continue</button>
+          <button type="button" className="button button--secondary" onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+};
 
 const SavedCharacterJoinState = ({
   status,
@@ -360,15 +514,48 @@ const SavedCharacterJoinState = ({
   </section>
 );
 
-const UnavailableInviteState = () => (
-  <section
-    className="account-card party-state-card party-join-state"
-    aria-labelledby="unavailable-invite-title"
-  >
-    <h1 id="unavailable-invite-title" className="account-title">Party invite unavailable</h1>
-    <p role="alert">This party invite is unavailable.</p>
-  </section>
-);
+const UnavailableInviteState = ({
+  isSignedIn,
+  onTryAnotherCode,
+  onExit,
+}: {
+  isSignedIn: boolean;
+  onTryAnotherCode?: () => void;
+  onExit: () => void;
+}) => {
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
+  return (
+    <section
+      className="account-card party-state-card party-join-state"
+      aria-labelledby="unavailable-invite-title"
+    >
+      <h1
+        ref={headingRef}
+        id="unavailable-invite-title"
+        className="account-title"
+        tabIndex={-1}
+      >
+        Party invite unavailable
+      </h1>
+      <p role="alert">This party invite is unavailable.</p>
+      <div className="party-actions">
+        {onTryAnotherCode ? (
+          <button type="button" className="button button--primary" onClick={onTryAnotherCode}>
+            Try another code
+          </button>
+        ) : null}
+        <button type="button" className="button button--secondary" onClick={onExit}>
+          {isSignedIn ? 'Go to My parties' : 'Go home'}
+        </button>
+      </div>
+    </section>
+  );
+};
 
 const LoadingInviteState = () => (
   <section
@@ -500,16 +687,52 @@ const emptyInteractionState = (key: InteractionKey): InteractionState => ({
 
 const loadKeysMatch = (left: LoadKey, right: LoadKey) => {
   return (
-    left.requestedToken === right.requestedToken &&
+    inviteCredentialsMatch(left.requestedCredential, right.requestedCredential) &&
     left.requestedIsSignedIn === right.requestedIsSignedIn &&
     left.requestedInspector === right.requestedInspector &&
+    left.requestedCodeInspector === right.requestedCodeInspector &&
     left.requestedCharacterLoader === right.requestedCharacterLoader &&
     left.requestedAttempt === right.requestedAttempt
   );
 };
 
+const inspectCredential = (
+  credential: InviteCredential,
+  inspectInvite: InspectInvite,
+  inspectInviteByCode: InspectInviteByCode | undefined,
+) => {
+  if (credential.kind === 'token') {
+    return inspectInvite({ token: credential.value });
+  }
+
+  if (!inspectInviteByCode) {
+    return Promise.reject(new Error('Code inspection is unavailable.'));
+  }
+  return inspectInviteByCode({ code: credential.value });
+};
+
+const joinWithCredential = (
+  credential: InviteCredential,
+  characterId: string,
+  joinParty: JoinParty,
+  joinPartyByCode: JoinPartyByCode | undefined,
+) => {
+  if (credential.kind === 'token') {
+    return joinParty({ token: credential.value, characterId });
+  }
+
+  if (!joinPartyByCode) {
+    return Promise.reject(new Error('Code joining is unavailable.'));
+  }
+  return joinPartyByCode({ code: credential.value, characterId });
+};
+
 const interactionKeysMatch = (left: InteractionKey, right: InteractionKey) => {
-  return loadKeysMatch(left, right) && left.requestedJoiner === right.requestedJoiner;
+  return (
+    loadKeysMatch(left, right) &&
+    left.requestedJoiner === right.requestedJoiner &&
+    left.requestedCodeJoiner === right.requestedCodeJoiner
+  );
 };
 
 const safeJoinErrorMessage = (error: unknown) => {

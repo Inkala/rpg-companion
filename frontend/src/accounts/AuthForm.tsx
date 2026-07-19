@@ -17,6 +17,7 @@ interface AuthFormProps {
   onAuthenticated: (user: AuthUser) => void;
   onModeChange: (mode: AccountMode) => void;
   onRegistrationSuccess: () => void;
+  onAuthenticationFailure?: () => boolean;
 }
 
 export const AuthForm = ({
@@ -24,6 +25,7 @@ export const AuthForm = ({
   onAuthenticated,
   onModeChange,
   onRegistrationSuccess,
+  onAuthenticationFailure,
 }: AuthFormProps) => {
   const [mode, setMode] = useState<AccountMode>(initialMode);
   const [username, setUsername] = useState('');
@@ -93,8 +95,10 @@ export const AuthForm = ({
       const user = await signIn({ usernameOrEmail, password });
       onAuthenticated(user);
     } catch (submitError) {
-      const message =
-        submitError instanceof AuthApiError
+      const privateContinuationCleared = onAuthenticationFailure?.() ?? false;
+      const message = privateContinuationCleared
+        ? 'Could not sign in. Please try again.'
+        : submitError instanceof AuthApiError
           ? submitError.message
           : 'The account request failed.';
       setError(message);

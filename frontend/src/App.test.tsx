@@ -95,6 +95,7 @@ const createdParty = {
 
 const generatedInvite = {
   token: 'g'.repeat(43),
+  code: 'ABCD-EFGH',
   createdAt: '2026-07-13T10:00:00Z',
   expiresAt: '2026-07-20T10:00:00Z',
 };
@@ -312,6 +313,182 @@ describe('App', () => {
     expect(requestedPaths(fetchMock)).not.toContain('/characters');
   });
 
+  it('keeps a signed-out code private, defers inspection, then inspects exactly once after sign-in', async () => {
+    const code = 'ABCDEFGH';
+    const inspectInviteCode = vi.fn().mockResolvedValue(jsonResponse(partyInspection));
+    const fetchMock = partyFetchMock({ inspectInviteCode });
+    const consoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    render(<App />);
+
+    const input = screen.getByRole('textbox', { name: 'Invitation code' });
+    fireEvent.change(input, { target: { value: ' abcd - efgh ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(screen.getByRole('heading', { name: 'Sign in to use this party invite' })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('main')).getByRole('button', { name: 'Create account' }),
+    ).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(code);
+    expect(inviteAppearsInBrowserSurface(code)).toBe(false);
+    expect(requestCount(fetchMock, '/party-invites/code/inspect')).toBe(0);
+
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }));
+    completeSignInForm();
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('heading', { name: 'Join The Lantern Guard' })).toBeInTheDocument();
+    expect(inspectInviteCode).toHaveBeenCalledOnce();
+    expect(inspectInviteCode).toHaveBeenCalledWith(code);
+    expect(requestCount(fetchMock, '/party-invites/code/inspect')).toBe(1);
+    expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(0);
+    expect(inviteAppearsInBrowserSurface(code)).toBe(false);
+    expect(consoleLog).not.toHaveBeenCalled();
+  });
+
+  it('clears a pending code after failed authentication', async () => {
+    const code = 'ABCDEFGH';
+    const authenticate = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: `private ${code}` }, 401))
+      .mockResolvedValueOnce(jsonResponse({ user: maraUser }));
+    const fetchMock = partyFetchMock({ authenticate });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    render(<App />);
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Invitation code' }), {
+      target: { value: 'ABCD-EFGH' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }));
+    completeSignInForm();
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('alert')).not.toHaveTextContent(code);
+    expect(inviteAppearsInBrowserSurface(code)).toBe(false);
+    expect(requestCount(fetchMock, '/party-invites/code/inspect')).toBe(0);
+
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }));
+    expect(await screen.findByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+    expect(requestCount(fetchMock, '/party-invites/code/inspect')).toBe(0);
+  });
+
+  it('clears a pending code when authentication is cancelled', async () => {
+    const code = 'ABCDEFGH';
+    const fetchMock = partyFetchMock();
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    render(<App />);
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Invitation code' }), {
+      target: { value: 'ABCD-EFGH' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+    expect(window.location.pathname).toBe('/parties/join');
+    const input = screen.getByRole('textbox', { name: 'Invitation code' });
+    expect(input).toHaveValue('');
+    await waitFor(() => expect(input).toHaveFocus());
+    expect(inviteAppearsInBrowserSurface(code)).toBe(false);
+    expect(requestCount(fetchMock, '/party-invites/code/inspect')).toBe(0);
+  });
+
+  it('inspects and joins a normalized code through code-only endpoints when signed in', async () => {
+    const code = 'ABCDEFGH';
+    const inspectInviteCode = vi.fn().mockResolvedValue(jsonResponse(partyInspection));
+    const joinPartyCode = vi.fn().mockResolvedValue(jsonResponse(joinedParty, 201));
+    const fetchMock = partyFetchMock({
+      restoredUser: true,
+      inspectInviteCode,
+      joinPartyCode,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    render(<App />);
+
+    await screen.findByRole('button', { name: 'Mara account menu' });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Invitation code' }), {
+      target: { value: 'abcd-efgh' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(await screen.findByRole('radio', { name: /Branna Shieldhand/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
+
+    expect(await screen.findByRole('heading', { name: 'The Lantern Guard' })).toBeInTheDocument();
+    expect(inspectInviteCode).toHaveBeenCalledWith(code);
+    expect(joinPartyCode).toHaveBeenCalledWith({
+      code,
+      characterId: fighterCharacterSummary.id,
+    });
+    expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(0);
+    expect(requestCount(fetchMock, '/party-invites/join')).toBe(0);
+    expect(inviteAppearsInBrowserSurface(code)).toBe(false);
+  });
+
+  it('offers privacy-safe unavailable recovery and focuses an empty retry input', async () => {
+    const code = 'ABCDEFGH';
+    const fetchMock = partyFetchMock({
+      restoredUser: true,
+      inspectInviteCode: vi.fn().mockResolvedValue(
+        jsonResponse({ error: `private ${code}`, code: 'invite_unavailable' }, 400),
+      ),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    render(<App />);
+
+    await screen.findByRole('button', { name: 'Mara account menu' });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Invitation code' }), {
+      target: { value: 'ABCD-EFGH' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(await screen.findByRole('heading', { name: 'Party invite unavailable' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Try another code' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to My parties' })).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(code);
+    expect(document.body).not.toHaveTextContent(`private ${code}`);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try another code' }));
+    const retryInput = screen.getByRole('textbox', { name: 'Invitation code' });
+    expect(retryInput).toHaveValue('');
+    await waitFor(() => expect(retryInput).toHaveFocus());
+  });
+
+  it('ignores a late code inspection after cancellation', async () => {
+    const code = 'ABCDEFGH';
+    const pendingInspection = deferred<Response>();
+    const fetchMock = partyFetchMock({
+      restoredUser: true,
+      inspectInviteCode: vi.fn().mockReturnValue(pendingInspection.promise),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    render(<App />);
+
+    await screen.findByRole('button', { name: 'Mara account menu' });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Invitation code' }), {
+      target: { value: 'ABCD-EFGH' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() => expect(requestCount(fetchMock, '/party-invites/code/inspect')).toBe(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await act(async () => {
+      pendingInspection.resolve(jsonResponse(partyInspection));
+      await pendingInspection.promise;
+    });
+
+    expect(window.location.pathname).toBe('/');
+    expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
+    expect(screen.queryByText('The Lantern Guard')).not.toBeInTheDocument();
+    expect(inviteAppearsInBrowserSurface(code)).toBe(false);
+  });
+
   it('starts invite inspection and Character loading after restoring a session', async () => {
     const fetchMock = partyFetchMock({ restoredUser: true });
     vi.stubGlobal('fetch', fetchMock);
@@ -347,7 +524,7 @@ describe('App', () => {
 
     await screen.findByRole('button', { name: 'Mara account menu' });
     expect(
-      screen.getByRole('heading', { name: 'Party invite unavailable' }),
+      screen.getByRole('heading', { name: 'Join a party' }),
     ).toBeInTheDocument();
 
     dispatchFragmentNavigation(inviteToken);
@@ -550,7 +727,7 @@ describe('App', () => {
     fireEvent(window, new PopStateEvent('popstate'));
 
     expect(
-      screen.getByRole('heading', { name: 'Party invite unavailable' }),
+      screen.getByRole('heading', { name: 'Join a party' }),
     ).toBeInTheDocument();
     expect(
       within(screen.getByRole('main')).queryByRole('button', { name: 'Sign in' }),
@@ -643,7 +820,7 @@ describe('App', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
     fireEvent(window, new PopStateEvent('popstate'));
     expect(
-      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+      await screen.findByRole('heading', { name: 'Join a party' }),
     ).toBeInTheDocument();
   });
 
@@ -661,7 +838,7 @@ describe('App', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
     fireEvent(window, new PopStateEvent('popstate'));
     expect(
-      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+      await screen.findByRole('heading', { name: 'Join a party' }),
     ).toBeInTheDocument();
   });
 
@@ -680,7 +857,7 @@ describe('App', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
     fireEvent(window, new PopStateEvent('popstate'));
     expect(
-      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+      await screen.findByRole('heading', { name: 'Join a party' }),
     ).toBeInTheDocument();
   });
 
@@ -699,7 +876,7 @@ describe('App', () => {
     await waitFor(() => expect(window.location.pathname).toBe('/parties/join'));
     fireEvent(window, new PopStateEvent('popstate'));
     expect(
-      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+      await screen.findByRole('heading', { name: 'Join a party' }),
     ).toBeInTheDocument();
 
     window.history.forward();
@@ -838,7 +1015,48 @@ describe('App', () => {
     ).toBeInTheDocument();
     expect(joinParty).toHaveBeenCalledTimes(2);
     expect(requestCountByMethod(fetchMock, '/characters', 'POST')).toBe(1);
-    expect(screen.getAllByText('Character saved.')).toHaveLength(1);
+    await waitFor(() => {
+      expect(screen.getAllByText('Character saved.')).toHaveLength(1);
+    });
+  });
+
+  it('retries only the code join after creating and saving a character', async () => {
+    const code = 'ABCDEFGH';
+    const joinPartyCode = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: 'private backend detail' }, 503))
+      .mockResolvedValueOnce(jsonResponse(joinedParty, 201));
+    const fetchMock = partyFetchMock({
+      restoredUser: true,
+      characters: [],
+      joinPartyCode,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/parties/join');
+    render(<App />);
+
+    await screen.findByRole('button', { name: 'Mara account menu' });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Invitation code' }), {
+      target: { value: 'abcd-efgh' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    await createStrengthCharacterFromInvite();
+
+    expect(await screen.findByRole('heading', { name: 'Could not join party' })).toBeInTheDocument();
+    expect(joinPartyCode).toHaveBeenCalledOnce();
+    expect(joinPartyCode).toHaveBeenCalledWith({
+      code,
+      characterId: fighterCharacter.id,
+    });
+    expect(requestCountByMethod(fetchMock, '/characters', 'POST')).toBe(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByRole('heading', { name: 'The Lantern Guard' })).toBeInTheDocument();
+    expect(joinPartyCode).toHaveBeenCalledTimes(2);
+    expect(requestCountByMethod(fetchMock, '/characters', 'POST')).toBe(1);
+    expect(requestCount(fetchMock, '/party-invites/join')).toBe(0);
+    expect(inviteAppearsInBrowserSurface(code)).toBe(false);
   });
 
   it('ignores stale automatic join success after invite cancellation', async () => {
@@ -890,7 +1108,9 @@ describe('App', () => {
     expect(joinParty).not.toHaveBeenCalled();
     expect(window.location.pathname).toBe('/');
     expect(screen.getByRole('heading', { name: 'Hunin' })).toBeInTheDocument();
-    expect(screen.getAllByText('Character saved.')).toHaveLength(1);
+    await waitFor(() => {
+      expect(screen.getAllByText('Character saved.')).toHaveLength(1);
+    });
   });
 
   it('ignores stale invite-unavailable failure after invite replacement', async () => {
@@ -982,7 +1202,7 @@ describe('App', () => {
     fireEvent(window, new PopStateEvent('popstate'));
 
     expect(
-      await screen.findByRole('heading', { name: 'Party invite unavailable' }),
+      await screen.findByRole('heading', { name: 'Join a party' }),
     ).toBeInTheDocument();
     expect(requestCount(fetchMock, '/party-invites/inspect')).toBe(1);
   });
@@ -1050,7 +1270,7 @@ describe('App', () => {
     render(<App />);
 
     expect(
-      await screen.findByRole('button', { name: 'Generate invite link' }),
+      await screen.findByRole('button', { name: 'Generate invitation' }),
     ).toBeInTheDocument();
     expect(requestCount(fetchMock, '/parties/party-1')).toBe(1);
   });
@@ -1062,7 +1282,7 @@ describe('App', () => {
 
     await screen.findByRole('heading', { name: 'The Lantern Guard' });
     expect(
-      screen.queryByRole('button', { name: 'Generate invite link' }),
+      screen.queryByRole('button', { name: 'Generate invitation' }),
     ).not.toBeInTheDocument();
   });
 
@@ -1073,7 +1293,7 @@ describe('App', () => {
     render(<App />);
 
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Generate invite link' }),
+      await screen.findByRole('button', { name: 'Generate invitation' }),
     );
     await waitFor(() => {
       expect(
@@ -1106,10 +1326,10 @@ describe('App', () => {
     render(<App />);
 
     await generateInviteWithoutTokenOutput();
-    fireEvent.click(findButtonWithoutDOMOutput('Copy invite link'));
+    fireEvent.click(findButtonWithoutDOMOutput('Copy invitation link'));
 
     await waitFor(() => {
-      expect(document.querySelector('[role="status"]')?.textContent === 'Invite link copied.').toBe(true);
+      expect(document.querySelector('[role="status"]')?.textContent === 'Invitation link copied.').toBe(true);
     });
     expect(copied.length).toBe(1);
     expect(copied[0] === `${window.location.origin}/parties/join#${generatedInvite.token}`).toBe(true);
@@ -1124,12 +1344,12 @@ describe('App', () => {
     render(<App />);
 
     await generateInviteWithoutTokenOutput();
-    fireEvent.click(findButtonWithoutDOMOutput('Copy invite link'));
+    fireEvent.click(findButtonWithoutDOMOutput('Copy invitation link'));
 
     await waitFor(() => {
       expect(
         document.querySelector('[role="alert"]')?.textContent ===
-          'Could not copy the invite link. Copy it manually instead.',
+          'Could not copy the invitation link. Copy it manually instead.',
       ).toBe(true);
     });
   });
@@ -1587,7 +1807,7 @@ describe('App', () => {
     expect(window.location.hash).toBe('');
     expect(JSON.stringify(window.history.state).includes(inviteToken)).toBe(false);
     expect(
-      screen.getByRole('heading', { name: 'Party invite unavailable' }),
+      screen.getByRole('heading', { name: 'Join a party' }),
     ).toHaveFocus();
     expect(inviteAppearsInBrowserSurface(inviteToken)).toBe(false);
     await waitFor(() => expect(requestedPaths(fetchMock)).toContain('/auth/session'));
@@ -1974,7 +2194,10 @@ const partyFetchMock = ({
   restoredUser = false,
   inspectionResponse,
   inspectInvite,
+  inspectInviteCode,
   joinParty,
+  joinPartyCode,
+  authenticate,
   createCharacter,
   party = partyDetail,
   characters = [fighterCharacterSummary],
@@ -1986,7 +2209,10 @@ const partyFetchMock = ({
   restoredUser?: boolean;
   inspectionResponse?: Response;
   inspectInvite?: (token: string) => Promise<Response>;
+  inspectInviteCode?: (code: string) => Promise<Response>;
   joinParty?: (input: { token: string; characterId: string }) => Promise<Response>;
+  joinPartyCode?: (input: { code: string; characterId: string }) => Promise<Response>;
+  authenticate?: () => Promise<Response>;
   createCharacter?: () => Promise<Response>;
   party?: unknown;
   characters?: unknown[];
@@ -2013,7 +2239,13 @@ const partyFetchMock = ({
       );
     }
 
-    if (path === '/auth/sessions' || path === '/auth/register') {
+    if (path === '/auth/sessions') {
+      return authenticate
+        ? authenticate()
+        : Promise.resolve(jsonResponse({ user: maraUser }));
+    }
+
+    if (path === '/auth/register') {
       return Promise.resolve(jsonResponse({ user: maraUser }));
     }
 
@@ -2027,6 +2259,16 @@ const partyFetchMock = ({
       return Promise.resolve(inspectionResponse ?? jsonResponse(partyInspection));
     }
 
+    if (path === '/party-invites/code/inspect') {
+      const body = typeof init?.body === 'string'
+        ? JSON.parse(init.body) as { code?: unknown }
+        : {};
+      const code = typeof body.code === 'string' ? body.code : '';
+      return inspectInviteCode
+        ? inspectInviteCode(code)
+        : Promise.resolve(jsonResponse(partyInspection));
+    }
+
     if (path === '/party-invites/join') {
       if (joinParty) {
         const body = typeof init?.body === 'string'
@@ -2038,6 +2280,19 @@ const partyFetchMock = ({
         });
       }
       return Promise.resolve(jsonResponse(joinedParty, 201));
+    }
+
+    if (path === '/party-invites/code/join') {
+      const body = typeof init?.body === 'string'
+        ? JSON.parse(init.body) as { code?: unknown; characterId?: unknown }
+        : {};
+      const input = {
+        code: typeof body.code === 'string' ? body.code : '',
+        characterId: typeof body.characterId === 'string' ? body.characterId : '',
+      };
+      return joinPartyCode
+        ? joinPartyCode(input)
+        : Promise.resolve(jsonResponse(joinedParty, 201));
     }
 
     if (path === '/characters' && init?.method === 'POST') {
@@ -2112,6 +2367,7 @@ const inviteAppearsInBrowserSurface = (sensitiveValue: string) => {
     window.location.hash,
     JSON.stringify(window.history.state),
     document.body.textContent ?? '',
+    document.cookie,
     storageValues(window.localStorage),
     storageValues(window.sessionStorage),
   ].some((surface) => surface.includes(sensitiveValue));
@@ -2138,7 +2394,7 @@ const partyCreateRequests = (fetchMock: ReturnType<typeof vi.fn>) => {
 
 const generateInviteWithoutTokenOutput = async () => {
   fireEvent.click(
-    await screen.findByRole('button', { name: 'Generate invite link' }),
+    await screen.findByRole('button', { name: 'Generate invitation' }),
   );
   await waitFor(() => {
     expect(

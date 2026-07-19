@@ -10,6 +10,7 @@ interface AccountPanelProps {
   onAuthenticated: (user: AuthUser) => void;
   onModeChange: (mode: AccountMode) => void;
   onRegistrationSuccess: () => void;
+  onAuthenticationFailure?: () => boolean;
   onSignOut: () => void;
 }
 
@@ -20,6 +21,7 @@ export const AccountPanel = ({
   onAuthenticated,
   onModeChange,
   onRegistrationSuccess,
+  onAuthenticationFailure,
   onSignOut,
 }: AccountPanelProps) => {
   if (!accountsAvailable) {
@@ -55,6 +57,7 @@ export const AccountPanel = ({
         onAuthenticated={onAuthenticated}
         onModeChange={onModeChange}
         onRegistrationSuccess={onRegistrationSuccess}
+        onAuthenticationFailure={onAuthenticationFailure}
       />
     </section>
   );

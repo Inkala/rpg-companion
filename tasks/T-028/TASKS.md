@@ -50,37 +50,37 @@ Planning is approved. Implementation must not start until it is separately assig
 
 ## Slice 3: frontend flow
 
-- [ ] Add initial failing bare Join, valid code, auth-return, unavailable, copy, focus, and privacy
+- [x] Add initial failing bare Join, valid code, auth-return, unavailable, copy, focus, and privacy
   tests.
-- [ ] Add the accessible bare Join code-entry form and local normalization.
-- [ ] Keep submitted codes only in private typed memory and clear the rendered input immediately.
-- [ ] Continue code invitations through signed-in and signed-out authentication paths.
-- [ ] Prove signed-out submission does not call inspection before authentication and inspects exactly
+- [x] Add the accessible bare Join code-entry form and local normalization.
+- [x] Keep submitted codes only in private typed memory and clear the rendered input immediately.
+- [x] Continue code invitations through signed-in and signed-out authentication paths.
+- [x] Prove signed-out submission does not call inspection before authentication and inspects exactly
   once after successful authentication.
-- [ ] Clear pending credential memory on cancellation, replacement, failed authentication,
+- [x] Clear pending credential memory on cancellation, replacement, failed authentication,
   unavailable invitation, and completed join.
-- [ ] Add `Try another code` and the authentication-specific escape destination.
-- [ ] Make `Try another code` clear the failed credential and focus an empty code input.
-- [ ] Add separate GM `Copy code` and `Copy invitation link` controls.
-- [ ] Give both copy actions fixed accessible success feedback that never repeats credentials.
-- [ ] Hide credentials and copy actions when private response state is gone; retain regeneration as
+- [x] Add `Try another code` and the authentication-specific escape destination.
+- [x] Make `Try another code` clear the failed credential and focus an empty code input.
+- [x] Add separate GM `Copy code` and `Copy invitation link` controls.
+- [x] Give both copy actions fixed accessible success feedback that never repeats credentials.
+- [x] Hide credentials and copy actions when private response state is gone; retain regeneration as
   the recovery path and explain the one-time behavior safely.
-- [ ] Preserve direct-link token automation, character selection/creation, joining, and navigation.
-- [ ] Prove credentials never enter DOM after submission, navigation, history, storage, logs, errors,
+- [x] Preserve direct-link token automation, character selection/creation, joining, and navigation.
+- [x] Prove credentials never enter DOM after submission, navigation, history, storage, logs, errors,
   analytics, or toasts.
 
 ## Complete validation
 
-- [ ] Run focused backend and frontend tests after implementation.
-- [ ] Run all PostgreSQL-backed tests with an explicit disposable database.
-- [ ] Run complete backend tests with `-p 1`, focused race tests, vet, and build.
-- [ ] Run frozen frontend install, high-severity audit, typecheck, lint, full tests, and build using the
+- [x] Run focused backend and frontend tests after implementation.
+- [x] Run all PostgreSQL-backed tests with an explicit disposable database.
+- [x] Run complete backend tests with `-p 1`, focused race tests, vet, and build.
+- [x] Run frozen frontend install, high-severity audit, typecheck, lint, full tests, and build using the
   required Node and pnpm versions.
-- [ ] Validate keyboard, focus, live announcements, 44px targets, and no overflow at 320px, 390px,
+- [x] Validate keyboard, focus, live announcements, 44px targets, and no overflow at 320px, 390px,
   720px, and desktop with no console errors.
-- [ ] Run `git diff --check` and confirm no T-023, provider, deployment, production, or unrelated files
+- [x] Run `git diff --check` and confirm no T-023, provider, deployment, production, or unrelated files
   changed.
-- [ ] Return the standard worker report and stop before commit unless separately authorized.
+- [x] Return the standard worker report and stop before commit unless separately authorized.
 
 ## Controlled rollout and integration
 

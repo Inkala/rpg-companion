@@ -53,6 +53,44 @@ const joinedParty: JoinPartyResponseDTO = {
 };
 
 describe('JoinPartyPage', () => {
+  it('renders an accessible invitation-code form for a bare Join route', async () => {
+    const onSubmitCode = vi.fn();
+    const onCancel = vi.fn();
+
+    renderPage({ token: null, isSignedIn: false, onSubmitCode, onCancel });
+
+    expect(screen.getByRole('heading', { name: 'Join a party' })).toBeInTheDocument();
+    expect(screen.getByText('Enter the invitation code shared by your GM.')).toBeInTheDocument();
+    const input = screen.getByRole('textbox', { name: 'Invitation code' });
+    expect(input).toHaveAttribute('autocomplete', 'off');
+    expect(input).toHaveAttribute('spellcheck', 'false');
+    await waitFor(() => expect(input).toHaveFocus());
+    expect(screen.queryByText('This party invite is unavailable.')).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: ' abcd - efgh ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(onSubmitCode).toHaveBeenCalledWith('ABCDEFGH');
+    expect(input).toHaveValue('');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it('rejects invalid codes locally and focuses the associated input', () => {
+    const onSubmitCode = vi.fn();
+    renderPage({ token: null, onSubmitCode });
+
+    const input = screen.getByRole('textbox', { name: 'Invitation code' });
+    fireEvent.change(input, { target: { value: 'ABCI-1234' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(onSubmitCode).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Enter the eight-character invitation code using letters and numbers.',
+    );
+    expect(input).toHaveFocus();
+  });
+
   it('reveals no invite details and performs no requests while signed out', () => {
     const inspectInvite = vi.fn();
     const loadCharacters = vi.fn();
@@ -82,7 +120,7 @@ describe('JoinPartyPage', () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
-  it('shows a safe unavailable state for a signed-out missing token without requests', () => {
+  it('shows the code-entry state for a signed-out missing token without requests', () => {
     const inspectInvite = vi.fn();
     const loadCharacters = vi.fn();
     const joinParty = vi.fn();
@@ -95,11 +133,8 @@ describe('JoinPartyPage', () => {
       joinParty,
     });
 
-    expect(
-      screen.getByRole('heading', { name: 'Party invite unavailable' }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent('This party invite is unavailable.');
-    expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Join a party' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Invitation code' })).toBeInTheDocument();
     expect(inspectInvite).not.toHaveBeenCalled();
     expect(loadCharacters).not.toHaveBeenCalled();
     expect(joinParty).not.toHaveBeenCalled();
@@ -131,6 +166,162 @@ describe('JoinPartyPage', () => {
     expect(within(characterGroup).getByText('Fighter - Level 1')).toBeInTheDocument();
     expect(within(characterGroup).getByLabelText(/Mara Velard/)).toBeInTheDocument();
     expect(within(characterGroup).getByText('Ranger - Hunter - Level 3')).toBeInTheDocument();
+  });
+
+  it('uses code inspection and joining without exposing the submitted code', async () => {
+    const code = 'ABCDEFGH';
+    const inspectInviteByCode = vi.fn().mockResolvedValue(inspection);
+    const joinPartyByCode = vi.fn().mockResolvedValue(joinedParty);
+    const onJoined = vi.fn();
+
+    renderPage({
+      token: undefined,
+      credential: { kind: 'code', value: code },
+      inspectInviteByCode,
+      joinPartyByCode,
+      onJoined,
+    });
+
+    fireEvent.click(await screen.findByRole('radio', { name: /Branna Shieldhand/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
+
+    expect(inspectInviteByCode).toHaveBeenCalledWith({ code });
+    expect(joinPartyByCode).toHaveBeenCalledWith({ code, characterId: 'character-1' });
+    await waitFor(() => expect(onJoined).toHaveBeenCalledWith('party-1'));
+    expect(document.body).not.toHaveTextContent(code);
+  });
+
+  it('ignores a code inspection result after the code inspector is replaced', async () => {
+    const oldInspection = deferred<PartyInviteInspectionResponseDTO>();
+    const replacementInspection = deferred<PartyInviteInspectionResponseDTO>();
+    const oldInspector = vi.fn().mockReturnValue(oldInspection.promise);
+    const replacementInspector = vi.fn().mockReturnValue(replacementInspection.promise);
+    const code = 'ABCDEFGH';
+    const props = defaultProps({
+      token: undefined,
+      credential: { kind: 'code', value: code },
+      inspectInviteByCode: oldInspector,
+    });
+    const { rerender } = render(<JoinPartyPage {...props} />);
+
+    expect(oldInspector).toHaveBeenCalledWith({ code });
+    rerender(<JoinPartyPage {...props} inspectInviteByCode={replacementInspector} />);
+    expect(replacementInspector).toHaveBeenCalledWith({ code });
+
+    await act(async () => {
+      oldInspection.resolve(inspection);
+      await oldInspection.promise;
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('Checking party invite...');
+    expect(screen.queryByText('The Lantern Guard')).not.toBeInTheDocument();
+
+    await act(async () => {
+      replacementInspection.resolve({
+        party: { id: 'party-2', name: 'The Silver Company' },
+        expiresAt: '2026-07-20T10:00:00Z',
+      });
+      await replacementInspection.promise;
+    });
+    expect(
+      await screen.findByRole('heading', { name: 'Join The Silver Company' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('The Lantern Guard')).not.toBeInTheDocument();
+  });
+
+  it.each(['resolve', 'reject'] as const)(
+    'ignores an old code join that %s after the code joiner is replaced',
+    async (completion) => {
+      const oldJoin = deferred<JoinPartyResponseDTO>();
+      const oldJoiner = vi.fn().mockReturnValue(oldJoin.promise);
+      const replacementJoiner = vi.fn().mockResolvedValue({
+        ...joinedParty,
+        partyId: 'party-2',
+      });
+      const onJoined = vi.fn();
+      const code = 'ABCDEFGH';
+      const props = defaultProps({
+        token: undefined,
+        credential: { kind: 'code', value: code },
+        joinPartyByCode: oldJoiner,
+        onJoined,
+      });
+      const { rerender } = render(<JoinPartyPage {...props} />);
+
+      fireEvent.click(await screen.findByRole('radio', { name: /Branna Shieldhand/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
+      expect(oldJoiner).toHaveBeenCalledWith({ code, characterId: 'character-1' });
+
+      rerender(<JoinPartyPage {...props} joinPartyByCode={replacementJoiner} />);
+      await act(async () => {
+        if (completion === 'resolve') {
+          oldJoin.resolve(joinedParty);
+          await oldJoin.promise;
+        } else {
+          oldJoin.reject(new PartiesApiError('private old failure', 503, 'server_error'));
+          await oldJoin.promise.catch(() => undefined);
+        }
+      });
+
+      expect(onJoined).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Join The Lantern Guard' })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('radio', { name: /Branna Shieldhand/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Join party' }));
+      expect(replacementJoiner).toHaveBeenCalledWith({ code, characterId: 'character-1' });
+      await waitFor(() => expect(onJoined).toHaveBeenCalledWith('party-2'));
+    },
+  );
+
+  it('ignores a late token inspection after replacement by a code credential', async () => {
+    const oldInspection = deferred<PartyInviteInspectionResponseDTO>();
+    const inspectInviteByCode = vi.fn().mockResolvedValue({
+      party: { id: 'party-2', name: 'The Silver Company' },
+      expiresAt: '2026-07-20T10:00:00Z',
+    });
+    const props = defaultProps({ inspectInvite: vi.fn().mockReturnValue(oldInspection.promise) });
+    const { rerender } = render(
+      <JoinPartyPage {...props} credential={{ kind: 'token', value: token }} token={undefined} />,
+    );
+
+    rerender(
+      <JoinPartyPage
+        {...props}
+        token={undefined}
+        credential={{ kind: 'code', value: 'ABCDEFGH' }}
+        inspectInviteByCode={inspectInviteByCode}
+      />,
+    );
+    expect(await screen.findByRole('heading', { name: 'Join The Silver Company' })).toBeInTheDocument();
+
+    oldInspection.resolve(inspection);
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Join The Silver Company' })).toBeInTheDocument();
+      expect(screen.queryByText('The Lantern Guard')).not.toBeInTheDocument();
+    });
+  });
+
+  it('returns unavailable recovery to an empty focused code input', async () => {
+    const onTryAnotherCode = vi.fn();
+    const onCancel = vi.fn();
+    const props = defaultProps({
+      token: null,
+      isSignedIn: false,
+      showUnavailable: true,
+      onTryAnotherCode,
+      onCancel,
+    });
+    const { rerender } = render(<JoinPartyPage {...props} />);
+
+    expect(screen.getByRole('heading', { name: 'Party invite unavailable' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Go home' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Try another code' }));
+    expect(onTryAnotherCode).toHaveBeenCalledOnce();
+
+    rerender(<JoinPartyPage {...props} showUnavailable={false} />);
+    const input = screen.getByRole('textbox', { name: 'Invitation code' });
+    expect(input).toHaveValue('');
+    await waitFor(() => expect(input).toHaveFocus());
   });
 
   it('provides scoped join-form and radio-card hooks without adding another group', async () => {
@@ -478,13 +669,17 @@ const defaultProps = (
   token,
   isSignedIn: true,
   inspectInvite: vi.fn().mockResolvedValue(inspection),
+  inspectInviteByCode: vi.fn().mockResolvedValue(inspection),
   loadCharacters: vi.fn().mockResolvedValue(characters),
   joinParty: vi.fn().mockResolvedValue(joinedParty),
+  joinPartyByCode: vi.fn().mockResolvedValue(joinedParty),
   onSignIn: vi.fn(),
   onCreateCharacter: vi.fn(),
   onJoined: vi.fn(),
   onCancel: vi.fn(),
   onInviteUnavailable: vi.fn(),
+  onSubmitCode: vi.fn(),
+  onTryAnotherCode: vi.fn(),
   ...overrides,
 });
 

@@ -2,12 +2,14 @@ import type { CharacterDTO } from '../characters/apiTypes';
 import type {
   CreatePartyRequestDTO,
   CreatePartyResponseDTO,
+  JoinPartyByCodeRequestDTO,
   JoinPartyRequestDTO,
   JoinPartyResponseDTO,
   PartyDetailDTO,
   PartyErrorCodeDTO,
   PartyErrorResponseDTO,
   PartyInviteDTO,
+  PartyInviteCodeInspectionRequestDTO,
   PartyInviteInspectionRequestDTO,
   PartyInviteInspectionResponseDTO,
   PartyListResponseDTO,
@@ -90,8 +92,23 @@ export const createPartiesApiClient = ({
     );
   };
 
+  const inspectPartyInviteByCode = (
+    input: PartyInviteCodeInspectionRequestDTO,
+  ): Promise<PartyInviteInspectionResponseDTO> => {
+    return request<PartyInviteInspectionResponseDTO>(
+      '/party-invites/code/inspect',
+      postRequestInit(input),
+    );
+  };
+
   const joinParty = (input: JoinPartyRequestDTO): Promise<JoinPartyResponseDTO> => {
     return request<JoinPartyResponseDTO>('/party-invites/join', postRequestInit(input));
+  };
+
+  const joinPartyByCode = (
+    input: JoinPartyByCodeRequestDTO,
+  ): Promise<JoinPartyResponseDTO> => {
+    return request<JoinPartyResponseDTO>('/party-invites/code/join', postRequestInit(input));
   };
 
   const getPartyCharacter = (
@@ -110,7 +127,9 @@ export const createPartiesApiClient = ({
     getParty,
     createPartyInvite,
     inspectPartyInvite,
+    inspectPartyInviteByCode,
     joinParty,
+    joinPartyByCode,
     getPartyCharacter,
   };
 };

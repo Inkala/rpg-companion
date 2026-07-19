@@ -29,6 +29,10 @@ import { createPartiesApiClient, PartiesApiError } from './parties/api';
 import type { PartyDetailDTO } from './parties/apiTypes';
 import { CreatePartyPage } from './parties/CreatePartyPage';
 import { captureAndScrubInviteFragment } from './parties/inviteFragment';
+import {
+  inviteCredentialsMatch,
+  type InviteCredential,
+} from './parties/inviteCode';
 import { JoinPartyPage } from './parties/JoinPartyPage';
 import { PartyCharacterReferencePage } from './parties/PartyCharacterReferencePage';
 import { PartyInvitePanel } from './parties/PartyInvitePanel';
@@ -41,18 +45,18 @@ type AppProps = {
 
 type AuthenticationDestination =
   | { name: 'new-party' }
-  | { name: 'party-invite'; token: string }
+  | { name: 'party-invite'; credential: InviteCredential }
   | { name: 'party'; partyId: string }
   | { name: 'party-character'; partyId: string; characterId: string };
 
 type SavedCharacterJoin = {
-  token: string;
+  credential: InviteCredential;
   characterId: string;
   status: 'joining' | 'error';
 };
 
 type SavedCharacterJoinAttempt = {
-  token: string;
+  credential: InviteCredential;
   characterId: string;
 };
 
@@ -67,13 +71,16 @@ export const App = ({
   const [route, setRoute] = useState<AppRoute>(
     () => initialRoute ?? parseAppRoute(window.location.pathname),
   );
-  const [inviteToken, setInviteToken] = useState<string | null>(initialInviteToken);
+  const [inviteCredential, setInviteCredential] = useState<InviteCredential | null>(
+    initialInviteToken === null ? null : { kind: 'token', value: initialInviteToken },
+  );
+  const [inviteUnavailable, setInviteUnavailable] = useState(false);
   const [pendingAuthentication, setPendingAuthentication] =
     useState<AuthenticationDestination | null>(null);
   const [savedCharacterJoin, setSavedCharacterJoin] =
     useState<SavedCharacterJoin | null>(null);
   const routeRef = useRef(route);
-  const inviteTokenRef = useRef(inviteToken);
+  const inviteCredentialRef = useRef(inviteCredential);
   const pendingAuthenticationRef = useRef(pendingAuthentication);
   const savedCharacterJoinRef = useRef(savedCharacterJoin);
   const activeSavedCharacterJoinRef = useRef<SavedCharacterJoinAttempt | null>(null);
@@ -111,25 +118,32 @@ export const App = ({
     updateSavedCharacterJoin(null);
   }, [updateSavedCharacterJoin]);
 
-  const clearMatchingInviteState = useCallback((matchingToken: string) => {
+  const clearMatchingInviteState = useCallback((
+    matchingCredential: InviteCredential,
+    showUnavailable = false,
+  ) => {
     const activeJoin = activeSavedCharacterJoinRef.current;
-    if (activeJoin?.token === matchingToken) {
+    if (activeJoin && inviteCredentialsMatch(activeJoin.credential, matchingCredential)) {
       activeSavedCharacterJoinRef.current = null;
     }
 
-    if (savedCharacterJoinRef.current?.token === matchingToken) {
+    if (
+      savedCharacterJoinRef.current &&
+      inviteCredentialsMatch(savedCharacterJoinRef.current.credential, matchingCredential)
+    ) {
       updateSavedCharacterJoin(null);
     }
 
-    if (inviteTokenRef.current === matchingToken) {
-      inviteTokenRef.current = null;
-      setInviteToken(null);
+    if (inviteCredentialsMatch(inviteCredentialRef.current, matchingCredential)) {
+      inviteCredentialRef.current = null;
+      setInviteCredential(null);
+      setInviteUnavailable(showUnavailable);
     }
 
     const destination = pendingAuthenticationRef.current;
     if (
       destination?.name === 'party-invite' &&
-      destination.token === matchingToken
+      inviteCredentialsMatch(destination.credential, matchingCredential)
     ) {
       pendingAuthenticationRef.current = null;
       setPendingAuthentication(null);
@@ -144,28 +158,34 @@ export const App = ({
 
       if (nextRoute.name !== 'join-party') {
         invalidateSavedCharacterJoin();
+        inviteCredentialRef.current = null;
+        setInviteCredential(null);
+        setInviteUnavailable(false);
       }
 
       if (nextRoute.name === 'join-party' && destination?.name === 'party-invite') {
-        inviteTokenRef.current = destination.token;
-        setInviteToken(destination.token);
+        inviteCredentialRef.current = destination.credential;
+        setInviteCredential(destination.credential);
+        setInviteUnavailable(false);
       } else if (nextRoute.name === 'account') {
         if (destination?.name === 'party-invite') {
-          inviteTokenRef.current = null;
-          setInviteToken(null);
+          inviteCredentialRef.current = null;
+          setInviteCredential(null);
+          setInviteUnavailable(false);
         } else if (
           destination === null &&
           previousRoute.name === 'join-party' &&
-          inviteTokenRef.current !== null
+          inviteCredentialRef.current !== null
         ) {
           const inviteDestination: AuthenticationDestination = {
             name: 'party-invite',
-            token: inviteTokenRef.current,
+            credential: inviteCredentialRef.current,
           };
           pendingAuthenticationRef.current = inviteDestination;
           setPendingAuthentication(inviteDestination);
-          inviteTokenRef.current = null;
-          setInviteToken(null);
+          inviteCredentialRef.current = null;
+          setInviteCredential(null);
+          setInviteUnavailable(false);
         }
       }
 
@@ -174,6 +194,7 @@ export const App = ({
     };
 
     const handleHashChange = () => {
+      const hadFragment = window.location.hash !== '';
       const capturedToken = captureAndScrubInviteFragment({
         location: window.location,
         history: window.history,
@@ -184,9 +205,13 @@ export const App = ({
       }
 
       invalidateSavedCharacterJoin();
-      inviteTokenRef.current = capturedToken;
+      const capturedCredential: InviteCredential | null = capturedToken === null
+        ? null
+        : { kind: 'token', value: capturedToken };
+      inviteCredentialRef.current = capturedCredential;
       pendingAuthenticationRef.current = null;
-      setInviteToken(capturedToken);
+      setInviteCredential(capturedCredential);
+      setInviteUnavailable(capturedCredential === null && hadFragment);
       setPendingAuthentication(null);
     };
 
@@ -243,9 +268,10 @@ export const App = ({
 
   const clearInviteState = () => {
     invalidateSavedCharacterJoin();
-    inviteTokenRef.current = null;
+    inviteCredentialRef.current = null;
     pendingAuthenticationRef.current = null;
-    setInviteToken(null);
+    setInviteCredential(null);
+    setInviteUnavailable(false);
     setPendingAuthentication(null);
   };
 
@@ -300,10 +326,11 @@ export const App = ({
   const restoreAuthenticationDestination = (
     destination: AuthenticationDestination,
   ) => {
-    const restoredToken =
-      destination.name === 'party-invite' ? destination.token : null;
-    inviteTokenRef.current = restoredToken;
-    setInviteToken(restoredToken);
+    const restoredCredential =
+      destination.name === 'party-invite' ? destination.credential : null;
+    inviteCredentialRef.current = restoredCredential;
+    setInviteCredential(restoredCredential);
+    setInviteUnavailable(false);
     navigateToRoute(routeForAuthenticationDestination(destination));
   };
 
@@ -311,9 +338,10 @@ export const App = ({
     destination: AuthenticationDestination,
     mode: AccountMode = 'sign-in',
   ) => {
-    inviteTokenRef.current = null;
+    inviteCredentialRef.current = null;
     pendingAuthenticationRef.current = destination;
-    setInviteToken(null);
+    setInviteCredential(null);
+    setInviteUnavailable(false);
     setPendingAuthentication(destination);
     navigateToRoute({ name: 'account', mode });
   };
@@ -324,8 +352,8 @@ export const App = ({
       return;
     }
 
-    if (route.name === 'join-party' && inviteToken !== null) {
-      beginAuthentication({ name: 'party-invite', token: inviteToken }, mode);
+    if (route.name === 'join-party' && inviteCredential !== null) {
+      beginAuthentication({ name: 'party-invite', credential: inviteCredential }, mode);
       return;
     }
 
@@ -359,6 +387,15 @@ export const App = ({
       return;
     }
 
+    if (
+      destination.name === 'party-invite' &&
+      destination.credential.kind === 'code'
+    ) {
+      clearInviteState();
+      navigateToRoute({ name: 'join-party' });
+      return;
+    }
+
     restoreAuthenticationDestination(destination);
   };
 
@@ -370,8 +407,9 @@ export const App = ({
     setPendingAuthentication(null);
 
     if (destination === null) {
-      inviteTokenRef.current = null;
-      setInviteToken(null);
+      inviteCredentialRef.current = null;
+      setInviteCredential(null);
+      setInviteUnavailable(false);
       navigateToRoute({ name: 'home' });
       return;
     }
@@ -385,13 +423,53 @@ export const App = ({
     });
   };
 
+  const handleAuthenticationFailure = () => {
+    const destination = pendingAuthenticationRef.current;
+    if (destination?.name !== 'party-invite') {
+      return false;
+    }
+
+    pendingAuthenticationRef.current = null;
+    setPendingAuthentication(null);
+    inviteCredentialRef.current = null;
+    setInviteCredential(null);
+    setInviteUnavailable(false);
+    return true;
+  };
+
   const handleInviteSignIn = () => {
-    if (inviteToken === null) {
+    if (inviteCredential === null) {
       showAccount('sign-in');
       return;
     }
 
-    beginAuthentication({ name: 'party-invite', token: inviteToken });
+    beginAuthentication({ name: 'party-invite', credential: inviteCredential });
+  };
+
+  const handleInviteCreateAccount = () => {
+    if (inviteCredential === null) {
+      showAccount('register');
+      return;
+    }
+
+    beginAuthentication(
+      { name: 'party-invite', credential: inviteCredential },
+      'register',
+    );
+  };
+
+  const handleInviteCodeSubmitted = (code: string) => {
+    invalidateSavedCharacterJoin();
+    const credential: InviteCredential = { kind: 'code', value: code };
+    inviteCredentialRef.current = credential;
+    pendingAuthenticationRef.current = null;
+    setInviteCredential(credential);
+    setPendingAuthentication(null);
+    setInviteUnavailable(false);
+  };
+
+  const handleTryAnotherCode = () => {
+    clearInviteState();
   };
 
   const handleInviteCancel = () => {
@@ -408,17 +486,24 @@ export const App = ({
     navigateToRoute({ name: 'party', partyId });
   };
 
-  const handleInviteUnavailable = useCallback((unavailableToken: string) => {
-    clearMatchingInviteState(unavailableToken);
+  const handleInviteUnavailable = useCallback((credential: InviteCredential) => {
+    clearMatchingInviteState(credential, true);
   }, [clearMatchingInviteState]);
 
-  const startSavedCharacterJoin = (token: string, characterId: string) => {
-    const attempt: SavedCharacterJoinAttempt = { token, characterId };
+  const startSavedCharacterJoin = (
+    credential: InviteCredential,
+    characterId: string,
+  ) => {
+    const attempt: SavedCharacterJoinAttempt = { credential, characterId };
     activeSavedCharacterJoinRef.current = attempt;
     updateSavedCharacterJoin({ ...attempt, status: 'joining' });
     navigateToRoute({ name: 'join-party' });
 
-    void partyApi.joinParty({ token, characterId })
+    const joinRequest = credential.kind === 'token'
+      ? partyApi.joinParty({ token: credential.value, characterId })
+      : partyApi.joinPartyByCode({ code: credential.value, characterId });
+
+    void joinRequest
       .then((joined) => {
         if (activeSavedCharacterJoinRef.current !== attempt) {
           return;
@@ -437,7 +522,7 @@ export const App = ({
           error instanceof PartiesApiError &&
           error.code === 'invite_unavailable'
         ) {
-          clearMatchingInviteState(token);
+          clearMatchingInviteState(credential, true);
           return;
         }
 
@@ -447,33 +532,33 @@ export const App = ({
 
   const handleCharacterSaved = (
     characterId: string,
-    sourceInviteToken: string | null,
+    sourceInviteCredential: InviteCredential | null,
   ) => {
     toast.success('Character saved.');
 
-    if (sourceInviteToken === null) {
+    if (sourceInviteCredential === null) {
       showSavedCharacter(characterId);
       return;
     }
 
-    if (inviteTokenRef.current !== sourceInviteToken) {
+    if (!inviteCredentialsMatch(inviteCredentialRef.current, sourceInviteCredential)) {
       return;
     }
 
-    startSavedCharacterJoin(sourceInviteToken, characterId);
+    startSavedCharacterJoin(sourceInviteCredential, characterId);
   };
 
   const retrySavedCharacterJoin = () => {
     const retryJoin = savedCharacterJoinRef.current;
     if (
       retryJoin?.status !== 'error' ||
-      inviteTokenRef.current !== retryJoin.token
+      !inviteCredentialsMatch(inviteCredentialRef.current, retryJoin.credential)
     ) {
       invalidateSavedCharacterJoin();
       return;
     }
 
-    startSavedCharacterJoin(retryJoin.token, retryJoin.characterId);
+    startSavedCharacterJoin(retryJoin.credential, retryJoin.characterId);
   };
 
   const handleSignOut = async () => {
@@ -566,6 +651,7 @@ export const App = ({
             onAuthenticated={handleAuthenticated}
             onModeChange={showAccountMode}
             onRegistrationSuccess={handleRegistrationSuccess}
+            onAuthenticationFailure={handleAuthenticationFailure}
             onSignOut={requestSignOut}
           />
         ) : route.name === 'profile' ? (
@@ -582,7 +668,7 @@ export const App = ({
             onBack={showHome}
             onCreateAccount={() => openAccount('register')}
             onOpenCharacterReference={(characterId) =>
-              handleCharacterSaved(characterId, inviteToken)
+              handleCharacterSaved(characterId, inviteCredential)
             }
             onSignIn={() => openAccount('sign-in')}
           />
@@ -613,18 +699,25 @@ export const App = ({
           )
         ) : route.name === 'join-party' ? (
           <JoinPartyPage
-            token={inviteToken}
+            credential={inviteCredential}
+            showUnavailable={inviteUnavailable}
             isSignedIn={currentUser !== null}
             inspectInvite={partyApi.inspectPartyInvite}
+            inspectInviteByCode={partyApi.inspectPartyInviteByCode}
             loadCharacters={listCharacterSummaries}
             joinParty={partyApi.joinParty}
+            joinPartyByCode={partyApi.joinPartyByCode}
             onSignIn={handleInviteSignIn}
+            onCreateAccount={handleInviteCreateAccount}
+            onSubmitCode={handleInviteCodeSubmitted}
             onCreateCharacter={showNewCharacter}
             onJoined={handleJoinedParty}
             onCancel={handleInviteCancel}
             onInviteUnavailable={handleInviteUnavailable}
+            onTryAnotherCode={handleTryAnotherCode}
             savedCharacterJoinState={
-              savedCharacterJoin?.token === inviteToken
+              savedCharacterJoin &&
+              inviteCredentialsMatch(savedCharacterJoin.credential, inviteCredential)
                 ? savedCharacterJoin.status
                 : undefined
             }
