@@ -30,10 +30,10 @@ formal deliverables below.
 ### Source code
 
 - [x] Public GitHub repository: `https://github.com/Inkala/rpg-companion`.
-- [ ] Final submission commit is pushed and CI is green. Integrated T-026 merge SHA:
-  `232335f26b8a16b5addcc68bf5de29bd22451b3f`; successful release CI:
-  `https://github.com/Inkala/rpg-companion/actions/runs/29647619803`. The later T-023 submission
-  commit is not yet created.
+- [ ] Final submission commit is pushed and CI is green. Current production SHA:
+  `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`; successful T-028 CI:
+  `https://github.com/Inkala/rpg-companion/actions/runs/29688775007`. T-025 is active, and the later
+  T-023 submission commit is not yet created.
 
 ### Working deployment
 
@@ -42,6 +42,11 @@ formal deliverables below.
 - [x] T-026 Railway and Cloudflare deployments are successful at exact SHA
   `232335f26b8a16b5addcc68bf5de29bd22451b3f`.
 - [x] Public Level Up smoke passed on `2026-07-18` at desktop and 390px.
+- [x] T-028 Railway deployment `3ee59bfd-ab50-45f5-94b5-94cbbc08af3f` and Cloudflare deployment
+  `fefc2f41-56b4-4392-a8d1-62744b714720` succeeded at exact SHA
+  `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`.
+- [x] T-028 frontend and backend health returned HTTP 200, and migration `000004` remained clean.
+- [x] T-028 public short-code and complete-link invitation smoke passed.
 - [ ] Final smoke test passes with the dedicated teacher-review account.
 - [ ] Test account can sign in and open at least one saved character.
 
@@ -84,18 +89,26 @@ unless they directly protect the review experience.
   `b942700a31af7efa22b0349018d692084b32965b`.
 - [x] Complete and merge T-026 source implementation at
   `232335f26b8a16b5addcc68bf5de29bd22451b3f`.
-- [x] Re-run frontend lint, typecheck, tests, and build on final main.
-- [x] Record final frontend evidence: 32 test files and 649 tests passed; audit found no known
+- [x] Re-run frontend lint, typecheck, tests, and build for the T-026 release checkpoint.
+- [x] Record T-026 frontend evidence: 32 test files and 649 tests passed; audit found no known
   vulnerabilities; lint, typecheck, and production build passed.
-- [x] Re-run backend tests, vet, and build on final main.
-- [x] Record final backend evidence: all 9 packages passed with PostgreSQL-backed tests;
+- [x] Re-run backend tests, vet, and build for the T-026 release checkpoint.
+- [x] Record T-026 backend evidence: all 9 packages passed with PostgreSQL-backed tests;
   govulncheck, vet, and build passed.
-- [x] Confirm GitHub Actions passes on final main:
+- [x] Confirm GitHub Actions passed for the T-026 release checkpoint:
   `https://github.com/Inkala/rpg-companion/actions/runs/29647619803`.
 - [x] Confirm Railway deployment `0d40c230-9b63-42ff-b162-9f7bf38c4783` and Cloudflare Pages
   deployment `18ff8791-beb0-4bfc-9de6-898ed49d4c69` succeeded at the exact SHA.
 - [x] Run public Level Up smoke at desktop and 390px on `2026-07-18`.
 - [x] Record the focus-ring automation limitation without treating it as a confirmed defect.
+- [x] Complete, merge, deploy, and publicly validate T-028 at
+  `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`.
+- [x] Confirm T-028 CI passed Frontend, Backend, and Secret history:
+  `https://github.com/Inkala/rpg-companion/actions/runs/29688775007`.
+- [x] Confirm T-028 automatic production deployments remain enabled and no unexpected deployment
+  occurred.
+- [ ] Complete and integrate active T-025 before final T-023 reconciliation.
+- [ ] Rebase T-023 onto post-T-025 `main`, reconcile final evidence, and merge T-023 last.
 - [x] Confirm no secrets or private credentials are committed.
 - [ ] Tag or record the final submission commit.
 
@@ -115,18 +128,19 @@ resources in the authoritative TFM document.
 
 ## No further feature breadth unless P0 is secure
 
-The following product work is deferred until the formal submission package is safe:
+Outside the explicitly active T-025 scope, the following product work remains deferred until the
+formal submission package is safe:
 
 - guest localStorage persistence and account conversion;
 - profile editing, password reset, verification, and deletion flows;
-- attack calculation breakdowns, HP controls, and broader resource tracking;
-- rules search, AI guidance, and additional D&D content beyond the bounded T-026 scope;
+- HP controls and combat or resource tracking beyond the active T-025 character-sheet scope;
+- runtime rules search, AI guidance, homebrew, and non-SRD content beyond the active T-025 scope;
 - Party deletion, member removal, GM character linking, and existing-member character replacement;
 - production-data cleanup that does not affect teacher review.
 
-T-026 bounded Level Up source, CI, deployment, and public smoke evidence are confirmed. T-023 still
-must complete the dedicated teacher-account check, feature-freeze decision, slides, video,
-submission form, and final submission commit before this checklist is complete.
+T-026 Level Up and T-028 invitation-code release evidence are confirmed. T-025 is active and must
+integrate before T-023 rebases. The dedicated teacher-account check, feature-freeze decision,
+slides, video, submission form, and final submission commit also remain incomplete.
 
 ## Evidence sources
 

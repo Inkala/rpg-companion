@@ -2,19 +2,21 @@
 
 Submission deadline: 20 July 2026
 
-Active work: T-023 Final TFM submission documentation reconciliation
+Active work: T-025 product implementation and T-023 Final TFM submission documentation
+reconciliation
 
-State: T-026 bounded Level Up source implementation is complete and merged to `main` at
-`232335f26b8a16b5addcc68bf5de29bd22451b3f`. The merged source contains the all-12-SRD-class,
-single-class, levels-1-through-5 flow, canonical rules data, generated runtime representations,
-server-authoritative update contract, and focused plus complete local validation evidence. T-027
-Party empty-state layout behavior is also preserved in that main history. GitHub Actions run
-`29647619803` passed Frontend, Backend, and Secret history. Railway deployment
-`0d40c230-9b63-42ff-b162-9f7bf38c4783` and Cloudflare Pages deployment
-`18ff8791-beb0-4bfc-9de6-898ed49d4c69` succeeded at the exact SHA. Public Level Up smoke passed on
-2026-07-18. T-023 has rebased its drafting checkpoint and is applying this confirmed evidence in an
-unstaged correction. The feature set is not claimed frozen. Dedicated teacher access and smoke,
-slides, video, submission evidence, T-025, and portrait integration remain pending or deferred.
+State: T-026 bounded Level Up remains complete and deployed at
+`232335f26b8a16b5addcc68bf5de29bd22451b3f`. T-028 human-friendly Party invitation codes are
+complete, merged, and deployed at `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`. GitHub Actions run
+`29688775007` passed Frontend, Backend, and Secret history. Railway deployment
+`3ee59bfd-ab50-45f5-94b5-94cbbc08af3f` and Cloudflare deployment
+`fefc2f41-56b4-4392-a8d1-62744b714720` succeeded at that exact SHA. Frontend and backend health
+returned HTTP 200, migration `000004` remained clean, and the complete public invitation smoke
+passed. Automatic production deployments remain enabled and no unexpected deployment occurred.
+T-025 is now active and must integrate before T-023 rebases. T-023 remains based on the earlier
+T-026 main checkpoint while it records T-028 evidence in an unstaged documentation-only correction.
+The feature set is not claimed frozen. Dedicated teacher access and smoke, slides, video,
+submission evidence, and portrait integration remain pending or deferred.
 
 T-020 is complete, merged, deployed, and validated at
 `e7053fb72f8b52e73e08dfdd8668b9a429abb803`.
@@ -26,7 +28,7 @@ T-022 merged through PR #30 as `ce57d79f3465df6ae166622521c1c26379cbd5f3`. Final
 Secret history. Railway and Cloudflare deployed the exact final SHA successfully. Public visual
 smoke at `390px` passed and no runtime errors were found.
 
-## Confirmed T-026 release and active T-023 documentation
+## Confirmed T-026 and T-028 releases with active T-025 and T-023 work
 
 ### T-026 source integration
 
@@ -38,19 +40,35 @@ smoke at `390px` passed and no runtime errors were found.
 - Preserved ownership: product code, canonical and generated rules data, generator, tests,
   `docs/rules-data.md`, and `tasks/T-026/*` remain exactly as integrated from main.
 
+### T-028 invitation-code release
+
+- Main and production SHA: `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`.
+- Status: complete, merged, deployed, and publicly smoke-tested.
+- CI: `https://github.com/Inkala/rpg-companion/actions/runs/29688775007`; Frontend, Backend, and
+  Secret history passed.
+- Production: Railway `3ee59bfd-ab50-45f5-94b5-94cbbc08af3f` and Cloudflare
+  `fefc2f41-56b4-4392-a8d1-62744b714720`; both public surfaces returned HTTP 200.
+- Migration and deployment: migration `000004` was already applied and remained clean; automatic
+  production deployments are enabled; no unexpected deployment occurred.
+- Public behavior: short code, complete link, authentication continuation, character creation,
+  regeneration invalidation, unavailable recovery, privacy, authorization, accessibility, and
+  responsive checks passed. Disclosed fictional QA residue remains in production.
+
 ### T-023 documentation
 
 - Path: `/Users/marce/Documents/Desarrollo con IA/worktrees/rpg-companion-submission-docs`.
 - Branch: `codex/t023-submission-docs`.
-- Rebase base: `232335f26b8a16b5addcc68bf5de29bd22451b3f`.
+- Current base: `232335f26b8a16b5addcc68bf5de29bd22451b3f`; T-023 has deliberately not rebased
+  onto T-028 because T-025 must integrate first.
 - Rebased drafting commit: `38e466968fd1c9ce97bf85f88e771147057cb460`.
-- Status: rebased drafting checkpoint pushed; post-T-026 source-state correction is unstaged for
-  review.
+- Latest pushed documentation checkpoint: `d2e311fda0b081637fabb87dc68ae3b64aefb31b`.
+- Status: T-028 release-evidence correction is unstaged for review.
 - Ownership: README, portrait attribution, submission checklist, T-023 task documentation, and
-  explicitly assigned shared coordination records only. No product, rules-data, T-026, migration,
-  deployment, or provider files.
-- Integration: confirmed technical release evidence is reconciled. Retain teacher, slides, video,
-  submission-date, and feature-freeze gates until Marcela confirms them; revalidate and merge last.
+  explicitly assigned shared coordination records only. No product, rules-data, T-025, T-026,
+  T-028, migration, deployment, or provider files.
+- Integration: wait for T-025 to integrate, rebase onto that later `main`, preserve all T-025 and
+  T-028 product state, reconcile final evidence, and merge T-023 last. Retain teacher, slides,
+  video, submission-date, and feature-freeze gates until Marcela confirms them.
 
 ## Approved T-023, T-024, and T-025 planning
 
@@ -77,9 +95,9 @@ smoke at `390px` passed and no runtime errors were found.
 
 ### T-025: Character-sheet fidelity, SRD data, and derived calculations
 
-- Status: deferred.
+- Status: active in separate product work. It must integrate before T-023 rebases and finalizes.
 - Classification: Red.
-- Timing: implementation deferred until Marcela explicitly approves it after the TFM submission.
+- Timing: active before T-023 final reconciliation. No feature freeze is claimed while it runs.
 - Scope: SRD 5.1/2014 development-time import, normalized local snapshot, CC-BY-4.0 attribution,
   Gender selector, Race/Class/Subclass dropdowns, derived calculations with provenance, structured
   attacks/spells/features/equipment/other entries, CharacterSheetV1 display compatibility, and Mara
@@ -287,6 +305,8 @@ conditions.
 - T-021 Save and invite reliability is merged, deployed, and validated.
 - T-022 Character Reference visual QA is merged, deployed, and validated.
 - T-026 bounded Level Up is merged, deployed at the exact SHA, and publicly smoke-tested.
+- T-028 human-friendly Party invitation codes are merged, deployed at the exact SHA, and publicly
+  smoke-tested.
 
 ## Final-week constraints
 
@@ -295,12 +315,14 @@ conditions.
 - Parallel coding uses separate worktrees with disjoint ownership.
 - Worker sessions do not edit shared coordination records.
 - New implementation work must start from a fresh approved task and separate worktree.
+- T-025 is the active product exception and must integrate before T-023 rebases.
 
 ## Single next action
 
-Review the unstaged T-023 release-evidence correction. Do not claim feature freeze until Marcela
-confirms it. Create and smoke-test the dedicated teacher account, publish slides and narrated video,
-record the submission date and form evidence, then revalidate and merge T-023 last. Keep T-025 and
-portrait integration deferred.
+Review the unstaged T-023 T-028 release-evidence correction without rebasing. Let active T-025
+integrate first. Then rebase T-023 onto post-T-025 `main`, preserve the integrated product state,
+reconcile final evidence, and merge T-023 last. Do not claim feature freeze or final submission
+completion. Dedicated teacher access, slides, video, submission evidence, and portrait integration
+remain pending or deferred.
 
-Last updated: 2026-07-18
+Last updated: 2026-07-19

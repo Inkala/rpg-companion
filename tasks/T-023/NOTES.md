@@ -6,18 +6,20 @@ Status: approved
 
 T-026 source implementation merged to `main` at
 `232335f26b8a16b5addcc68bf5de29bd22451b3f`. T-023 rebased its reviewed drafting checkpoint onto
-that exact SHA. Final slide and video production remains paused until Marcela says the product
+that exact SHA. T-028 later merged and deployed at
+`e0ac1e450849e5c751ba71b396e8c11b4545d0b0`. T-023 has not rebased onto T-028 because active T-025
+must integrate first. Final slide and video production remains paused until Marcela says the product
 feature set is frozen.
 
-T-023 now records confirmed merged-source functionality, final CI, exact-SHA deployments, test
-evidence, and public Level Up smoke. Teacher access, slides, video, feature freeze, and submission
-evidence remain pending. T-023 reconciles only confirmed evidence and merges last.
+T-023 now records confirmed T-026 and T-028 release evidence. Teacher access, slides, video,
+feature freeze, T-025 final integration, and submission evidence remain pending. T-023 reconciles
+only confirmed evidence and merges last.
 
 ## Ownership
 
 T-023 owns evaluator-facing README/submission documentation, `docs/submission-checklist.md`, shared
 status records, and `tasks/T-023/`. It must not edit product code, canonical/generated rules data,
-`docs/rules-data.md`, or `tasks/T-026/`.
+`docs/rules-data.md`, `tasks/T-025/`, `tasks/T-026/`, or `tasks/T-028/`.
 
 ## Missing information
 
@@ -32,11 +34,15 @@ Confirmed source integration:
 
 - T-026 merge SHA: `232335f26b8a16b5addcc68bf5de29bd22451b3f`.
 - Rebased T-023 drafting commit: `38e466968fd1c9ce97bf85f88e771147057cb460`.
+- Latest pushed T-023 documentation checkpoint:
+  `d2e311fda0b081637fabb87dc68ae3b64aefb31b`.
+- T-028 merge and production SHA: `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`. This T-023
+  branch intentionally remains on its earlier base until T-025 integrates.
 - `docs/rules-data.md`: present and locally resolvable.
-- Merged behavior: owner-only, saved single-class characters, all 12 SRD 5.1/2014 classes, exactly
-  one level at a time, current levels 1 through 4, target levels 2 through 5 only.
+- Merged T-026 behavior: owner-only, saved single-class characters, all 12 SRD 5.1/2014 classes,
+  exactly one level at a time, current levels 1 through 4, target levels 2 through 5 only.
 
-## Confirmed release evidence
+## Confirmed T-026 release evidence
 
 - CI: `https://github.com/Inkala/rpg-companion/actions/runs/29647619803`, successful.
 - CI jobs: Frontend `88088389787`, Backend `88088389776`, Secret history `88088389784`, all
@@ -62,6 +68,22 @@ Confirmed source integration:
 - Production residue: two signed-out fictional accounts, `Rook Ember QA` at level 5, Party
   `Silver Lantern QA`, one Player membership, and one generated invite. No credentials or invite
   token are recorded.
+
+## Confirmed T-028 release evidence
+
+- Merge and production SHA: `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`.
+- CI: `https://github.com/Inkala/rpg-companion/actions/runs/29688775007`; Frontend, Backend, and
+  Secret history passed.
+- Railway deployment: `3ee59bfd-ab50-45f5-94b5-94cbbc08af3f`.
+- Cloudflare deployment: `fefc2f41-56b4-4392-a8d1-62744b714720`.
+- Frontend and backend health: HTTP 200.
+- Migration `000004` was already applied successfully and remained clean.
+- Short invitation code, complete invitation link, authentication continuation, character creation
+  continuation, regeneration invalidation, unavailable recovery, privacy, authorization,
+  accessibility, and responsive checks passed.
+- Railway and Cloudflare automatic production deployments remain enabled. No unexpected deployment
+  occurred.
+- Public smoke left disclosed fictional QA residue. No credential value is recorded here.
 
 Do not invent missing values, copy personal credentials into placeholders, or reuse disposable
 smoke-account credentials without Marcela's explicit approval.
@@ -107,12 +129,16 @@ Completed source-integration order:
 
 Remaining final reconciliation:
 
-1. Replace the remaining five explicit placeholders with confirmed values. If any value is still
+1. Wait for active T-025 to integrate into `main`.
+2. Rebase T-023 onto post-T-025 `main`, preserving all integrated T-025 and T-028 source, task
+   evidence, migrations, and behavior.
+3. Reconcile the final product, CI, deployment, and smoke evidence without inventing values.
+4. Replace the remaining five explicit placeholders with confirmed values. If any value is still
    missing, leave the related checklist item unchecked and do not merge T-023.
-2. Create or verify the dedicated teacher-review account without exposing personal credentials.
-3. Run the dedicated teacher-account smoke.
-4. Obtain Marcela's explicit feature-freeze confirmation, publish the slides and narrated video,
+5. Create or verify the dedicated teacher-review account without exposing personal credentials.
+6. Run the dedicated teacher-account smoke.
+7. Obtain Marcela's explicit feature-freeze confirmation, publish the slides and narrated video,
    add their URLs, complete the submission form, and record its confirmation and date.
-5. Re-run Markdown-link, heading, code-fence, placeholder, privacy, `git diff --check`, and complete
+8. Re-run Markdown-link, heading, code-fence, placeholder, privacy, `git diff --check`, and complete
    diff review.
-6. Stop for Marcela's review. T-023 merges last only after every final gate is evidenced.
+9. Stop for Marcela's review. T-023 merges last only after every final gate is evidenced.

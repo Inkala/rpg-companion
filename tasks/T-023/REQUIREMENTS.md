@@ -76,12 +76,14 @@ product feature set is frozen.
 
 T-026 source implementation has merged at
 `232335f26b8a16b5addcc68bf5de29bd22451b3f`, and T-023 has rebased its drafting checkpoint onto
-that exact SHA. Final slide and narrated-video production remains paused until Marcela says the
-product feature set is frozen.
+that exact SHA. T-028 later merged and deployed at
+`e0ac1e450849e5c751ba71b396e8c11b4545d0b0`. T-023 records the confirmed T-028 release evidence
+without rebasing because active T-025 must integrate first. Final slide and narrated-video
+production remains paused until Marcela says the product feature set is frozen.
 
-The draft records confirmed source behavior, integrated SHA, final CI, deployment, public smoke,
-and final test evidence. It must retain explicit placeholders for teacher access, slides, video,
-and submission date until each value is confirmed.
+The draft records confirmed T-026 and T-028 source behavior, release SHAs, CI, deployment, public
+smoke, and test evidence. It must retain explicit placeholders for teacher access, slides, video,
+and submission date until each value is confirmed. Final post-T-025 evidence remains pending.
 
 ## Parallel ownership and integration
 
@@ -89,12 +91,14 @@ T-023 owns `README.md`, evaluator-facing submission documentation,
 `docs/submission-checklist.md`, `CURRENT.md`, `WORKLOG.md`, `BACKLOG.md`, and `tasks/T-023/`.
 
 T-023 must not edit product code, canonical/generated rules data, `docs/rules-data.md`, or
-`tasks/T-026/`.
+`tasks/T-025/`, `tasks/T-026/`, or `tasks/T-028/`.
 
 Required merge order:
 
-1. Completed: T-026 source implementation, validation, merge, T-023 rebase, final CI, exact-SHA
+1. Completed: T-026 source implementation, validation, merge, T-023 rebase, T-026 CI, exact-SHA
    deployment, and public smoke.
-2. Pending: explicit feature freeze, dedicated teacher access and smoke, slides, video, submission
+2. Completed: T-028 implementation, validation, merge, exact-SHA deployment, and public smoke.
+3. Pending: T-025 integration, then T-023 rebase onto post-T-025 `main`.
+4. Pending: explicit feature freeze, dedicated teacher access and smoke, slides, video, submission
    form, and final T-023 commit.
-3. T-023 replaces the remaining placeholders, reconciles final evidence, and merges last.
+5. T-023 replaces the remaining placeholders, reconciles final evidence, and merges last.

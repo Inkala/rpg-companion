@@ -664,3 +664,20 @@ base.
   credentials or invite token are recorded.
 - Feature freeze, dedicated teacher access and smoke, slides, video, submission date/form, and the
   final T-023 submission commit remain incomplete.
+
+## 2026-07-19: Recorded confirmed T-028 production evidence in T-023
+
+- T-028 human-friendly Party invitation codes merged and deployed at exact SHA
+  `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`.
+- Main CI `https://github.com/Inkala/rpg-companion/actions/runs/29688775007` passed Frontend,
+  Backend, and Secret history.
+- Railway deployment `3ee59bfd-ab50-45f5-94b5-94cbbc08af3f` and Cloudflare deployment
+  `fefc2f41-56b4-4392-a8d1-62744b714720` succeeded. Both public surfaces returned HTTP 200.
+- Migration `000004` was already applied successfully and remained clean. Automatic production
+  deployments remain enabled, and no unexpected deployment occurred.
+- Public smoke passed the short code, complete link, authentication and character-creation
+  continuations, regeneration invalidation, unavailable recovery, privacy, authorization,
+  accessibility, and responsive paths.
+- Public smoke left disclosed fictional QA residue. No credential value is recorded in T-023.
+- T-025 is active, so feature freeze and final submission completion are not claimed. T-023 does
+  not rebase yet; it waits for T-025 to integrate, then rebases and merges last.

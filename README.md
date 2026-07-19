@@ -11,21 +11,24 @@ with AI. It demonstrates product discovery, spec-driven and AI-assisted engineer
 backend development, relational persistence, automated testing, security controls, accessibility,
 continuous integration, cloud deployment, and documentation as code.
 
-## Live project and final evidence
+## Live project and release evidence
 
 - Public application: [https://hunin.marceramirez.com](https://hunin.marceramirez.com)
 - API health: [https://api.hunin.marceramirez.com/healthz](https://api.hunin.marceramirez.com/healthz)
 - Public repository: [https://github.com/Inkala/rpg-companion](https://github.com/Inkala/rpg-companion)
-- Integrated T-026 merge SHA: `232335f26b8a16b5addcc68bf5de29bd22451b3f`
-- Final CI: [GitHub Actions run 29647619803](https://github.com/Inkala/rpg-companion/actions/runs/29647619803), successful
-- Final deployment: Railway and Cloudflare successful at exact SHA
-  `232335f26b8a16b5addcc68bf5de29bd22451b3f`
-- Final public Level Up smoke date: `2026-07-18`
+- Current production SHA: `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`
+- Current production CI:
+  [GitHub Actions run 29688775007](https://github.com/Inkala/rpg-companion/actions/runs/29688775007),
+  successful
+- Current production deployment: Railway and Cloudflare successful at the exact T-028 SHA
+- Confirmed Level Up release SHA: `232335f26b8a16b5addcc68bf5de29bd22451b3f`
+- Confirmed public Level Up smoke date: `2026-07-18`
 - Final submission date: `[FINAL_SUBMISSION_DATE]`
 
-T-026 source, CI, deployment, and public Level Up smoke are confirmed. Teacher access, slides,
-video, and submission evidence remain intentionally placeholder-backed. The final-submission commit
-is not yet created because this T-023 documentation correction remains under review.
+T-026 Level Up and T-028 human-friendly Party invitation codes are merged, deployed, and publicly
+smoke-tested. T-025 is active, so the feature set is not yet claimed frozen. Teacher access, slides,
+video, and submission evidence remain intentionally placeholder-backed, and the final-submission
+commit is not yet created.
 
 ## Teacher review access
 
@@ -55,8 +58,8 @@ Guest draft persistence and automatic conversion from local storage are not impl
 - Register with username, email, and password.
 - Sign in, restore a server-backed session, and sign out with confirmation.
 - Open a read-only profile page.
-- Return to an interrupted Party invite after authentication without retaining the raw invite token
-  in visible browser history.
+- Return to an interrupted Party invitation after authentication whether it started from a short
+  code or complete link, without retaining the submitted credential in browser history.
 
 Registration intentionally returns the user to sign-in instead of creating an authenticated
 session automatically.
@@ -76,8 +79,13 @@ remain outside the submitted baseline.
 ### Party
 
 - Create a Party as its GM.
-- Generate and copy a time-bounded opaque invite link.
-- Inspect an invite only after authentication and join with one owned character.
+- Generate one active invitation pair and copy either its human-friendly short code or complete
+  time-bounded opaque link while the one-time result remains visible.
+- Enter a short invitation code or open a complete invitation link, authenticate if needed, and
+  continue through owned-character selection or character creation before joining.
+- Regenerate a lost invitation pair, atomically invalidating the previous code and link.
+- Recover from malformed, expired, revoked, replaced, or unknown codes through one privacy-safe
+  unavailable state without disclosing whether a Party or code existed.
 - View Party cards, member summaries, and the Members list.
 - Let the GM open a Party member's read-only Character Reference.
 - Protect Party and character data with membership and role authorization enforced by the backend.
@@ -142,6 +150,25 @@ SHA.
 Production smoke left two fictional accounts, signed out; level-5 character `Rook Ember QA`; Party
 `Silver Lantern QA`; one Player membership; and one generated invite. No credentials or invite
 token are recorded in this repository.
+
+## Confirmed T-028 release evidence
+
+- T-028 merged and deployed at `e0ac1e450849e5c751ba71b396e8c11b4545d0b0`.
+- GitHub Actions run
+  [29688775007](https://github.com/Inkala/rpg-companion/actions/runs/29688775007) passed Frontend,
+  Backend, and Secret history.
+- Railway deployment `3ee59bfd-ab50-45f5-94b5-94cbbc08af3f` and Cloudflare deployment
+  `fefc2f41-56b4-4392-a8d1-62744b714720` succeeded for that production SHA. Railway and Cloudflare
+  automatic production deployments remain enabled, and no unexpected deployment occurred.
+- The public frontend returned HTTP 200, and the backend health endpoint returned HTTP 200.
+  Migration `000004` was already applied successfully and remained clean.
+- Public smoke passed for short-code entry, complete invitation links, authentication continuation,
+  character-creation continuation, regeneration invalidation, unavailable recovery, privacy, and
+  authorization.
+- Accessibility and responsive checks for the invitation flow passed.
+
+The public smoke left disclosed fictional QA residue. No credentials or invitation value are
+recorded in this repository.
 
 ## Architecture and deployment
 
@@ -281,7 +308,7 @@ at the normal `hunin` development database or any production database. The dispo
 database may be dropped afterward. GitHub Actions additionally runs dependency checks and a
 redacted full-history secret scan.
 
-Final-main validation evidence:
+T-026 release-checkpoint validation evidence:
 
 - Frontend: 32 test files and 649 tests passed. Audit found no known vulnerabilities. Lint,
   typecheck, and production build passed.
@@ -300,8 +327,11 @@ Final-main validation evidence:
   timeouts, private-response `no-store` headers, and security response headers.
 - Character ownership and Party roles are enforced by the backend. Inaccessible resources use
   generic responses to reduce cross-user disclosure.
-- Invite tokens are handled as private data, scrubbed from the browser fragment, hashed at rest,
-  and omitted from ordinary Party responses.
+- Invitation links and short codes are bearer credentials. Link tokens are scrubbed from the
+  browser fragment and hashed at rest. Short codes are stored only as domain-separated HMAC-SHA-256
+  digests under a dedicated provider-managed key. Submitted credentials remain out of browser
+  history, storage, logs, errors, and ordinary Party responses.
+- Short-code inspection and joining require authentication and use bounded attempt throttling.
 - Registration and sign-in have bounded Argon2 concurrency and process-local throttling.
 - Secrets and production database URLs belong only in environment or provider configuration.
 
@@ -320,6 +350,9 @@ type, and touch-friendly targets. Character, Party, and integrated Level Up path
 browser checks at 320px, 390px, 720px, and desktop widths. Public smoke passed at desktop and 390px
 without horizontal overflow. Browser automation did not conclusively verify the visible focus ring
 during Tab navigation; this remains an evidence limitation rather than a confirmed defect.
+
+The deployed T-028 invitation flow also passed its keyboard, focus, accessible-feedback,
+touch-target, and responsive checks.
 
 The product uses progressive disclosure and short summaries to reduce cognitive load. The design is
 mobile-first for in-session reference and expands for creation and management on larger screens.
@@ -361,6 +394,9 @@ documented in [Rules-data provenance and attribution](docs/rules-data.md).
 - Profile editing, email verification, password reset, MFA, and account deletion are not available.
 - Party administration does not include Party deletion, member removal, GM character linking, or
   existing-member character replacement.
+- A Party has one active invitation pair. Its short code and complete link are displayed only once;
+  losing either requires regeneration, which invalidates the previous pair. Short-code inspection
+  is not anonymous.
 - The portrait bank is documented but not integrated.
 - Runtime rules search, AI explanations, broad combat/resource tracking, homebrew automation,
   multiclass progression, and paid-book content are outside scope.

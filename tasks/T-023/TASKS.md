@@ -16,10 +16,18 @@ Status: approved
 - [x] Update README from pending T-026 wording to the exact merged levels-1-through-5,
   all-12-SRD-class source behavior, then add deployment evidence only after confirmation.
 - [x] Replace every T-026 technical-evidence placeholder with confirmed evidence.
+- [x] Record confirmed T-028 merge, CI, deployment, migration, health, invitation smoke, privacy,
+  authorization, accessibility, responsive, automation, and residue evidence.
+- [x] Keep T-023 on its current base while T-025 remains active.
+- [ ] Wait for T-025 to integrate into `main`.
+- [ ] Rebase T-023 onto post-T-025 `main`, preserve integrated product state, and reconcile final
+  evidence.
 - [ ] Gather teacher-review credentials.
-- [x] Gather final public deployment and repository URLs.
-- [x] Gather final CI URL and release SHA.
-- [x] Run or record final deployed smoke-test evidence.
+- [x] Gather confirmed public deployment and repository URLs.
+- [x] Gather confirmed T-026 and T-028 CI URLs and release SHAs.
+- [x] Record confirmed T-026 and T-028 deployed smoke-test evidence.
+- [ ] Gather final post-T-025 CI URL and release SHA.
+- [ ] Run or record final post-T-025 deployed smoke-test evidence.
 - [ ] Gather slides URL.
 - [ ] Gather narrated-video URL.
 - [x] Update `README.md` for evaluator review draft.
