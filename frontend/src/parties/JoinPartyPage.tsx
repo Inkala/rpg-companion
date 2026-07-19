@@ -439,11 +439,17 @@ const InviteCodeEntryState = ({
       className="account-card party-state-card party-join-state"
       aria-labelledby="join-party-code-title"
     >
-      <p className="eyebrow">Party invite</p>
       <h1 id="join-party-code-title" className="account-title">Join a party</h1>
       <p>Enter the invitation code shared by your GM.</p>
-      <form className="party-join-form" onSubmit={submitCode} noValidate>
-        <label className="party-form__field" htmlFor="party-invitation-code">
+      <form
+        className="party-join-form party-invite-code-form"
+        onSubmit={submitCode}
+        noValidate
+      >
+        <label
+          className="form-field party-form__field party-invite-code-form__field"
+          htmlFor="party-invitation-code"
+        >
           <span>Invitation code</span>
           <input
             ref={inputRef}
@@ -461,19 +467,16 @@ const InviteCodeEntryState = ({
             autoCapitalize="characters"
             inputMode="text"
             maxLength={24}
-            aria-describedby={`party-invite-code-hint${codeError ? ' party-invite-code-error' : ''}`}
+            aria-describedby={codeError ? 'party-invite-code-error' : undefined}
             aria-invalid={codeError ? 'true' : undefined}
           />
         </label>
-        <p id="party-invite-code-hint" className="form-hint">
-          Eight letters or numbers, shown as XXXX-XXXX.
-        </p>
         {codeError ? (
           <p id="party-invite-code-error" className="form-error" role="alert">
             {codeError}
           </p>
         ) : null}
-        <div className="party-actions">
+        <div className="party-actions party-invite-code-form__actions">
           <button type="submit" className="button button--primary">Continue</button>
           <button type="button" className="button button--secondary" onClick={onCancel}>
             Cancel
