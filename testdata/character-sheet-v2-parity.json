@@ -177,13 +177,19 @@
       "schemaVersion": "CharacterSheetV2",
       "creationSource": "guided",
       "identity": {"name": "Parity Wizard", "gender": "Other", "race": {"source": "srd", "index": "human"}, "background": "Sage", "class": {"source": "srd", "index": "wizard"}, "level": 1, "subclass": null},
-      "abilityScores": {"mode": "calculated", "base": {"strength": 10, "dexterity": 10, "constitution": 10, "intelligence": 10, "wisdom": 10, "charisma": 10}},
+      "abilityScores": {"mode": "calculated", "base": {"strength": 8, "dexterity": 14, "constitution": 13, "intelligence": 15, "wisdom": 12, "charisma": 10}},
       "proficiencies": {"perception": "none", "skills": []},
       "hitPointProgression": {"levelGains": []},
       "combat": {"defense": {"mode": "manual", "armorClass": 14, "reason": "Parity transfer."}},
       "ruleChoices": [{"ruleId": "human-extra-language", "optionIds": ["dwarvish"]}],
       "attacks": [{"id": "fire-bolt", "name": "Fire Bolt", "attackBonus": {"mode": "calculated", "ability": "spellcasting", "proficient": true}, "damage": [{"dice": "1d10", "bonus": 0, "type": "fire"}]}],
-      "spellcasting": {"spells": [{"id": "spell-magic-missile", "source": "srd", "index": "magic-missile", "state": "prepared"}], "preparedSpellIds": ["spell-magic-missile"]},
+      "spellcasting": {
+        "mode": "spellbook-prepared",
+        "cantrips": [{"id": "spell-fire-bolt", "source": "srd", "index": "fire-bolt"}, {"id": "spell-light", "source": "srd", "index": "light"}, {"id": "spell-mage-hand", "source": "srd", "index": "mage-hand"}],
+        "initialSpellbook": [{"id": "spell-burning-hands", "source": "srd", "index": "burning-hands"}, {"id": "spell-charm-person", "source": "srd", "index": "charm-person"}, {"id": "spell-detect-magic", "source": "srd", "index": "detect-magic"}, {"id": "spell-identify", "source": "srd", "index": "identify"}, {"id": "spell-magic-missile", "source": "srd", "index": "magic-missile"}, {"id": "spell-sleep", "source": "srd", "index": "sleep"}],
+        "additions": [],
+        "preparedSpellIds": ["spell-burning-hands", "spell-detect-magic", "spell-identify", "spell-magic-missile"]
+      },
       "features": [{"source": "srd", "index": "spellcasting-wizard"}],
       "equipment": [],
       "other": []
@@ -192,14 +198,14 @@
       "defense": {"mode": "manual", "armorClass": 14, "reason": "Parity transfer."},
       "proficiencyBonus": {"value": 2, "provenance": {"kind": "calculated", "ruleId": "proficiency-bonus"}},
       "armorClass": {"value": 14, "provenance": {"kind": "manual-override", "reason": "Parity transfer."}},
-      "attack": {"id": "fire-bolt", "attackBonus": {"value": 2, "provenance": {"kind": "calculated", "ruleId": "attack-bonus"}}, "attackBonusInput": {"ability": "spellcasting", "proficient": true}, "damage": [{"dice": "1d10", "bonus": 0, "type": "fire"}]},
-      "spell": {"id": "spell-magic-missile", "canonicalIndex": "magic-missile", "name": "Magic Missile", "level": 1, "school": "evocation", "castingTime": "1 action", "range": "120 feet", "components": ["V", "S"], "materialComponent": null, "duration": "Instantaneous", "concentration": false, "ritual": false, "description": "You create three glowing darts of magical force. Each dart hits a creature of your choice that you can see within range. A dart deals 1d4 + 1 force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.", "higherLevelText": "When you cast this spell using a spell slot of 2nd level or higher, the spell creates one more dart for each slot level above 1st.", "state": "prepared", "provenance": {"kind": "calculated", "ruleId": "spell-canonical"}},
-      "preparedSpellIds": ["spell-magic-missile"],
+      "attack": {"id": "fire-bolt", "attackBonus": {"value": 5, "provenance": {"kind": "calculated", "ruleId": "attack-bonus"}}, "attackBonusInput": {"ability": "spellcasting", "proficient": true}, "damage": [{"dice": "1d10", "bonus": 0, "type": "fire"}]},
+      "spell": {"id": "spell-magic-missile", "canonicalIndex": "magic-missile", "name": "Magic Missile", "level": 1, "school": "evocation", "castingTime": "1 action", "range": "120 feet", "components": ["V", "S"], "materialComponent": null, "duration": "Instantaneous", "concentration": false, "ritual": false, "description": "You create three glowing darts of magical force. Each dart hits a creature of your choice that you can see within range. A dart deals 1d4 + 1 force damage to its target. The darts all strike simultaneously, and you can direct them to hit one creature or several.", "higherLevelText": "When you cast this spell using a spell slot of 2nd level or higher, the spell creates one more dart for each slot level above 1st.", "state": "spellbook", "provenance": {"kind": "calculated", "ruleId": "spell-canonical"}},
+      "preparedSpellIds": ["spell-burning-hands", "spell-detect-magic", "spell-identify", "spell-magic-missile"],
       "feature": {"id": "spellcasting-wizard", "source": "srd", "canonicalIndex": "spellcasting-wizard", "ownerKind": "class", "name": "Spellcasting: Wizard", "category": "class", "description": "As a student of arcane magic, you have a spellbook containing spells that show the first glimmerings of your true power.", "provenance": {"kind": "calculated", "ruleId": "feature-canonical"}},
       "subclass": null,
       "hitPointLevelGains": []
     },
-    "invalidUnionKeys": ["RuleSelection", "AbilityScoreInput", "DefenseInput", "HitPointLevelGain", "AttackBonusInput", "CharacterSpellInput", "CharacterFeatureInput", "CharacterEquipmentInput"]
+    "invalidUnionKeys": ["RuleSelection", "AbilityScoreInput", "DefenseInput", "HitPointLevelGain", "AttackBonusInput", "SpellSelectionInput", "CharacterFeatureInput", "CharacterEquipmentInput"]
   },
   "fallbackCases": [
     {
@@ -212,10 +218,10 @@
         "hitPointProgression": {"levelGains": []},
         "combat": {"defense": {"mode": "unarmored", "formulaId": "standard-unarmored"}, "speedOverride": {"value": 35, "reason": "Transferred Race speed."}},
         "ruleChoices": [{"ruleId": "fighter-fighting-style", "optionIds": ["fighter-fighting-style-archery"]}],
-        "attacks": [], "spellcasting": null,
+        "attacks": [], "spellcasting": {"mode": "none"},
         "features": [{"source": "srd", "index": "second-wind"}], "equipment": [], "other": []
       },
-      "expected": {"proficiencyBonus": 2, "maximumHitPoints": 11, "speedFt": 35, "armorClass": 12, "spellcasting": null, "featureIds": ["second-wind"], "featureSources": ["srd"], "featureCategories": ["class"]}
+      "expected": {"proficiencyBonus": 2, "maximumHitPoints": 11, "speedFt": 35, "armorClass": 12, "spellcasting": {"decisionHistory": {"mode": "none"}, "ability": null, "spellSaveDC": null, "spellAttackBonus": null, "slots": [], "availableSpellLevels": [], "spells": [], "preparedSpellIds": [], "alwaysPreparedSpellIds": []}, "featureIds": ["second-wind"], "featureSources": ["srd"], "featureCategories": ["class"]}
     },
     {
       "id": "canonical-race-manual-class",
@@ -227,10 +233,10 @@
         "hitPointProgression": {"levelGains": [], "maximumOverride": {"value": 41, "reason": "Transferred maximum HP."}},
         "combat": {"defense": {"mode": "unarmored", "formulaId": "standard-unarmored"}},
         "ruleChoices": [{"ruleId": "human-extra-language", "optionIds": ["dwarvish"]}],
-        "attacks": [], "spellcasting": null,
+        "attacks": [], "spellcasting": {"mode": "none"},
         "features": [{"source": "manual", "id": "custom-heritage", "name": "Ancestral Memory", "category": "Heritage Gift", "description": "Recall one carefully bounded ancestral memory."}], "equipment": [], "other": []
       },
-      "expected": {"proficiencyBonus": 3, "maximumHitPoints": 41, "speedFt": 30, "armorClass": 10, "spellcasting": null, "featureIds": ["custom-heritage"], "featureSources": ["manual"], "featureCategories": ["Heritage Gift"]}
+      "expected": {"proficiencyBonus": 3, "maximumHitPoints": 41, "speedFt": 30, "armorClass": 10, "spellcasting": {"decisionHistory": {"mode": "none"}, "ability": null, "spellSaveDC": null, "spellAttackBonus": null, "slots": [], "availableSpellLevels": [], "spells": [], "preparedSpellIds": [], "alwaysPreparedSpellIds": []}, "featureIds": ["custom-heritage"], "featureSources": ["manual"], "featureCategories": ["Heritage Gift"]}
     },
     {
       "id": "combined-manual-identities",
@@ -241,9 +247,9 @@
         "proficiencies": {"perception": "none", "skills": []},
         "hitPointProgression": {"levelGains": [], "maximumOverride": {"value": 41, "reason": "Transferred maximum HP."}},
         "combat": {"defense": {"mode": "unarmored", "formulaId": "standard-unarmored"}, "speedOverride": {"value": 35, "reason": "Transferred Race speed."}},
-        "ruleChoices": [], "attacks": [], "spellcasting": null, "features": [], "equipment": [], "other": []
+        "ruleChoices": [], "attacks": [], "spellcasting": {"mode": "none"}, "features": [], "equipment": [], "other": []
       },
-      "expected": {"proficiencyBonus": 3, "maximumHitPoints": 41, "speedFt": 35, "armorClass": 11, "spellcasting": null, "featureIds": [], "featureSources": [], "featureCategories": []}
+      "expected": {"proficiencyBonus": 3, "maximumHitPoints": 41, "speedFt": 35, "armorClass": 11, "spellcasting": {"decisionHistory": {"mode": "none"}, "ability": null, "spellSaveDC": null, "spellAttackBonus": null, "slots": [], "availableSpellLevels": [], "spells": [], "preparedSpellIds": [], "alwaysPreparedSpellIds": []}, "featureIds": [], "featureSources": [], "featureCategories": []}
     }
   ]
 }

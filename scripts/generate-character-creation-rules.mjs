@@ -50,7 +50,10 @@ const expectedRaceChoices = [
   { id: 'high-elf-extra-language', sourceOwnerType: 'race-trait', sourceOwnerIndex: 'extra-language', selectionCount: 1, optionType: 'language', allowedOptionIndexes: [], boundedRule: 'any-srd-language-not-already-known', optionValue: null, exclusivityConstraint: null },
   { id: 'human-extra-language', sourceOwnerType: 'race', sourceOwnerIndex: 'human', selectionCount: 1, optionType: 'language', allowedOptionIndexes: ['abyssal', 'celestial', 'deep-speech', 'draconic', 'dwarvish', 'elvish', 'giant', 'gnomish', 'goblin', 'halfling', 'infernal', 'orc', 'primordial', 'sylvan', 'undercommon'], boundedRule: null, optionValue: null, exclusivityConstraint: null },
 ];
-const levelUpBehaviorChecksum = 'a7420529fa665cfeadb7b00f5536d1f0fed5c5a5258bc5b1dd7f3a7bf7b59c57';
+// Approved additive T-025 amendments: initial Wizard spellbook count, zero replacements at each
+// known-mode acquisition level, and the corrected 2014 Warlock invocation count at level 4.
+// Every other T-026 behavior remains protected by this exact checksum.
+const levelUpBehaviorChecksum = '897e3e13ced98157378d59a829f985ef1910659b9d6a8166956e8aaf851abfa7';
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -430,6 +433,30 @@ const supportedModifierSources = new Set([
   ...canonical.classes.flatMap(({ subclasses }) => subclasses.flatMap(({ featuresByLevel }) => featuresByLevel.flatMap(({ features }) => features.map(({ index }) => index)))),
   ...canonical.classes.flatMap(({ choices }) => choices.flatMap(({ options }) => options.map(({ index }) => index))),
 ]);
+const creationClassChoices = canonical.classes.flatMap((classRule) => classRule.choices
+  .filter((choice) => choice.sourceFeatureIndex)
+  .map((choice) => ({ classIndex: classRule.index, ...choice })));
+ensureUnique(creationClassChoices.map(({ id }) => id), 'creation Class choice IDs');
+for (const choice of creationClassChoices) {
+  assert(supportedModifierSources.has(choice.sourceFeatureIndex), `creation Class choice ${choice.id} references unknown source feature ${choice.sourceFeatureIndex}`);
+  if (choice.requiredSubclassIndex) {
+    assert(canonical.classes.find(({ index }) => index === choice.classIndex)?.subclasses.some(({ index }) => index === choice.requiredSubclassIndex), `creation Class choice ${choice.id} references an unsupported subclass`);
+  }
+  assert(choice.options.length > 0 || ['any-srd-skill-proficiency', 'ability-score-improvement-or-srd-feat'].includes(choice.boundedRule), `creation Class choice ${choice.id} has no bounded options`);
+}
+const expectedCreationClassChoiceIDs = [
+  'barbarian-ability-score-improvement-1',
+  'college-of-lore-bonus-proficiencies', 'bard-ability-score-improvement-1',
+  'cleric-ability-score-improvement-1',
+  'circle-of-the-land-bonus-cantrip', 'druid-ability-score-improvement-1',
+  'fighter-ability-score-improvement-1', 'monk-ability-score-improvement-1',
+  'paladin-ability-score-improvement-1',
+  'hunter-hunters-prey', 'ranger-ability-score-improvement-1',
+  'rogue-ability-score-improvement-1',
+  'draconic-ancestor', 'sorcerer-ability-score-improvement-1',
+  'warlock-ability-score-improvement-1', 'wizard-ability-score-improvement-1',
+];
+assert(deepEqual(creationClassChoices.map(({ id }) => id), expectedCreationClassChoiceIDs), 'creation Class choice membership or deterministic order changed');
 for (const modifier of canonical.featureModifiers) {
   assert(supportedModifierSources.has(modifier.sourceIndex), `feature modifier ${modifier.id} references unknown canonical source ${modifier.sourceIndex}`);
 }
@@ -467,7 +494,10 @@ const legacySpells = canonical.spells.map((spell) => ({
 }));
 const actualLevelUpBehaviorChecksum = createHash('sha256').update(JSON.stringify({
   supportedTransitions: canonical.supportedTransitions,
-  classes: canonical.classes,
+  classes: canonical.classes.map((classRule) => ({
+    ...classRule,
+    choices: classRule.choices.filter((choice) => !choice.sourceFeatureIndex),
+  })),
   spells: legacySpells,
 })).digest('hex');
 assert(actualLevelUpBehaviorChecksum === levelUpBehaviorChecksum, 'existing T-026 Level Up projection changed behaviorally');
@@ -478,6 +508,7 @@ const projection = {
   subraces: canonical.subraces,
   raceTraits: canonical.raceTraits,
   raceChoices: canonical.raceChoices,
+  classChoices: creationClassChoices,
   equipmentCategories: canonical.equipmentCategories,
   equipment: canonical.equipment,
   spells: canonical.spells,
@@ -493,6 +524,7 @@ const counts = {
   subraces: canonical.subraces.length,
   raceTraits: canonical.raceTraits.length,
   raceChoices: canonical.raceChoices.length,
+  classChoices: creationClassChoices.length,
   equipmentCategories: canonical.equipmentCategories.length,
   equipment: canonical.equipment.length,
   equipmentByCategory,

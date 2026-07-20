@@ -14,13 +14,18 @@ func TestCorrectedV2BuildPersistsDefenseAttackSpellFeatureAndSubclassSources(t *
 	if sheet.Combat.Defense.Mode != "manual" || sheet.Combat.ArmorClass.Value != 14 || sheet.Combat.ProficiencyBonus.Value != 2 {
 		t.Fatalf("defense/proficiency sources were not preserved: %+v", sheet.Combat)
 	}
-	if len(sheet.Attacks) != 1 || sheet.Attacks[0].AttackBonusInput == nil || sheet.Attacks[0].AttackBonusInput.Ability != "spellcasting" || sheet.Attacks[0].AttackBonus.Value != 2 {
+	if len(sheet.Attacks) != 1 || sheet.Attacks[0].AttackBonusInput == nil || sheet.Attacks[0].AttackBonusInput.Ability != "spellcasting" || sheet.Attacks[0].AttackBonus.Value != 5 {
 		t.Fatalf("calculated attack input was not persisted: %+v", sheet.Attacks)
 	}
-	if sheet.Spellcasting == nil || len(sheet.Spellcasting.Spells) != 1 {
+	if sheet.Spellcasting == nil || len(sheet.Spellcasting.Spells) != 9 {
 		t.Fatalf("spellcasting was not populated: %+v", sheet.Spellcasting)
 	}
-	spell := sheet.Spellcasting.Spells[0]
+	spell := CharacterSheetV2Spell{}
+	for _, candidate := range sheet.Spellcasting.Spells {
+		if candidate.CanonicalIndex != nil && *candidate.CanonicalIndex == "magic-missile" {
+			spell = candidate
+		}
+	}
 	if spell.ID != "spell-magic-missile" || spell.CanonicalIndex == nil || *spell.CanonicalIndex != "magic-missile" || len(spell.Description) < 100 {
 		t.Fatalf("canonical spell fidelity was not persisted: %+v", spell)
 	}
@@ -29,6 +34,78 @@ func TestCorrectedV2BuildPersistsDefenseAttackSpellFeatureAndSubclassSources(t *
 	}
 	if errors := ValidateCharacterSheetV2(sheet); len(errors) != 0 {
 		t.Fatalf("built sheet failed validation: %v", errors)
+	}
+}
+
+func TestLevelFourAbilityScoreImprovementIsAppliedAuthoritatively(t *testing.T) {
+	request := correctedFighterRequest(4)
+	sheet, err := BuildCharacterSheetV2(request)
+	if err != nil {
+		t.Fatalf("build level-four Fighter: %v", err)
+	}
+	if sheet.AbilityScores.Scores.Strength.Value != 18 {
+		t.Fatalf("strength after Human bonus and +2 ASI = %d, want 18", sheet.AbilityScores.Scores.Strength.Value)
+	}
+	if sheet.AbilityScores.Scores.Dexterity.Value != 15 {
+		t.Fatalf("dexterity after fixed Human bonus = %d, want 15", sheet.AbilityScores.Scores.Dexterity.Value)
+	}
+}
+
+func TestRejectsManualSpellWithoutComponentsInRequestAndSavedSheet(t *testing.T) {
+	request := correctedWizardRequest()
+	replacedID := request.Spellcasting.InitialSpellbook[0].ID
+	request.Spellcasting.InitialSpellbook[0] = SpellSelectionInput{
+		ID: "spell-no-components", Source: "manual", Name: "Silent Shape", Level: 1,
+		School: "Illusion", CastingTime: "1 action", Range: "30 feet", Components: []string{},
+		Duration: "1 minute", Description: "A complete imported description.", ImportReason: "Transferred from a paper sheet.",
+	}
+	for index, id := range request.Spellcasting.PreparedSpellIDs {
+		if id == replacedID {
+			request.Spellcasting.PreparedSpellIDs[index] = "spell-no-components"
+		}
+	}
+	if len(ValidateCreateCharacterV2Request(request)) == 0 {
+		t.Fatal("manual spell without components was accepted in the request")
+	}
+
+	request.Spellcasting.InitialSpellbook[0].Components = []string{"S"}
+	sheet, err := BuildCharacterSheetV2(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for index := range sheet.Spellcasting.Spells {
+		if sheet.Spellcasting.Spells[index].ID == "spell-no-components" {
+			sheet.Spellcasting.Spells[index].Components = []string{}
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("manual spell fixture was not persisted")
+	}
+	if len(ValidateCharacterSheetV2(sheet)) == 0 {
+		t.Fatal("saved manual spell without components was accepted")
+	}
+}
+
+func TestRejectsManualSpellLevelsUnavailableToCurrentClassLevelInRequestAndSavedSheet(t *testing.T) {
+	request := correctedWizardRequest()
+	request.Spellcasting.InitialSpellbook[0] = SpellSelectionInput{
+		ID: "spell-too-high", Source: "manual", Name: "Too High", Level: 3,
+		School: "Evocation", CastingTime: "1 action", Range: "30 feet", Components: []string{"V"},
+		Duration: "Instantaneous", Description: "Unavailable at Wizard level one.", ImportReason: "Transferred.",
+	}
+	if len(ValidateCreateCharacterV2Request(request)) == 0 {
+		t.Fatal("manual level-three spell was accepted for a level-one Wizard request")
+	}
+
+	sheet, err := BuildCharacterSheetV2(correctedWizardRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	sheet.Spellcasting.Spells[0].Level = 3
+	if len(ValidateCharacterSheetV2(sheet)) == 0 {
+		t.Fatal("saved level-one Wizard accepted a level-three spell")
 	}
 }
 
@@ -70,7 +147,7 @@ func TestCorrectedV2RejectsSubclassHPAttackAndNestedUnionViolations(t *testing.T
 			value["hitPointProgression"].(map[string]any)["levelGains"] = []any{map[string]any{"level": 2.0, "mode": "fixed-average", "roll": 0.0}}
 		},
 		"spell": func(value map[string]any) {
-			value["spellcasting"].(map[string]any)["spells"].([]any)[0].(map[string]any)["name"] = ""
+			value["spellcasting"].(map[string]any)["cantrips"].([]any)[0].(map[string]any)["state"] = ""
 		},
 		"feature": func(value map[string]any) {
 			value["features"].([]any)[0].(map[string]any)["id"] = ""
@@ -157,18 +234,27 @@ func TestCorrectedV2DefenseVariantsAttacksManualSpellAndRangerHunter(t *testing.
 	}
 
 	wizard := correctedWizardRequest()
-	wizard.Spellcasting.Spells = []CharacterSpellInput{{ID: "spell-custom", Source: "manual", Name: "Custom Spark", Level: 1, School: "Evocation", CastingTime: "1 action", Range: "30 feet", Components: []string{"V", "S"}, MaterialComponent: "A copper wire", Duration: "Instantaneous", Concentration: false, Ritual: false, Description: "A bounded custom effect.", HigherLevelText: "The effect grows by one die.", State: "prepared"}}
-	wizard.Spellcasting.PreparedSpellIDs = []string{"spell-custom"}
+	wizard.Spellcasting.InitialSpellbook[0] = SpellSelectionInput{ID: "spell-custom", Source: "manual", Name: "Custom Spark", Level: 1, School: "Evocation", CastingTime: "1 action", Range: "30 feet", Components: []string{"V", "S"}, MaterialComponent: "A copper wire", Duration: "Instantaneous", Concentration: false, Ritual: false, Description: "A bounded custom effect.", HigherLevelText: "The effect grows by one die.", ImportReason: "Transferred from a paper sheet."}
+	wizard.Spellcasting.PreparedSpellIDs = []string{"spell-custom", "spell-detect-magic", "spell-identify", "spell-magic-missile"}
 	wizardSheet, err := BuildCharacterSheetV2(wizard)
-	if err != nil || wizardSheet.Spellcasting.Spells[0].CanonicalIndex != nil || wizardSheet.Spellcasting.Spells[0].Provenance.Kind != "imported" {
+	manualFound := false
+	if err == nil {
+		for _, spell := range wizardSheet.Spellcasting.Spells {
+			manualFound = manualFound || spell.ID == "spell-custom" && spell.CanonicalIndex == nil && spell.Provenance.Kind == "imported" && spell.Provenance.Note == "Transferred from a paper sheet."
+		}
+	}
+	if err != nil || !manualFound {
 		t.Fatalf("manual spell was not fully imported: %+v %v", wizardSheet.Spellcasting, err)
 	}
 
 	ranger := correctedFighterRequest(3)
 	ranger.Identity.Class = RuleSelection{Source: "srd", Index: "ranger"}
 	ranger.Identity.Subclass = &RuleSelection{Source: "srd", Index: "hunter"}
-	ranger.RuleChoices = []RuleChoiceInput{{RuleID: "human-extra-language", OptionIDs: []string{"dwarvish"}}, {RuleID: "ranger-favored-enemy", OptionIDs: []string{}, ManualNote: "Dragons."}, {RuleID: "ranger-natural-explorer", OptionIDs: []string{}, ManualNote: "Forest."}, {RuleID: "ranger-fighting-style", OptionIDs: []string{"ranger-fighting-style-archery"}}}
-	ranger.Spellcasting = &CharacterSpellcastingInput{Spells: []CharacterSpellInput{}, PreparedSpellIDs: []string{}}
+	ranger.RuleChoices = []RuleChoiceInput{{RuleID: "human-extra-language", OptionIDs: []string{"dwarvish"}}, {RuleID: "ranger-favored-enemy", OptionIDs: []string{}, ManualNote: "Dragons."}, {RuleID: "ranger-natural-explorer", OptionIDs: []string{}, ManualNote: "Forest."}, {RuleID: "ranger-fighting-style", OptionIDs: []string{"ranger-fighting-style-archery"}}, {RuleID: "hunter-hunters-prey", OptionIDs: []string{"hunters-prey-colossus-slayer"}}}
+	ranger.Spellcasting = &CharacterSpellcastingInput{Mode: "known", Cantrips: []SpellSelectionInput{}, Levels: []KnownSpellLevelInput{
+		{Level: 2, Learned: spellSelections("cure-wounds", "hunters-mark"), Replacements: []SpellReplacementInput{}},
+		{Level: 3, Learned: spellSelections("goodberry"), Replacements: []SpellReplacementInput{}},
+	}}
 	ranger.Features = []CharacterFeatureInput{{Source: "srd", Index: "hunters-prey"}}
 	if _, err := BuildCharacterSheetV2(ranger); err != nil {
 		t.Fatalf("Ranger Hunter coverage failed: %v", err)
@@ -221,7 +307,7 @@ func TestFinalFallbackManualClassUniversalProficiencyAndBoundedAutomation(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sheet.Combat.ProficiencyBonus.Value != 3 || sheet.HitPointProgression.Maximum.Value != 41 || len(sheet.HitPointProgression.LevelGains) != 0 || sheet.Spellcasting != nil {
+	if sheet.Combat.ProficiencyBonus.Value != 3 || sheet.HitPointProgression.Maximum.Value != 41 || len(sheet.HitPointProgression.LevelGains) != 0 || sheet.Spellcasting == nil || sheet.Spellcasting.DecisionHistory.Mode != "none" {
 		t.Fatalf("manual Class fallbacks are wrong: %+v", sheet)
 	}
 
@@ -241,7 +327,7 @@ func TestFinalFallbackManualClassUniversalProficiencyAndBoundedAutomation(t *tes
 		t.Fatal("manual Class accepted canonical Class feature")
 	}
 	spellcasting := finalManualClassRequest(1)
-	spellcasting.Spellcasting = &CharacterSpellcastingInput{Spells: []CharacterSpellInput{}, PreparedSpellIDs: []string{}}
+	spellcasting.Spellcasting = &CharacterSpellcastingInput{Mode: "known", Cantrips: []SpellSelectionInput{}, Levels: []KnownSpellLevelInput{}}
 	if len(ValidateCreateCharacterV2Request(spellcasting)) == 0 {
 		t.Fatal("manual Class accepted spellcasting")
 	}
@@ -332,7 +418,7 @@ func finalManualClassRequest(level int) CreateCharacterV2RequestDTO {
 	request.Combat.Defense = DefenseInput{Mode: "unarmored", FormulaID: "standard-unarmored"}
 	request.RuleChoices = []RuleChoiceInput{{RuleID: "human-extra-language", OptionIDs: []string{"dwarvish"}}}
 	request.Features = []CharacterFeatureInput{}
-	request.Spellcasting = nil
+	request.Spellcasting = &CharacterSpellcastingInput{Mode: "none"}
 	return request
 }
 
@@ -360,17 +446,23 @@ func correctedFighterRequest(level int) CreateCharacterV2RequestDTO {
 			ID: "longsword", Name: "Longsword", AttackBonus: CharacterAttackBonusInput{Mode: "calculated", Ability: "strength", Proficient: true},
 			Damage: []CharacterDamageInput{{Dice: "1d8", Bonus: 3, Type: "slashing"}},
 		}},
-		Features:  []CharacterFeatureInput{{Source: "srd", Index: "second-wind"}},
-		Equipment: []CharacterEquipmentInput{}, Other: []CharacterOtherInput{},
+		Spellcasting: &CharacterSpellcastingInput{Mode: "none"},
+		Features:     []CharacterFeatureInput{{Source: "srd", Index: "second-wind"}},
+		Equipment:    []CharacterEquipmentInput{}, Other: []CharacterOtherInput{},
 	}
 	if level >= 3 {
 		request.Identity.Subclass = &RuleSelection{Source: "srd", Index: "champion"}
+	}
+	if level >= 4 {
+		request.RuleChoices = append(request.RuleChoices, RuleChoiceInput{RuleID: "fighter-ability-score-improvement-1", OptionIDs: []string{"ability-score-increase-strength-2"}})
 	}
 	return request
 }
 
 func correctedWizardRequest() CreateCharacterV2RequestDTO {
 	request := correctedFighterRequest(1)
+	base := AbilityScoresDTO{Strength: 8, Dexterity: 14, Constitution: 13, Intelligence: 15, Wisdom: 12, Charisma: 10}
+	request.AbilityScores = AbilityScoreInput{Mode: "calculated", Base: &base}
 	request.Identity.Background = "Sage"
 	request.Identity.Class = RuleSelection{Source: "srd", Index: "wizard"}
 	request.RuleChoices = []RuleChoiceInput{{RuleID: "human-extra-language", OptionIDs: []string{"dwarvish"}}}
@@ -379,8 +471,11 @@ func correctedWizardRequest() CreateCharacterV2RequestDTO {
 		Damage: []CharacterDamageInput{{Dice: "1d10", Type: "fire"}},
 	}}
 	request.Spellcasting = &CharacterSpellcastingInput{
-		Spells:           []CharacterSpellInput{{ID: "spell-magic-missile", Source: "srd", Index: "magic-missile", State: "prepared"}},
-		PreparedSpellIDs: []string{"spell-magic-missile"},
+		Mode:             "spellbook-prepared",
+		Cantrips:         spellSelections("fire-bolt", "light", "mage-hand"),
+		InitialSpellbook: spellSelections("burning-hands", "charm-person", "detect-magic", "identify", "magic-missile", "sleep"),
+		Additions:        []WizardSpellbookAdditionInput{},
+		PreparedSpellIDs: []string{"spell-burning-hands", "spell-detect-magic", "spell-identify", "spell-magic-missile"},
 	}
 	request.Features = []CharacterFeatureInput{{Source: "srd", Index: "spellcasting-wizard"}}
 	return request

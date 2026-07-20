@@ -260,7 +260,7 @@ const validRequest = (): CreateCharacterV2RequestDTO => ({
     { ruleId: 'human-extra-language', optionIds: ['dwarvish'] },
     { ruleId: 'fighter-fighting-style', optionIds: ['fighter-fighting-style-archery'] },
   ],
-  attacks: [], spellcasting: null, features: [], equipment: [], other: [],
+  attacks: [], spellcasting: { mode: 'none' }, features: [], equipment: [], other: [],
 });
 
 const validSheet = (): CharacterSheetV2 => buildCharacterSheetV2(validRequest());

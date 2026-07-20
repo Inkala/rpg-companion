@@ -11,11 +11,17 @@ type CharacterCreationDataset struct {
 	Subraces            []SubraceRule             `json:"subraces"`
 	RaceTraits          []RaceTraitRule           `json:"raceTraits"`
 	RaceChoices         []RaceChoiceRule          `json:"raceChoices"`
+	ClassChoices        []CharacterCreationChoice `json:"classChoices"`
 	EquipmentCategories []EquipmentCategoryRule   `json:"equipmentCategories"`
 	Equipment           []EquipmentRule           `json:"equipment"`
 	Spells              []SpellDetail             `json:"spells"`
 	CalculationRules    []CalculationRule         `json:"calculationRules"`
 	FeatureModifiers    []FeatureModifier         `json:"featureModifiers"`
+}
+
+type CharacterCreationChoice struct {
+	ClassIndex string `json:"classIndex"`
+	Choice
 }
 
 type CharacterCreationMetadata struct {

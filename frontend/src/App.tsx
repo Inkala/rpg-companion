@@ -16,6 +16,7 @@ import {
   type AuthUser,
 } from './auth/api';
 import { CharacterCreationPage } from './character-creation/CharacterCreationPage';
+import type { StructuredCharacterCreationContinuation } from './character-creation/StructuredCharacterCreation';
 import { CharacterReference } from './characters/CharacterReference';
 import { listCharacterSummaries } from './characters/api';
 import { maraReferenceCharacter } from './characters/maraReference';
@@ -44,6 +45,7 @@ type AppProps = {
 };
 
 type AuthenticationDestination =
+  | { name: 'new-character'; continuation: StructuredCharacterCreationContinuation | null }
   | { name: 'new-party' }
   | { name: 'party-invite'; credential: InviteCredential }
   | { name: 'party'; partyId: string }
@@ -77,6 +79,9 @@ export const App = ({
   const [inviteUnavailable, setInviteUnavailable] = useState(false);
   const [pendingAuthentication, setPendingAuthentication] =
     useState<AuthenticationDestination | null>(null);
+  const [characterCreationContinuation, setCharacterCreationContinuation] =
+    useState<StructuredCharacterCreationContinuation | null>(null);
+  const characterCreationContinuationRef = useRef<StructuredCharacterCreationContinuation | null>(null);
   const [savedCharacterJoin, setSavedCharacterJoin] =
     useState<SavedCharacterJoin | null>(null);
   const routeRef = useRef(route);
@@ -111,6 +116,11 @@ export const App = ({
   const updateSavedCharacterJoin = useCallback((nextJoin: SavedCharacterJoin | null) => {
     savedCharacterJoinRef.current = nextJoin;
     setSavedCharacterJoin(nextJoin);
+  }, []);
+
+  const updateCharacterCreationContinuation = useCallback((next: StructuredCharacterCreationContinuation | null) => {
+    characterCreationContinuationRef.current = next;
+    setCharacterCreationContinuation(next);
   }, []);
 
   const invalidateSavedCharacterJoin = useCallback(() => {
@@ -326,6 +336,9 @@ export const App = ({
   const restoreAuthenticationDestination = (
     destination: AuthenticationDestination,
   ) => {
+    if (destination.name === 'new-character') {
+      updateCharacterCreationContinuation(destination.continuation);
+    }
     const restoredCredential =
       destination.name === 'party-invite' ? destination.credential : null;
     inviteCredentialRef.current = restoredCredential;
@@ -347,6 +360,10 @@ export const App = ({
   };
 
   const openAccount = (mode: AccountMode) => {
+    if (route.name === 'new-character') {
+      beginAuthentication({ name: 'new-character', continuation: characterCreationContinuationRef.current }, mode);
+      return;
+    }
     if (route.name === 'new-party') {
       beginAuthentication({ name: 'new-party' }, mode);
       return;
@@ -665,12 +682,15 @@ export const App = ({
         ) : route.name === 'new-character' ? (
           <CharacterCreationPage
             isSignedIn={currentUser !== null}
-            onBack={showHome}
+            onBack={() => { updateCharacterCreationContinuation(null); showHome(); }}
             onCreateAccount={() => openAccount('register')}
-            onOpenCharacterReference={(characterId) =>
-              handleCharacterSaved(characterId, inviteCredential)
-            }
+            onOpenCharacterReference={(characterId) => {
+              updateCharacterCreationContinuation(null);
+              handleCharacterSaved(characterId, inviteCredential);
+            }}
             onSignIn={() => openAccount('sign-in')}
+            structuredContinuation={characterCreationContinuation}
+            onStructuredContinuationChange={updateCharacterCreationContinuation}
           />
         ) : route.name === 'sample-character' ? (
           <CharacterReference
@@ -886,6 +906,8 @@ const routeForAuthenticationDestination = (
   destination: AuthenticationDestination,
 ): AppRoute => {
   switch (destination.name) {
+    case 'new-character':
+      return { name: 'new-character' };
     case 'new-party':
       return { name: 'new-party' };
     case 'party-invite':

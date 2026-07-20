@@ -3,6 +3,7 @@ package characters
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/Inkala/rpg-companion/backend/internal/rules"
 )
@@ -80,7 +81,7 @@ func CalculateCharacterV2(input CharacterCalculationInput) (CharacterCalculation
 		return CharacterCalculationOutput{}, fmt.Errorf("unsupported canonical Race")
 	}
 	choiceErrors := ValidateRuleChoices(RuleChoiceValidationContext{
-		RaceIndex: input.Race.Index, SubraceIndex: input.SubraceIndex, ClassIndex: input.ClassIndex,
+		RaceIndex: input.Race.Index, SubraceIndex: input.SubraceIndex, ClassIndex: input.ClassIndex, SubclassIndex: input.SubclassIndex,
 		Level: input.Level, Choices: input.RuleChoices,
 	})
 	if len(choiceErrors) > 0 {
@@ -273,44 +274,23 @@ func BuildCharacterSheetV2(request CreateCharacterV2RequestDTO) (CharacterSheetV
 		}
 		attacks = append(attacks, entry)
 	}
-	var spellcasting *CharacterSheetV2Spellcasting
-	if calculation.Spellcasting != nil && request.Spellcasting != nil {
-		spells := make([]CharacterSheetV2Spell, 0, len(request.Spellcasting.Spells))
-		for _, spell := range request.Spellcasting.Spells {
-			if spell.Source == "manual" {
-				entry := CharacterSheetV2Spell{ID: spell.ID, Name: spell.Name, Level: spell.Level, School: spell.School, CastingTime: spell.CastingTime,
-					Range: spell.Range, Components: append([]string(nil), spell.Components...), Duration: spell.Duration, Concentration: spell.Concentration,
-					Ritual: spell.Ritual, Description: spell.Description, State: spell.State, Provenance: ValueProvenance{Kind: "imported"}}
-				if spell.MaterialComponent != "" {
-					value := spell.MaterialComponent
-					entry.MaterialComponent = &value
-				}
-				if spell.HigherLevelText != "" {
-					value := spell.HigherLevelText
-					entry.HigherLevelText = &value
-				}
-				spells = append(spells, entry)
-				continue
-			}
-			var canonical rules.SpellDetail
-			found := false
-			for _, candidate := range creation.Spells {
-				if candidate.Index == spell.Index {
-					canonical = candidate
-					found = true
-					break
-				}
-			}
-			if !found {
-				return CharacterSheetV2{}, fmt.Errorf("unsupported canonical spell")
-			}
-			index := canonical.Index
-			spells = append(spells, CharacterSheetV2Spell{ID: spell.ID, CanonicalIndex: &index, Name: canonical.Name, Level: canonical.Level,
-				School: canonical.School, CastingTime: canonical.CastingTime, Range: canonical.Range, Components: append([]string(nil), canonical.Components...),
-				MaterialComponent: canonical.Material, Duration: canonical.Duration, Concentration: canonical.Concentration, Ritual: canonical.Ritual,
-				Description: canonical.Description, HigherLevelText: canonical.HigherLevel, State: spell.State,
-				Provenance: ValueProvenance{Kind: "calculated", RuleID: "spell-canonical"}})
+	spellResult := SpellReconstructionResult{Spells: []CharacterSheetV2Spell{}, PreparedSpellIDs: []string{}, AlwaysPreparedSpellIDs: []string{}}
+	spellResult.Spells, err = raceGrantedV2Cantrips(v2RuleChoiceOptions(request.RuleChoices, "high-elf-cantrip"))
+	if err != nil {
+		return CharacterSheetV2{}, err
+	}
+	if classIndex != "" {
+		abilityModifierValue := 0
+		if calculation.Spellcasting != nil {
+			abilityModifierValue = abilityValue(calculation.AbilityModifiers, calculation.Spellcasting.Ability)
 		}
+		spellResult, err = reconstructV2Spellcasting(SpellReconstructionInput{ClassIndex: classIndex, SubclassIndex: subclassIndex, Level: request.Identity.Level, AbilityModifier: abilityModifierValue, Input: *request.Spellcasting, ActiveFeatureIDs: v2AllRuleChoiceOptions(request.RuleChoices), RaceGrantedCantripIndexes: v2RuleChoiceOptions(request.RuleChoices, "high-elf-cantrip"), ClassGrantedCantripIndexes: v2RuleChoiceOptions(request.RuleChoices, "circle-of-the-land-bonus-cantrip")})
+		if err != nil {
+			return CharacterSheetV2{}, err
+		}
+	}
+	spellcasting := &CharacterSheetV2Spellcasting{DecisionHistory: *request.Spellcasting, Slots: []CharacterSheetV2Slot{}, AvailableSpellLevels: []int{}, Spells: spellResult.Spells, PreparedSpellIDs: spellResult.PreparedSpellIDs, AlwaysPreparedSpellIDs: spellResult.AlwaysPreparedSpellIDs}
+	if calculation.Spellcasting != nil {
 		slots := make([]CharacterSheetV2Slot, len(calculation.Spellcasting.Slots))
 		for index, maximum := range calculation.Spellcasting.Slots {
 			slots[index] = CharacterSheetV2Slot{Level: index + 1, Max: maximum, Provenance: ValueProvenance{Kind: "calculated", RuleID: "spell-slots"}}
@@ -321,10 +301,14 @@ func BuildCharacterSheetV2(request CreateCharacterV2RequestDTO) (CharacterSheetV
 				}
 			}
 		}
-		spellcasting = &CharacterSheetV2Spellcasting{Ability: calculation.Spellcasting.Ability,
-			SpellSaveDC: calculated(calculation.Spellcasting.SpellSaveDC, "spell-save-dc"), SpellAttackBonus: calculated(calculation.Spellcasting.SpellAttackBonus, "spell-attack-bonus"),
-			Slots: slots, AvailableSpellLevels: append([]int(nil), calculation.Spellcasting.AvailableSpellLevels...), Spells: spells,
-			PreparedSpellIDs: append([]string(nil), request.Spellcasting.PreparedSpellIDs...)}
+		abilityName := calculation.Spellcasting.Ability
+		saveDC := calculated(calculation.Spellcasting.SpellSaveDC, "spell-save-dc")
+		attackBonus := calculated(calculation.Spellcasting.SpellAttackBonus, "spell-attack-bonus")
+		spellcasting.Ability = &abilityName
+		spellcasting.SpellSaveDC = &saveDC
+		spellcasting.SpellAttackBonus = &attackBonus
+		spellcasting.Slots = slots
+		spellcasting.AvailableSpellLevels = append([]int(nil), calculation.Spellcasting.AvailableSpellLevels...)
 	}
 	features := make([]CharacterSheetV2Feature, 0, len(request.Features))
 	for _, feature := range request.Features {
@@ -353,7 +337,7 @@ func BuildCharacterSheetV2(request CreateCharacterV2RequestDTO) (CharacterSheetV
 		Proficiencies: request.Proficiencies, HitPointProgression: CharacterSheetV2HitPoints{LevelGains: request.HitPointProgression.LevelGains, MaximumOverride: request.HitPointProgression.MaximumOverride, Maximum: resolved(calculation.MaximumHitPoints, request.HitPointProgression.MaximumOverride, "maximum-hit-points")},
 		Combat:      CharacterSheetV2Combat{Defense: request.Combat.Defense, ProficiencyBonus: calculated(calculation.ProficiencyBonus, "proficiency-bonus"), Initiative: resolved(calculation.Initiative, request.Combat.InitiativeOverride, "initiative"), PassivePerception: resolved(calculation.PassivePerception, request.Combat.PassivePerceptionOverride, "passive-perception"), SpeedFt: resolved(calculation.SpeedFt, request.Combat.SpeedOverride, "walking-speed"), ArmorClass: armorClass},
 		RuleChoices: request.RuleChoices, Attacks: attacks, Spellcasting: spellcasting, Features: features, Equipment: request.Equipment, Other: request.Other,
-		Summary: CharacterSheetV2Summary{DisplayLine: fmt.Sprintf("%s · Level %d", request.Identity.Name, request.Identity.Level), LandingConcept: request.Identity.Background + " " + ruleSelectionLabel(request.Identity.Class), FeaturedAbilities: featureNames(features), ReferenceSections: []CharacterReferenceSectionV2{{ID: "actions", Label: "Actions", DefaultOpen: true}, {ID: "features", Label: "Features", DefaultOpen: true}, {ID: "spells", Label: "Spells", DefaultOpen: spellcasting != nil}, {ID: "equipment", Label: "Equipment"}, {ID: "other", Label: "Other"}}},
+		Summary: CharacterSheetV2Summary{DisplayLine: fmt.Sprintf("%s · Level %d", request.Identity.Name, request.Identity.Level), LandingConcept: request.Identity.Background + " " + ruleSelectionLabel(request.Identity.Class), FeaturedAbilities: featureNames(features), ReferenceSections: []CharacterReferenceSectionV2{{ID: "actions", Label: "Actions", DefaultOpen: true}, {ID: "features", Label: "Features", DefaultOpen: true}, {ID: "spells", Label: "Spells", DefaultOpen: len(spellcasting.Spells) > 0}, {ID: "equipment", Label: "Equipment"}, {ID: "other", Label: "Other"}}},
 	}, nil
 }
 
@@ -443,8 +427,28 @@ func calculateAbilityScores(input CharacterCalculationInput, race rules.RaceRule
 				addAbilityBonus(&scores, ability, 1)
 			}
 		}
+		if strings.Contains(choice.RuleID, "ability-score-improvement") {
+			for _, option := range choice.OptionIDs {
+				parts := strings.Split(strings.TrimPrefix(option, "ability-score-increase-"), "-")
+				if len(parts) == 2 && parts[1] == "2" {
+					addAbilityBonusCapped(&scores, parts[0], 2)
+				} else if len(parts) == 3 && parts[2] == "1" {
+					addAbilityBonusCapped(&scores, parts[0], 1)
+					addAbilityBonusCapped(&scores, parts[1], 1)
+				}
+			}
+		}
 	}
 	return scores, nil
+}
+
+func addAbilityBonusCapped(scores *AbilityScoresDTO, ability string, bonus int) {
+	before := abilityValue(*scores, ability)
+	addAbilityBonus(scores, ability, bonus)
+	after := abilityValue(*scores, ability)
+	if before+bonus > 20 && after > 20 {
+		addAbilityBonus(scores, ability, 20-after)
+	}
 }
 
 func calculatePassivePerception(input CharacterCalculationInput, wisdomModifier, proficiency int, race rules.RaceRule, subrace *rules.SubraceRule) int {

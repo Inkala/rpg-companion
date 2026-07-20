@@ -148,8 +148,8 @@ describe('level-up state machine', () => {
     ]));
   });
 
-  it('collects an increased Warlock invocation count as a target-level class choice', () => {
-    const character = characterAt('Warlock', 3);
+  it('collects the third Warlock invocation at target level five', () => {
+    const character = characterAt('Warlock', 4);
     const sheet = character.referencePayload as CharacterSheetV1;
     sheet.identity.classes[0].subclass = 'Fiend';
     character.subclassName = 'Fiend';

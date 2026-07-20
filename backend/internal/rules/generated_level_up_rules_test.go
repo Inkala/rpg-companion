@@ -23,8 +23,9 @@ type canonicalRulesFixture struct {
 			Spellcasting map[string]any `json:"spellcasting"`
 		} `json:"levels"`
 		Choices []struct {
-			ID        string `json:"id"`
-			FromLevel int    `json:"fromLevel"`
+			ID                    string         `json:"id"`
+			FromLevel             int            `json:"fromLevel"`
+			SelectionCountByLevel map[string]int `json:"selectionCountByLevel"`
 		} `json:"choices"`
 	} `json:"classes"`
 	Spells []struct {
@@ -129,6 +130,37 @@ func TestGeneratedRulesSpellCountsMembershipsSlotsAndChoices(t *testing.T) {
 	if int(warlock["pactSlots"].(float64)) != 2 || int(warlock["pactSlotLevel"].(float64)) != 3 {
 		t.Fatalf("unexpected level-5 Pact Magic progression: %#v", warlock)
 	}
+	for classIndex, class := range classes {
+		for _, level := range class.Levels {
+			want := 0
+			if classIndex == "wizard" && level.Level == 1 {
+				want = 6
+			}
+			if got, ok := level.Spellcasting["initialSpellbookSpells"]; ok {
+				if int(got.(float64)) != want {
+					t.Fatalf("%s level %d initial spellbook=%v, want %d", classIndex, level.Level, got, want)
+				}
+			} else if level.Spellcasting != nil {
+				t.Fatalf("%s level %d lacks initialSpellbookSpells", classIndex, level.Level)
+			}
+		}
+	}
+	for _, classIndex := range []string{"bard", "ranger", "sorcerer", "warlock"} {
+		first := true
+		for _, level := range classes[classIndex].Levels {
+			if level.Spellcasting == nil {
+				continue
+			}
+			want := 1
+			if first {
+				want = 0
+				first = false
+			}
+			if got := int(level.Spellcasting["replacementLimit"].(float64)); got != want {
+				t.Fatalf("%s level %d replacement limit=%d, want %d", classIndex, level.Level, got, want)
+			}
+		}
+	}
 
 	requiredChoiceIDs := map[string]bool{
 		"fighter-fighting-style":       false,
@@ -151,6 +183,17 @@ func TestGeneratedRulesSpellCountsMembershipsSlotsAndChoices(t *testing.T) {
 			t.Fatalf("missing canonical choice ID %q", id)
 		}
 	}
+	warlockChoices := classes["warlock"].Choices
+	for _, choice := range warlockChoices {
+		if choice.ID == "warlock-eldritch-invocations" {
+			want := map[string]int{"1": 0, "2": 2, "3": 2, "4": 2, "5": 3}
+			for level, count := range want {
+				if got := choice.SelectionCountByLevel[level]; got != count {
+					t.Fatalf("warlock invocation count at level %s=%d, want %d", level, got, count)
+				}
+			}
+		}
+	}
 }
 
 type canonicalRulesFixtureClass struct {
@@ -160,8 +203,9 @@ type canonicalRulesFixtureClass struct {
 		Spellcasting map[string]any `json:"spellcasting"`
 	}
 	Choices []struct {
-		ID        string `json:"id"`
-		FromLevel int    `json:"fromLevel"`
+		ID                    string         `json:"id"`
+		FromLevel             int            `json:"fromLevel"`
+		SelectionCountByLevel map[string]int `json:"selectionCountByLevel"`
 	}
 }
 

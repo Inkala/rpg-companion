@@ -17,6 +17,7 @@ type RuleChoiceValidationContext struct {
 	RaceIndex       string
 	SubraceIndex    string
 	ClassIndex      string
+	SubclassIndex   string
 	Level           int
 	Choices         []RuleChoiceInput
 	RequireComplete bool
@@ -115,11 +116,15 @@ func ValidateCreateCharacterV2Request(request CreateCharacterV2RequestDTO) []str
 	}
 	raceIndex, subraceIndex := canonicalRaceAndSubrace(request.Identity.Race)
 	classIndex := ""
+	subclassIndex := ""
 	if request.Identity.Class.Source == "srd" {
 		classIndex = request.Identity.Class.Index
 	}
+	if request.Identity.Subclass != nil && request.Identity.Subclass.Source == "srd" {
+		subclassIndex = request.Identity.Subclass.Index
+	}
 	errors = append(errors, ValidateRuleChoices(RuleChoiceValidationContext{
-		RaceIndex: raceIndex, SubraceIndex: subraceIndex, ClassIndex: classIndex,
+		RaceIndex: raceIndex, SubraceIndex: subraceIndex, ClassIndex: classIndex, SubclassIndex: subclassIndex,
 		Level: request.Identity.Level, Choices: request.RuleChoices, RequireComplete: true,
 	})...)
 	if request.Identity.Race.Source == "manual" && request.AbilityScores.Mode != "imported" {
@@ -148,7 +153,9 @@ func ValidateCreateCharacterV2Request(request CreateCharacterV2RequestDTO) []str
 			}
 		}
 	}
-	if request.Spellcasting != nil {
+	if request.Spellcasting == nil {
+		errors = append(errors, "spellcasting decision union is required")
+	} else {
 		errors = append(errors, validateSpellcastingInput(*request.Spellcasting)...)
 	}
 	errors = append(errors, validateSpellcastingForIdentity(request)...)
@@ -231,7 +238,9 @@ func ValidateCharacterSheetV2(sheet CharacterSheetV2) []string {
 	if hasDuplicateStrings(sectionIDs) {
 		errors = append(errors, "reference section IDs are duplicated")
 	}
-	if sheet.Spellcasting != nil {
+	if sheet.Spellcasting == nil {
+		errors = append(errors, "resolved spellcasting is required")
+	} else {
 		errors = append(errors, validateResolvedSpellcasting(*sheet.Spellcasting)...)
 	}
 	if expected, err := BuildCharacterSheetV2(request); err != nil || !sameAuthoritativeV2(sheet, expected) {
@@ -241,12 +250,33 @@ func ValidateCharacterSheetV2(sheet CharacterSheetV2) []string {
 }
 
 func validateResolvedSpellcasting(spellcasting CharacterSheetV2Spellcasting) []string {
-	if !oneOf(spellcasting.Ability, "intelligence", "wisdom", "charisma") || !validProvenance(spellcasting.SpellSaveDC.Provenance) || !validProvenance(spellcasting.SpellAttackBonus.Provenance) || len(spellcasting.Slots) > 3 || len(spellcasting.AvailableSpellLevels) > 3 || len(spellcasting.Spells) > 128 {
+	if len(validateSpellcastingInput(spellcasting.DecisionHistory)) > 0 || len(spellcasting.Slots) > 3 || len(spellcasting.AvailableSpellLevels) > 3 || len(spellcasting.Spells) > 128 || len(spellcasting.PreparedSpellIDs) > 128 || len(spellcasting.AlwaysPreparedSpellIDs) > 128 {
 		return []string{"resolved spellcasting is invalid"}
 	}
+	spellIDs := make([]string, 0, len(spellcasting.Spells))
+	spellIdentities := make([]string, 0, len(spellcasting.Spells))
 	for _, spell := range spellcasting.Spells {
-		if !v2Identifier.MatchString(spell.ID) || !boundedText(spell.Name, 200) || spell.Level < 0 || spell.Level > 3 || !boundedText(spell.Description, 10000) || !validProvenance(spell.Provenance) {
+		spellIDs = append(spellIDs, spell.ID)
+		spellIdentities = append(spellIdentities, v2SpellIdentity(spell))
+	}
+	if hasDuplicateStrings(spellIDs) || hasDuplicateStrings(spellIdentities) || hasDuplicateStrings(spellcasting.PreparedSpellIDs) || hasDuplicateStrings(spellcasting.AlwaysPreparedSpellIDs) {
+		return []string{"resolved spellcasting contains duplicate spells"}
+	}
+	if spellcasting.DecisionHistory.Mode == "none" {
+		if spellcasting.Ability != nil || spellcasting.SpellSaveDC != nil || spellcasting.SpellAttackBonus != nil || len(spellcasting.Slots) != 0 || len(spellcasting.AvailableSpellLevels) != 0 || len(spellcasting.Spells) != 0 {
+			return []string{"resolved non-spellcasting state is invalid"}
+		}
+	} else if spellcasting.Ability == nil || !oneOf(*spellcasting.Ability, "intelligence", "wisdom", "charisma") || spellcasting.SpellSaveDC == nil || spellcasting.SpellAttackBonus == nil || !validProvenance(spellcasting.SpellSaveDC.Provenance) || !validProvenance(spellcasting.SpellAttackBonus.Provenance) {
+		return []string{"resolved spellcasting calculations are invalid"}
+	}
+	for _, spell := range spellcasting.Spells {
+		if !v2Identifier.MatchString(spell.ID) || !boundedText(spell.Name, 200) || spell.Level < 0 || spell.Level > 3 || len(spell.Components) < 1 || len(spell.Components) > 3 || !boundedText(spell.Description, 10000) || !validProvenance(spell.Provenance) {
 			return []string{"resolved spell is invalid"}
+		}
+		for _, component := range spell.Components {
+			if !boundedText(component, 20) {
+				return []string{"resolved spell components are invalid"}
+			}
 		}
 	}
 	for _, slot := range spellcasting.Slots {
@@ -281,26 +311,7 @@ func requestFromSheet(sheet CharacterSheetV2) CreateCharacterV2RequestDTO {
 		request.Attacks = append(request.Attacks, CharacterAttackInput{ID: attack.ID, Name: attack.Name, AttackBonus: input, Damage: attack.Damage})
 	}
 	if sheet.Spellcasting != nil {
-		input := CharacterSpellcastingInput{PreparedSpellIDs: append([]string(nil), sheet.Spellcasting.PreparedSpellIDs...)}
-		for _, spell := range sheet.Spellcasting.Spells {
-			if spell.CanonicalIndex != nil {
-				input.Spells = append(input.Spells, CharacterSpellInput{ID: spell.ID, Source: "srd", Index: *spell.CanonicalIndex, State: spell.State})
-			} else {
-				entry := CharacterSpellInput{ID: spell.ID, Source: "manual", Name: spell.Name, Level: spell.Level, School: spell.School, CastingTime: spell.CastingTime, Range: spell.Range, Components: spell.Components, Duration: spell.Duration, Concentration: spell.Concentration, Ritual: spell.Ritual, Description: spell.Description, State: spell.State}
-				if spell.MaterialComponent != nil {
-					entry.MaterialComponent = *spell.MaterialComponent
-				}
-				if spell.HigherLevelText != nil {
-					entry.HigherLevelText = *spell.HigherLevelText
-				}
-				input.Spells = append(input.Spells, entry)
-			}
-		}
-		for _, slot := range sheet.Spellcasting.Slots {
-			if slot.Provenance.Kind == "manual-override" {
-				input.SlotOverride = append(input.SlotOverride, CharacterSpellSlotOverride{Level: slot.Level, Max: slot.Max, Reason: slot.Provenance.Reason})
-			}
-		}
+		input := sheet.Spellcasting.DecisionHistory
 		request.Spellcasting = &input
 	}
 	for _, feature := range sheet.Features {
@@ -427,6 +438,12 @@ func ValidateRuleChoices(context RuleChoiceValidationContext) []string {
 	traits := append([]string(nil), race.TraitIndexes...)
 	traits = append(traits, subrace.TraitIndexes...)
 	class, _ := findClass(levelRules.Classes, context.ClassIndex)
+	classChoices := append([]rules.Choice(nil), class.Choices...)
+	for _, choice := range creation.ClassChoices {
+		if choice.ClassIndex == context.ClassIndex {
+			classChoices = append(classChoices, choice.Choice)
+		}
+	}
 	activeFeatures := map[string]bool{}
 	for _, level := range class.Levels {
 		if level.Level <= context.Level {
@@ -448,9 +465,9 @@ func ValidateRuleChoices(context RuleChoiceValidationContext) []string {
 				errors = append(errors, raceChoice.ID+" is required for a complete canonical Race")
 			}
 		}
-		for _, classChoice := range class.Choices {
+		for _, classChoice := range classChoices {
 			count := classChoice.SelectionCountByLevel[fmt.Sprint(context.Level)]
-			if context.Level >= classChoice.FromLevel && count > 0 && !hasRuleChoice(context.Choices, classChoice.ID) {
+			if context.Level >= classChoice.FromLevel && count > 0 && (classChoice.RequiredSubclassIndex == "" || classChoice.RequiredSubclassIndex == context.SubclassIndex) && !hasRuleChoice(context.Choices, classChoice.ID) {
 				errors = append(errors, classChoice.ID+" is required for a complete canonical Class")
 			}
 		}
@@ -464,9 +481,9 @@ func ValidateRuleChoices(context RuleChoiceValidationContext) []string {
 			}
 		}
 		var classChoice *rules.Choice
-		for index := range class.Choices {
-			if class.Choices[index].ID == choice.RuleID {
-				classChoice = &class.Choices[index]
+		for index := range classChoices {
+			if classChoices[index].ID == choice.RuleID {
+				classChoice = &classChoices[index]
 				break
 			}
 		}
@@ -494,14 +511,14 @@ func ValidateRuleChoices(context RuleChoiceValidationContext) []string {
 		}
 		if classChoice != nil {
 			count := classChoice.SelectionCountByLevel[fmt.Sprint(context.Level)]
-			if context.Level < classChoice.FromLevel || count == 0 {
+			if context.Level < classChoice.FromLevel || count == 0 || classChoice.RequiredSubclassIndex != "" && classChoice.RequiredSubclassIndex != context.SubclassIndex {
 				errors = append(errors, fmt.Sprintf("%s is unavailable at level %d", choice.RuleID, context.Level))
 			}
 			allowed := make([]string, 0, len(classChoice.Options))
 			for _, option := range classChoice.Options {
 				allowed = append(allowed, option.Index)
 			}
-			errors = append(errors, validateChoiceSelection(choice, count, allowed, "", classChoice.AllowManual)...)
+			errors = append(errors, validateChoiceSelection(choice, count, allowed, classChoice.BoundedRule, classChoice.AllowManual)...)
 			for _, optionID := range choice.OptionIDs {
 				for _, option := range classChoice.Options {
 					if option.Index == optionID && (option.MinimumLevel > context.Level || missingPrerequisite(option.RequiredFeatureIndexes, activeFeatures)) {
@@ -534,6 +551,8 @@ func validateChoiceSelection(choice RuleChoiceInput, count int, allowed []string
 		bounded = v2SkillOptions
 	} else if boundedRule == "any-srd-language-not-already-known" {
 		bounded = v2LanguageOptions
+	} else if boundedRule == "ability-score-improvement-or-srd-feat" {
+		bounded = v2AbilityScoreImprovementOptions
 	}
 	for _, option := range choice.OptionIDs {
 		if !v2Contains(bounded, option) {
@@ -548,6 +567,13 @@ func validateChoiceSelection(choice RuleChoiceInput, count int, allowed []string
 
 var v2SkillOptions = []string{"skill-acrobatics", "skill-animal-handling", "skill-arcana", "skill-athletics", "skill-deception", "skill-history", "skill-insight", "skill-intimidation", "skill-investigation", "skill-medicine", "skill-nature", "skill-perception", "skill-performance", "skill-persuasion", "skill-religion", "skill-sleight-of-hand", "skill-stealth", "skill-survival"}
 var v2LanguageOptions = []string{"abyssal", "celestial", "common", "deep-speech", "draconic", "dwarvish", "elvish", "giant", "gnomish", "goblin", "halfling", "infernal", "orc", "primordial", "sylvan", "undercommon"}
+var v2AbilityScoreImprovementOptions = []string{
+	"ability-score-increase-strength-2", "ability-score-increase-dexterity-2", "ability-score-increase-constitution-2", "ability-score-increase-intelligence-2", "ability-score-increase-wisdom-2", "ability-score-increase-charisma-2",
+	"ability-score-increase-strength-dexterity-1", "ability-score-increase-strength-constitution-1", "ability-score-increase-strength-intelligence-1", "ability-score-increase-strength-wisdom-1", "ability-score-increase-strength-charisma-1",
+	"ability-score-increase-dexterity-constitution-1", "ability-score-increase-dexterity-intelligence-1", "ability-score-increase-dexterity-wisdom-1", "ability-score-increase-dexterity-charisma-1",
+	"ability-score-increase-constitution-intelligence-1", "ability-score-increase-constitution-wisdom-1", "ability-score-increase-constitution-charisma-1",
+	"ability-score-increase-intelligence-wisdom-1", "ability-score-increase-intelligence-charisma-1", "ability-score-increase-wisdom-charisma-1", "feat-grappler",
+}
 
 func validateV2Identity(identity CharacterIdentityV2Input) []string {
 	var errors []string
@@ -559,9 +585,14 @@ func validateV2Identity(identity CharacterIdentityV2Input) []string {
 	}
 	creation, _ := rules.LoadCharacterCreation()
 	levelRules, _ := rules.Load()
-	raceIndex, _ := canonicalRaceAndSubrace(identity.Race)
+	raceIndex, subraceIndex := canonicalRaceAndSubrace(identity.Race)
 	if identity.Race.Source == "srd" && raceIndex == "" {
 		errors = append(errors, "canonical Race index is unknown")
+	}
+	if identity.Race.Source == "srd" && subraceIndex == "" {
+		if race, ok := creation.FindRace(raceIndex); ok && len(race.SubraceIndexes) > 0 {
+			errors = append(errors, "canonical Race requires a supported subrace")
+		}
 	}
 	var class rules.Class
 	if identity.Class.Source == "srd" {
@@ -588,13 +619,15 @@ func validateV2Identity(identity CharacterIdentityV2Input) []string {
 	if identity.Class.Source == "srd" && identity.Level >= class.SubclassDecisionLevel && identity.Subclass == nil {
 		errors = append(errors, "subclass is required at this level")
 	}
-	_ = creation
 	return errors
 }
 
 func validateSpellcastingForIdentity(request CreateCharacterV2RequestDTO) []string {
+	if request.Spellcasting == nil {
+		return []string{"spellcasting decisions are required"}
+	}
 	if request.Identity.Class.Source != "srd" {
-		if request.Spellcasting != nil {
+		if request.Spellcasting.Mode != "none" {
 			return []string{"manual Class cannot receive spellcasting automation"}
 		}
 		return nil
@@ -609,38 +642,40 @@ func validateSpellcastingForIdentity(request CreateCharacterV2RequestDTO) []stri
 		return []string{"canonical Class level is unknown"}
 	}
 	if level.Spellcasting == nil {
-		if request.Spellcasting != nil {
+		if request.Spellcasting.Mode != "none" {
 			return []string{"non-spellcasting Class cannot receive spell automation"}
 		}
 		return nil
 	}
-	if request.Spellcasting == nil {
-		return []string{"spellcasting is required for this canonical Class level"}
-	}
-	creation, _ := rules.LoadCharacterCreation()
 	subclassIndex := ""
 	if request.Identity.Subclass != nil && request.Identity.Subclass.Source == "srd" {
 		subclassIndex = request.Identity.Subclass.Index
 	}
-	for _, input := range request.Spellcasting.Spells {
-		if input.Source == "manual" {
-			continue
-		}
-		spell, ok := creation.FindSpellDetail(input.Index)
-		if !ok || spell.Level > 0 && !v2ContainsInt(level.Spellcasting.AvailableSpellLevels, spell.Level) {
-			return []string{"canonical spell is unavailable at this level"}
-		}
-		member := v2Contains(spell.ClassIndexes, class.Index)
-		for _, membership := range spell.SubclassMemberships {
-			if membership.ClassIndex == class.Index && membership.SubclassIndex == subclassIndex && membership.ClassLevel <= request.Identity.Level {
-				member = true
-			}
-		}
-		if !member {
-			return []string{"canonical spell belongs to another Class or subclass"}
+	modifier, err := spellAbilityModifierForRequest(request, level.Spellcasting.Ability)
+	if err != nil {
+		return []string{"spellcasting ability cannot be resolved"}
+	}
+	if _, err := reconstructV2Spellcasting(SpellReconstructionInput{ClassIndex: class.Index, SubclassIndex: subclassIndex, Level: request.Identity.Level, AbilityModifier: modifier, Input: *request.Spellcasting, ActiveFeatureIDs: v2AllRuleChoiceOptions(request.RuleChoices), RaceGrantedCantripIndexes: v2RuleChoiceOptions(request.RuleChoices, "high-elf-cantrip"), ClassGrantedCantripIndexes: v2RuleChoiceOptions(request.RuleChoices, "circle-of-the-land-bonus-cantrip")}); err != nil {
+		return []string{err.Error()}
+	}
+	return nil
+}
+
+func v2RuleChoiceOptions(choices []RuleChoiceInput, ruleID string) []string {
+	for _, choice := range choices {
+		if choice.RuleID == ruleID {
+			return append([]string(nil), choice.OptionIDs...)
 		}
 	}
 	return nil
+}
+
+func v2AllRuleChoiceOptions(choices []RuleChoiceInput) []string {
+	var options []string
+	for _, choice := range choices {
+		options = append(options, choice.OptionIDs...)
+	}
+	return options
 }
 
 func validateAbilityScoreInput(input AbilityScoreInput) []string {
@@ -671,28 +706,16 @@ func validateHPProgression(input HitPointProgressionInput) []string {
 }
 
 func validateSpellcastingInput(input CharacterSpellcastingInput) []string {
-	if len(input.Spells) > 128 || len(input.PreparedSpellIDs) > 128 || len(input.SlotOverride) > 3 || hasDuplicateStrings(spellIDs(input.Spells)) || hasDuplicateStrings(input.PreparedSpellIDs) {
+	if !oneOf(input.Mode, "none", "known", "prepared", "pact-known", "spellbook-prepared") || len(input.PreparedSpellIDs) > 128 || len(input.SlotOverride) > 3 {
 		return []string{"spellcasting arrays are invalid"}
 	}
-	creation, _ := rules.LoadCharacterCreation()
-	ids := map[string]bool{}
-	for _, spell := range input.Spells {
-		id := spell.ID
-		if spell.Source == "srd" {
-			if _, ok := creation.FindSpellDetail(spell.Index); !ok || !v2Identifier.MatchString(spell.ID) || spell.Name != "" || spell.Description != "" {
-				return []string{"canonical spell union is invalid"}
-			}
-		} else if spell.Source != "manual" || !v2Identifier.MatchString(spell.ID) || !boundedText(spell.Name, 200) || spell.Level < 0 || spell.Level > 3 || !boundedText(spell.School, 200) || !boundedText(spell.CastingTime, 200) || !boundedText(spell.Range, 200) || !boundedText(spell.Duration, 200) || !boundedText(spell.Description, 10000) || len(spell.Components) > 3 || spell.Index != "" {
-			return []string{"manual spell union is invalid"}
-		}
-		if !oneOf(spell.State, "known", "prepared", "spellbook", "always-prepared") {
-			return []string{"spell state is invalid"}
-		}
-		ids[id] = true
+	all := allV2SpellSelections(input)
+	if len(all) > 128 || hasDuplicateStrings(spellSelectionIDs(all)) {
+		return []string{"spell selections are excessive or duplicated"}
 	}
-	for _, id := range input.PreparedSpellIDs {
-		if !ids[id] {
-			return []string{"prepared spell does not resolve"}
+	for _, spell := range all {
+		if errors := validateSpellSelectionInput(spell); len(errors) > 0 {
+			return errors
 		}
 	}
 	seenSlots := map[int]bool{}
@@ -703,6 +726,67 @@ func validateSpellcastingInput(input CharacterSpellcastingInput) []string {
 		seenSlots[slot.Level] = true
 	}
 	return nil
+}
+
+func validateSpellSelectionInput(spell SpellSelectionInput) []string {
+	creation, _ := rules.LoadCharacterCreation()
+	if spell.Source == "srd" {
+		if _, ok := creation.FindSpellDetail(spell.Index); ok && v2Identifier.MatchString(spell.ID) && spell.Name == "" && spell.Level == 0 && spell.School == "" && spell.CastingTime == "" && spell.Range == "" && len(spell.Components) == 0 && spell.MaterialComponent == "" && spell.Duration == "" && !spell.Concentration && !spell.Ritual && spell.Description == "" && spell.HigherLevelText == "" && spell.ImportReason == "" {
+			return nil
+		}
+		return []string{"canonical spell union is invalid"}
+	}
+	if spell.Source == "manual" && spell.Index == "" && v2Identifier.MatchString(spell.ID) && boundedText(spell.Name, 200) && spell.Level >= 0 && spell.Level <= 3 && boundedText(spell.School, 200) && boundedText(spell.CastingTime, 200) && boundedText(spell.Range, 200) && boundedText(spell.Duration, 200) && boundedText(spell.Description, 10000) && boundedText(spell.ImportReason, 1000) && len(spell.Components) >= 1 && len(spell.Components) <= 3 && (spell.MaterialComponent == "" || boundedText(spell.MaterialComponent, 1000)) && (spell.HigherLevelText == "" || boundedText(spell.HigherLevelText, 5000)) {
+		for _, component := range spell.Components {
+			if !boundedText(component, 20) {
+				return []string{"manual spell components are invalid"}
+			}
+		}
+		return nil
+	}
+	return []string{"manual spell union is invalid"}
+}
+
+func allV2SpellSelections(input CharacterSpellcastingInput) []SpellSelectionInput {
+	result := append([]SpellSelectionInput(nil), input.Cantrips...)
+	switch input.Mode {
+	case "known", "pact-known":
+		for _, level := range input.Levels {
+			result = append(result, level.Learned...)
+			for _, replacement := range level.Replacements {
+				result = append(result, replacement.Add)
+			}
+		}
+	case "prepared":
+		result = append(result, input.Prepared...)
+	case "spellbook-prepared":
+		result = append(result, input.InitialSpellbook...)
+		for _, addition := range input.Additions {
+			result = append(result, addition.Spells...)
+		}
+	}
+	return result
+}
+
+func spellAbilityModifierForRequest(request CreateCharacterV2RequestDTO, ability string) (int, error) {
+	if request.AbilityScores.Mode == "imported" && request.AbilityScores.Values != nil {
+		return AbilityModifier(abilityValue(*request.AbilityScores.Values, ability)), nil
+	}
+	raceIndex, subraceIndex := canonicalRaceAndSubrace(request.Identity.Race)
+	creation, _ := rules.LoadCharacterCreation()
+	race, ok := creation.FindRace(raceIndex)
+	if !ok {
+		return 0, fmt.Errorf("canonical Race is unavailable")
+	}
+	var subrace *rules.SubraceRule
+	if candidate, found := findSubrace(creation.Subraces, subraceIndex); found {
+		subrace = &candidate
+	}
+	finalScores, err := calculateAbilityScores(CharacterCalculationInput{AbilityScores: request.AbilityScores, RuleChoices: request.RuleChoices}, race, subrace)
+	if err != nil {
+		return 0, err
+	}
+	return AbilityModifier(abilityValue(finalScores, ability)), nil
 }
 
 func validateFeatureInput(input CharacterFeatureInput) []string {
@@ -820,7 +904,7 @@ func validateCreateV2Semantics(request CreateCharacterV2RequestDTO) []string {
 		return []string{"manual Race requires imported ability scores and a speed override"}
 	}
 	if manualClass {
-		if request.HitPointProgression.MaximumOverride == nil || len(request.HitPointProgression.LevelGains) != 0 || request.Spellcasting != nil {
+		if request.HitPointProgression.MaximumOverride == nil || len(request.HitPointProgression.LevelGains) != 0 || request.Spellcasting == nil || request.Spellcasting.Mode != "none" {
 			return []string{"manual Class requires maximum HP override and forbids Class automation"}
 		}
 		for _, attack := range request.Attacks {
@@ -994,23 +1078,8 @@ func validateCreateV2RawKeys(raw []byte) bool {
 			}
 		}
 	}
-	if root["spellcasting"] != nil {
-		value, ok := rawObject(root["spellcasting"])
-		if !ok || !rawExact(value, []string{"spells", "preparedSpellIds"}, []string{"slotOverride"}) {
-			return false
-		}
-		for _, item := range rawArray(value["spells"]) {
-			spell, ok := rawObject(item)
-			if !ok || !(rawExact(spell, []string{"id", "source", "index", "state"}, nil) || rawExact(spell, []string{"id", "source", "name", "level", "school", "castingTime", "range", "components", "duration", "concentration", "ritual", "description", "state"}, []string{"materialComponent", "higherLevelText"})) {
-				return false
-			}
-		}
-		for _, item := range rawArray(value["slotOverride"]) {
-			slot, ok := rawObject(item)
-			if !ok || !rawExact(slot, []string{"level", "max", "reason"}, nil) {
-				return false
-			}
-		}
+	if !rawSpellcastingDecision(root["spellcasting"]) {
+		return false
 	}
 	for _, item := range rawArray(root["features"]) {
 		value, ok := rawObject(item)
@@ -1098,7 +1167,10 @@ func validateSheetV2RawKeys(raw []byte) bool {
 	}
 	if root["spellcasting"] != nil {
 		value, ok := rawObject(root["spellcasting"])
-		if !ok || !rawExact(value, []string{"ability", "spellSaveDC", "spellAttackBonus", "slots", "availableSpellLevels", "spells", "preparedSpellIds"}, nil) {
+		if !ok || !rawExact(value, []string{"decisionHistory", "ability", "spellSaveDC", "spellAttackBonus", "slots", "availableSpellLevels", "spells", "preparedSpellIds", "alwaysPreparedSpellIds"}, nil) || !rawSpellcastingDecision(value["decisionHistory"]) {
+			return false
+		}
+		if value["spellSaveDC"] != nil && !rawResolved(value["spellSaveDC"]) || value["spellAttackBonus"] != nil && !rawResolved(value["spellAttackBonus"]) {
 			return false
 		}
 		for _, item := range rawArray(value["spells"]) {
@@ -1122,6 +1194,73 @@ func validateSheetV2RawKeys(raw []byte) bool {
 func rawSelection(value any) bool {
 	object, ok := rawObject(value)
 	return ok && (rawExact(object, []string{"source", "index"}, nil) || rawExact(object, []string{"source", "name"}, nil))
+}
+func rawSpellcastingDecision(value any) bool {
+	object, ok := rawObject(value)
+	if !ok {
+		return false
+	}
+	mode, _ := object["mode"].(string)
+	var selections []any
+	switch mode {
+	case "none":
+		return rawExact(object, []string{"mode"}, nil)
+	case "known", "pact-known":
+		if !rawExact(object, []string{"mode", "cantrips", "levels"}, []string{"slotOverride"}) {
+			return false
+		}
+		selections = append(selections, rawArray(object["cantrips"])...)
+		for _, item := range rawArray(object["levels"]) {
+			level, valid := rawObject(item)
+			if !valid || !rawExact(level, []string{"level", "learned", "replacements"}, nil) {
+				return false
+			}
+			selections = append(selections, rawArray(level["learned"])...)
+			for _, replacementItem := range rawArray(level["replacements"]) {
+				replacement, valid := rawObject(replacementItem)
+				if !valid || !rawExact(replacement, []string{"removeSpellId", "add"}, nil) || !rawSpellSelection(replacement["add"]) {
+					return false
+				}
+			}
+		}
+	case "prepared":
+		if !rawExact(object, []string{"mode", "cantrips", "prepared"}, []string{"slotOverride"}) {
+			return false
+		}
+		selections = append(selections, rawArray(object["cantrips"])...)
+		selections = append(selections, rawArray(object["prepared"])...)
+	case "spellbook-prepared":
+		if !rawExact(object, []string{"mode", "cantrips", "initialSpellbook", "additions", "preparedSpellIds"}, []string{"slotOverride"}) {
+			return false
+		}
+		selections = append(selections, rawArray(object["cantrips"])...)
+		selections = append(selections, rawArray(object["initialSpellbook"])...)
+		for _, item := range rawArray(object["additions"]) {
+			addition, valid := rawObject(item)
+			if !valid || !rawExact(addition, []string{"level", "spells"}, nil) {
+				return false
+			}
+			selections = append(selections, rawArray(addition["spells"])...)
+		}
+	default:
+		return false
+	}
+	for _, selection := range selections {
+		if !rawSpellSelection(selection) {
+			return false
+		}
+	}
+	for _, item := range rawArray(object["slotOverride"]) {
+		slot, valid := rawObject(item)
+		if !valid || !rawExact(slot, []string{"level", "max", "reason"}, nil) {
+			return false
+		}
+	}
+	return true
+}
+func rawSpellSelection(value any) bool {
+	spell, ok := rawObject(value)
+	return ok && (rawExact(spell, []string{"id", "source", "index"}, nil) || rawExact(spell, []string{"id", "source", "name", "level", "school", "castingTime", "range", "components", "duration", "concentration", "ritual", "description", "importReason"}, []string{"materialComponent", "higherLevelText"}))
 }
 func rawDefense(value any) bool {
 	object, ok := rawObject(value)
@@ -1262,7 +1401,7 @@ func attackIDs(values []CharacterAttackInput) []string {
 	}
 	return result
 }
-func spellIDs(values []CharacterSpellInput) []string {
+func spellSelectionIDs(values []SpellSelectionInput) []string {
 	result := make([]string, len(values))
 	for i, value := range values {
 		if value.Source == "srd" {

@@ -10,6 +10,7 @@ import type {
   ResolvedValue,
 } from './characterSheetV2';
 import { isCreateCharacterV2Request, validateRuleChoices } from './characterSheetV2Validation';
+import { reconstructSpellcastingV2 } from './characterSheetV2SpellProgression';
 
 const abilityNames: AbilityName[] = [
   'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
@@ -66,6 +67,7 @@ export const calculateCharacterV2 = (input: CharacterCalculationInput): Characte
     raceIndex: raceRule.index,
     subraceIndex: input.subraceIndex,
     classIndex: classRule.index,
+    subclassIndex: input.subclassIndex,
     level: input.level,
     choices: input.ruleChoices,
   });
@@ -141,6 +143,20 @@ const calculateAbilityScores = (
   const halfElf = input.ruleChoices.find((choice) => choice.ruleId === 'half-elf-ability-bonuses');
   for (const ability of halfElf?.optionIds ?? []) {
     scores[ability as AbilityName] += 1;
+  }
+  for (const choice of input.ruleChoices) {
+    if (!choice.ruleId.includes('ability-score-improvement')) continue;
+    for (const option of choice.optionIds) {
+      const parts = option.replace('ability-score-increase-', '').split('-');
+      const amount = Number(parts.at(-1));
+      if (amount === 2 && abilityNames.includes(parts[0] as AbilityName)) {
+        scores[parts[0] as AbilityName] = Math.min(20, scores[parts[0] as AbilityName] + 2);
+      } else if (amount === 1) {
+        for (const ability of parts.slice(0, -1)) {
+          if (abilityNames.includes(ability as AbilityName)) scores[ability as AbilityName] = Math.min(20, scores[ability as AbilityName] + 1);
+        }
+      }
+    }
   }
   return scores;
 };
@@ -384,26 +400,6 @@ export const buildCharacterSheetV2 = (request: CreateCharacterV2RequestDTO): Cha
       attackBonus: calculated(bonus, 'attack-bonus'),
     };
   });
-  const spells = (request.spellcasting?.spells ?? []).map((spell) => {
-    if (spell.source === 'manual') return {
-      id: spell.id, canonicalIndex: null, name: spell.name, level: spell.level, school: spell.school,
-      castingTime: spell.castingTime, range: spell.range, components: [...spell.components],
-      materialComponent: spell.materialComponent ?? null, duration: spell.duration,
-      concentration: spell.concentration, ritual: spell.ritual, description: spell.description,
-      higherLevelText: spell.higherLevelText ?? null, state: spell.state,
-      provenance: { kind: 'imported' as const },
-    };
-    const canonical = characterCreationRules.spells.find((entry) => entry.index === spell.index);
-    if (!canonical) throw new Error('unsupported canonical spell');
-    return {
-      id: spell.id, canonicalIndex: canonical.index, name: canonical.name, level: canonical.level,
-      school: canonical.school, castingTime: canonical.castingTime, range: canonical.range,
-      components: [...canonical.components], materialComponent: canonical.material, duration: canonical.duration,
-      concentration: canonical.concentration, ritual: canonical.ritual, description: canonical.description,
-      higherLevelText: canonical.higherLevel, state: spell.state,
-      provenance: { kind: 'calculated' as const, ruleId: 'spell-canonical' },
-    };
-  });
   const features = request.features.map((feature) => {
     if (feature.source === 'manual') return {
       id: feature.id, source: 'manual' as const, canonicalIndex: null,
@@ -420,18 +416,38 @@ export const buildCharacterSheetV2 = (request: CreateCharacterV2RequestDTO): Cha
       ...resolved, provenance: { kind: 'calculated' as const, ruleId: 'feature-canonical' },
     };
   });
-  const spellcasting = calculation.spellcasting && request.spellcasting ? {
+  const reconstructedSpells = reconstructSpellcastingV2({
+      classIndex: canonicalClassIndex ?? 'fighter',
+      subclassIndex,
+      level: request.identity.level,
+      abilityModifier: calculation.spellcasting === null ? 0 : calculation.abilityModifiers[calculation.spellcasting.ability],
+      input: request.spellcasting,
+      activeFeatureIds: request.ruleChoices.flatMap((choice) => choice.optionIds),
+      raceGrantedCantripIndexes: request.ruleChoices.find((choice) => choice.ruleId === 'high-elf-cantrip')?.optionIds,
+      classGrantedCantripIndexes: request.ruleChoices.find((choice) => choice.ruleId === 'circle-of-the-land-bonus-cantrip')?.optionIds,
+    });
+  const slotOverrides = request.spellcasting.mode === 'none' ? [] : request.spellcasting.slotOverride ?? [];
+  const spellcasting = calculation.spellcasting ? {
+    decisionHistory: structuredClone(request.spellcasting),
     ability: calculation.spellcasting.ability,
     spellSaveDC: calculated(calculation.spellcasting.spellSaveDC, 'spell-save-dc'),
     spellAttackBonus: calculated(calculation.spellcasting.spellAttackBonus, 'spell-attack-bonus'),
     slots: calculation.spellcasting.slots.map((max, index) => {
-      const manual = request.spellcasting?.slotOverride?.find((slot) => slot.level === index + 1);
+      const manual = slotOverrides.find((slot) => slot.level === index + 1);
       return { level: index + 1, max: manual?.max ?? max, used: 0,
         provenance: manual ? { kind: 'manual-override' as const, reason: manual.reason } : { kind: 'calculated' as const, ruleId: 'spell-slots' } };
     }),
-    availableSpellLevels: [...calculation.spellcasting.availableSpellLevels], spells,
-    preparedSpellIds: [...request.spellcasting.preparedSpellIds],
-  } : null;
+    availableSpellLevels: [...calculation.spellcasting.availableSpellLevels],
+    ...reconstructedSpells,
+  } : {
+    decisionHistory: structuredClone(request.spellcasting),
+    ability: null,
+    spellSaveDC: null,
+    spellAttackBonus: null,
+    slots: [],
+    availableSpellLevels: [],
+    ...reconstructedSpells,
+  };
   return {
     schemaVersion: 'CharacterSheetV2',
     ruleset: { system: 'dnd5e', version: '2014', snapshotId: characterCreationRules.metadata.snapshotId },
@@ -457,7 +473,7 @@ export const buildCharacterSheetV2 = (request: CreateCharacterV2RequestDTO): Cha
       referenceSections: [
         { id: 'actions', label: 'Actions', defaultOpen: true },
         { id: 'features', label: 'Features', defaultOpen: true },
-        { id: 'spells', label: 'Spells', defaultOpen: Boolean(spellcasting) },
+        { id: 'spells', label: 'Spells', defaultOpen: spellcasting.spells.length > 0 },
         { id: 'equipment', label: 'Equipment', defaultOpen: false },
         { id: 'other', label: 'Other', defaultOpen: false },
       ],

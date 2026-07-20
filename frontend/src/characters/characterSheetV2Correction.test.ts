@@ -66,17 +66,18 @@ describe('corrected CharacterSheetV2 request contract', () => {
     const request = correctedWizardRequest();
     expect(isCreateCharacterV2Request(request)).toBe(true);
     const sheet = buildCharacterSheetV2(request);
-    expect(sheet.spellcasting?.spells[0]).toMatchObject({
+    const magicMissile = sheet.spellcasting.spells.find((spell) => spell.canonicalIndex === 'magic-missile');
+    expect(magicMissile).toMatchObject({
       id: 'spell-magic-missile',
       canonicalIndex: 'magic-missile',
       name: 'Magic Missile',
       materialComponent: null,
       concentration: false,
       ritual: false,
-      state: 'prepared',
+      state: 'spellbook',
       provenance: { kind: 'calculated', ruleId: 'spell-canonical' },
     });
-    expect(sheet.spellcasting?.spells[0].description.length).toBeGreaterThan(100);
+    expect(magicMissile?.description.length).toBeGreaterThan(100);
     expect(isCharacterSheetV2(sheet)).toBe(true);
 
     const missingPrepared = structuredClone(sheet);
@@ -87,18 +88,58 @@ describe('corrected CharacterSheetV2 request contract', () => {
     expect(isCharacterSheetV2(alteredCanonical)).toBe(false);
 
     const manual = correctedWizardRequest();
-    manual.spellcasting!.spells = [{
+    if (manual.spellcasting.mode !== 'spellbook-prepared') throw new Error('Wizard fixture mode changed');
+    manual.spellcasting.initialSpellbook[0] = {
       id: 'spell-custom', source: 'manual', name: 'Custom Spark', level: 1, school: 'Evocation',
       castingTime: '1 action', range: '30 feet', components: ['V', 'S'], materialComponent: 'A copper wire',
       duration: 'Instantaneous', concentration: false, ritual: false, description: 'A bounded custom effect.',
-      higherLevelText: 'The effect grows by one die.', state: 'prepared',
-    }];
-    manual.spellcasting!.preparedSpellIds = ['spell-custom'];
+      higherLevelText: 'The effect grows by one die.', importReason: 'Transferred from a paper sheet.',
+    };
+    manual.spellcasting.preparedSpellIds = ['spell-custom', 'spell-detect-magic', 'spell-identify', 'spell-magic-missile'];
     const manualSheet = buildCharacterSheetV2(manual);
-    expect(manualSheet.spellcasting?.spells[0]).toMatchObject({
+    expect(manualSheet.spellcasting.spells.find((spell) => spell.id === 'spell-custom')).toMatchObject({
       id: 'spell-custom', canonicalIndex: null, materialComponent: 'A copper wire',
-      higherLevelText: 'The effect grows by one die.', provenance: { kind: 'imported' },
+      higherLevelText: 'The effect grows by one die.', provenance: { kind: 'imported', note: 'Transferred from a paper sheet.' },
     });
+  });
+
+  it('rejectsManualSpellWithoutComponentsInRequestAndSavedSheet', () => {
+    const request = correctedWizardRequest();
+    if (request.spellcasting.mode !== 'spellbook-prepared') throw new Error('Wizard fixture mode changed');
+    const replacedId = request.spellcasting.initialSpellbook[0].id;
+    const preparedIds = request.spellcasting.preparedSpellIds.map((id) => id === replacedId ? 'spell-no-components' : id);
+    request.spellcasting.initialSpellbook[0] = {
+      id: 'spell-no-components', source: 'manual', name: 'Silent Shape', level: 1, school: 'Illusion',
+      castingTime: '1 action', range: '30 feet', components: [], duration: '1 minute',
+      concentration: false, ritual: false, description: 'A complete imported description.',
+      importReason: 'Transferred from a paper sheet.',
+    };
+    request.spellcasting.preparedSpellIds = preparedIds;
+    expect(isCreateCharacterV2Request(request)).toBe(false);
+
+    request.spellcasting.initialSpellbook[0].components = ['S'];
+    const sheet = buildCharacterSheetV2(request);
+    const stored = structuredClone(sheet);
+    const imported = stored.spellcasting.spells.find((spell) => spell.id === 'spell-no-components');
+    if (!imported) throw new Error('Imported spell fixture was not persisted');
+    imported.components = [];
+    expect(isCharacterSheetV2(stored)).toBe(false);
+  });
+
+  it('rejectsManualSpellLevelsUnavailableToTheCurrentClassLevelInRequestAndSavedSheet', () => {
+    const request = correctedWizardRequest();
+    if (request.spellcasting.mode !== 'spellbook-prepared') throw new Error('Wizard fixture mode changed');
+    request.spellcasting.initialSpellbook[0] = {
+      id: 'spell-too-high', source: 'manual', name: 'Too High', level: 3, school: 'Evocation',
+      castingTime: '1 action', range: '30 feet', components: ['V'], duration: 'Instantaneous',
+      concentration: false, ritual: false, description: 'Unavailable at Wizard level one.', importReason: 'Transferred.',
+    };
+    expect(isCreateCharacterV2Request(request)).toBe(false);
+
+    const sheet = buildCharacterSheetV2(correctedWizardRequest());
+    if (!sheet.spellcasting) throw new Error('Wizard sheet lost spellcasting');
+    sheet.spellcasting.spells[0].level = 3;
+    expect(isCharacterSheetV2(sheet)).toBe(false);
   });
 
   it('rejects canonical features owned by another identity or unavailable level and persists resolved feature data', () => {
@@ -154,7 +195,7 @@ describe('corrected CharacterSheetV2 request contract', () => {
     ['DefenseInput', (request: Record<string, unknown>) => (((request.combat as Record<string, unknown>).defense) = { mode: 'manual', armorClass: 10, reason: 'Transfer.', shieldIndex: '' })],
     ['HitPointLevelGain', (request: Record<string, unknown>) => (((request.hitPointProgression as Record<string, unknown>).levelGains) = [{ level: 2, mode: 'fixed-average', roll: 0 }, { level: 3, mode: 'fixed-average' }])],
     ['AttackBonusInput', (request: Record<string, unknown>) => (((request.attacks as Array<Record<string, unknown>>)[0].attackBonus) = { mode: 'calculated', ability: 'strength', proficient: false, value: 0 })],
-    ['CharacterSpellInput', (request: Record<string, unknown>) => (((request.spellcasting as Record<string, unknown>).spells as Array<Record<string, unknown>>)[0].name = '')],
+    ['SpellSelectionInput', (request: Record<string, unknown>) => (((request.spellcasting as Record<string, unknown>).cantrips as Array<Record<string, unknown>>)[0].state = '')],
     ['CharacterFeatureInput', (request: Record<string, unknown>) => ((request.features as Array<Record<string, unknown>>)[0].id = '')],
     ['CharacterEquipmentInput', (request: Record<string, unknown>) => ((request.equipment as Array<Record<string, unknown>>)[0] = { source: 'manual', id: 'gear', name: 'Gear', category: 'Other', quantity: 1, equipped: false, index: null })],
   ])('rejects %s cross-variant keys even with empty, false, zero, or null values', (_, mutate) => {
@@ -181,8 +222,8 @@ describe('corrected CharacterSheetV2 saved consistency', () => {
       (value) => { value.combat.speedFt.value += 5; },
       (value) => { value.hitPointProgression.maximum.value += 1; },
       (value) => { value.attacks[0].attackBonus.value += 1; },
-      (value) => { value.spellcasting!.spellSaveDC.value += 1; },
-      (value) => { value.spellcasting!.spellAttackBonus.value += 1; },
+      (value) => { value.spellcasting.spellSaveDC!.value += 1; },
+      (value) => { value.spellcasting.spellAttackBonus!.value += 1; },
       (value) => { value.spellcasting!.availableSpellLevels = []; },
       (value) => { value.spellcasting!.slots[0].max += 1; },
       (value) => { value.spellcasting!.preparedSpellIds = ['missing-entry']; },
@@ -241,7 +282,7 @@ describe('final manual identity and lossless feature fallbacks', () => {
       value: 41, provenance: { kind: 'manual-override', reason: 'Transferred maximum HP.' },
     });
     expect(sheet.hitPointProgression.levelGains).toEqual([]);
-    expect(sheet.spellcasting).toBeNull();
+    expect(sheet.spellcasting).toMatchObject({ decisionHistory: { mode: 'none' }, ability: null, spells: [] });
   });
 
   it('rejects missing or forbidden manual Class automation', () => {
@@ -258,7 +299,7 @@ describe('final manual identity and lossless feature fallbacks', () => {
     expect(isCreateCharacterV2Request(canonicalFeature)).toBe(false);
 
     const spellcasting = manualClassRequest();
-    spellcasting.spellcasting = { spells: [], preparedSpellIds: [] };
+    spellcasting.spellcasting = { mode: 'known', cantrips: [], levels: [] };
     expect(isCreateCharacterV2Request(spellcasting)).toBe(false);
 
     const classFormula = manualClassRequest();
@@ -318,12 +359,13 @@ const correctedFighterRequest = (level = 1): CreateCharacterV2RequestDTO => ({
   ruleChoices: [
     { ruleId: 'human-extra-language', optionIds: ['dwarvish'] },
     { ruleId: 'fighter-fighting-style', optionIds: ['fighter-fighting-style-archery'] },
+    ...(level >= 4 ? [{ ruleId: 'fighter-ability-score-improvement-1', optionIds: ['ability-score-increase-strength-2'] }] : []),
   ],
   attacks: [{
     id: 'longsword', name: 'Longsword', attackBonus: { mode: 'calculated', ability: 'strength', proficient: true },
     damage: [{ dice: '1d8', bonus: 3, type: 'slashing' }],
   }],
-  spellcasting: null,
+  spellcasting: { mode: 'none' },
   features: [{ source: 'srd', index: 'second-wind' }],
   equipment: [], other: [],
 });
@@ -335,13 +377,17 @@ const correctedWizardRequest = (): CreateCharacterV2RequestDTO => ({
     background: 'Sage', class: { source: 'srd', index: 'wizard' }, subclass: null,
   },
   ruleChoices: [{ ruleId: 'human-extra-language', optionIds: ['dwarvish'] }],
+  abilityScores: { mode: 'calculated', base: { strength: 8, dexterity: 14, constitution: 13, intelligence: 15, wisdom: 12, charisma: 10 } },
   attacks: [{
     id: 'fire-bolt', name: 'Fire Bolt', attackBonus: { mode: 'calculated', ability: 'spellcasting', proficient: true },
     damage: [{ dice: '1d10', bonus: 0, type: 'fire' }],
   }],
   spellcasting: {
-    spells: [{ id: 'spell-magic-missile', source: 'srd', index: 'magic-missile', state: 'prepared' }],
-    preparedSpellIds: ['spell-magic-missile'],
+    mode: 'spellbook-prepared',
+    cantrips: ['fire-bolt', 'light', 'mage-hand'].map((index) => ({ id: `spell-${index}`, source: 'srd' as const, index })),
+    initialSpellbook: ['burning-hands', 'charm-person', 'detect-magic', 'identify', 'magic-missile', 'sleep'].map((index) => ({ id: `spell-${index}`, source: 'srd' as const, index })),
+    additions: [],
+    preparedSpellIds: ['spell-burning-hands', 'spell-detect-magic', 'spell-identify', 'spell-magic-missile'],
   },
   features: [{ source: 'srd', index: 'spellcasting-wizard' }],
 });
@@ -358,8 +404,16 @@ const correctedRangerRequest = (level: number): CreateCharacterV2RequestDTO => (
     { ruleId: 'ranger-favored-enemy', optionIds: [], manualNote: 'Dragons.' },
     { ruleId: 'ranger-natural-explorer', optionIds: [], manualNote: 'Forest.' },
     ...(level >= 2 ? [{ ruleId: 'ranger-fighting-style', optionIds: ['ranger-fighting-style-archery'] }] : []),
+    ...(level >= 3 ? [{ ruleId: 'hunter-hunters-prey', optionIds: ['hunters-prey-colossus-slayer'] }] : []),
+    ...(level >= 4 ? [{ ruleId: 'ranger-ability-score-improvement-1', optionIds: ['ability-score-increase-dexterity-2'] }] : []),
   ],
-  spellcasting: level >= 2 ? { spells: [], preparedSpellIds: [] } : null,
+  spellcasting: level >= 2 ? {
+    mode: 'known', cantrips: [],
+    levels: [
+      { level: 2, learned: ['cure-wounds', 'hunters-mark'].map((index) => ({ id: `spell-${index}`, source: 'srd' as const, index })), replacements: [] },
+      ...(level >= 3 ? [{ level: 3, learned: [{ id: 'spell-goodberry', source: 'srd' as const, index: 'goodberry' }], replacements: [] }] : []),
+    ],
+  } : { mode: 'none' },
   features: level >= 3 ? [{ source: 'srd', index: 'hunters-prey' }] : [],
 });
 
@@ -385,7 +439,7 @@ const manualClassRequest = (level = 1): CreateCharacterV2RequestDTO => {
   request.combat.defense = { mode: 'unarmored', formulaId: 'standard-unarmored' };
   request.ruleChoices = [{ ruleId: 'human-extra-language', optionIds: ['dwarvish'] }];
   request.features = [];
-  request.spellcasting = null;
+  request.spellcasting = { mode: 'none' };
   return request;
 };
 

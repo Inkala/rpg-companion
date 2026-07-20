@@ -489,3 +489,303 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+.structured-creation {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.structured-creation__intro,
+.structured-section,
+.structured-review__block,
+.override-panel,
+.repeatable-row {
+  min-width: 0;
+  border: 1px solid rgba(47, 93, 70, 0.2);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-primary);
+}
+
+.structured-creation__intro,
+.structured-review__block,
+.structured-section,
+.override-panel,
+.repeatable-row {
+  padding: var(--space-4);
+}
+
+.structured-creation__form,
+.structured-review,
+.structured-review__content,
+.structured-section,
+.repeatable-list,
+.repeatable-row--stacked,
+.spell-metadata {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.structured-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.structured-steps a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-accent-primary);
+  font-weight: 800;
+}
+
+.repeatable-row > select,
+.repeatable-row > input {
+  box-sizing: border-box;
+  min-height: 44px;
+}
+
+.structured-creation .button {
+  min-height: 44px;
+}
+
+.structured-section > legend,
+.override-panel > legend,
+.repeatable-row > legend {
+  padding: 0 var(--space-2);
+  color: var(--color-text-primary);
+  font-weight: 900;
+}
+
+.structured-grid,
+.derived-grid,
+.spell-metadata {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.structured-field {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-weight: 800;
+}
+
+.structured-field input,
+.structured-field select,
+.structured-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgba(47, 93, 70, 0.42);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-primary);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.structured-field select:not([multiple]) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.structured-field textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.structured-field input:focus-visible,
+.structured-field select:focus-visible,
+.structured-field textarea:focus-visible,
+.structured-creation button:focus-visible {
+  outline: 3px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+.structured-field__error,
+.structured-errors {
+  color: var(--color-state-hp);
+  font-weight: 800;
+}
+
+.structured-errors {
+  padding: var(--space-3) var(--space-4);
+  border-left: 4px solid var(--color-state-hp);
+  background: rgba(158, 54, 54, 0.08);
+}
+
+.structured-add-row,
+.repeatable-actions,
+.structured-creation__actions,
+.toggle-row,
+.structured-creation .segmented-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.structured-creation .segmented-control label {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 800;
+}
+
+.structured-add-row > .structured-field {
+  flex: 1 1 15rem;
+}
+
+.structured-creation__actions {
+  justify-content: space-between;
+}
+
+.structured-creation__actions .button,
+.repeatable-actions .button,
+.structured-section > .button {
+  min-height: 44px;
+}
+
+.repeatable-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.canonical-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.repeatable-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.repeatable-row--stacked {
+  align-items: stretch;
+}
+
+.repeatable-row > .structured-field {
+  flex: 1 1 12rem;
+}
+
+.toggle-row {
+  min-height: 44px;
+  align-items: center;
+  color: var(--color-text-primary);
+  font-weight: 800;
+}
+
+.toggle-row input {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.derived-grid,
+.spell-metadata {
+  margin: 0;
+}
+
+.derived-grid > div,
+.spell-metadata > div {
+  min-width: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: rgba(221, 232, 220, 0.42);
+  overflow-wrap: anywhere;
+}
+
+.derived-grid dt,
+.spell-metadata dt {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.derived-grid dd,
+.spell-metadata dd {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-primary);
+  font-weight: 800;
+}
+
+.provenance-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(47, 93, 70, 0.12);
+  color: var(--color-accent-primary);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.structured-review__block h3,
+.structured-review__block h4,
+.structured-review__block p,
+.structured-review__block ul {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 719px) {
+  .structured-creation__intro,
+  .structured-review__block,
+  .structured-section,
+  .override-panel,
+  .repeatable-row {
+    padding: var(--space-3);
+  }
+
+  .structured-add-row,
+  .repeatable-row,
+  .structured-creation__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .structured-add-row > .structured-field,
+  .repeatable-row > .structured-field {
+    flex-basis: auto;
+  }
+
+  .structured-creation__actions .button,
+  .repeatable-row > .button,
+  .structured-add-row > .button {
+    width: 100%;
+  }
+}
+
+@media (min-width: 960px) {
+  .structured-section,
+  #creation-review {
+    scroll-margin-top: 9rem;
+  }
+
+  .structured-steps {
+    position: sticky;
+    z-index: 2;
+    top: var(--space-2);
+    padding: var(--space-2);
+    border: 1px solid rgba(47, 93, 70, 0.18);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-surface-primary) 94%, transparent);
+    box-shadow: var(--shadow-card);
+  }
+}

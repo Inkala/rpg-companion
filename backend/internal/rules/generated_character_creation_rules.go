@@ -2,8 +2,8 @@
 package rules
 
 const CharacterCreationSnapshotID = "srd-5-1-2014-levels-1-5-2026-07-19"
-const CharacterCreationRulesChecksum = "545a10e880e568431a492135623ad24dd2f63d77c1e56dab30c56389f3a65423"
-const CharacterCreationProjectionChecksum = "4a75e78236957e31f5dc36ebc04ffe233dc07503a1f85fff6fcce9922de6847c"
+const CharacterCreationRulesChecksum = "cd02323779e76ccd65d0e41d07dc3fa23a91456f738e35d4b3cb083cc316494b"
+const CharacterCreationProjectionChecksum = "6f70ee6cdb8251285f60cf5c9614d754e074bbb6cb67bbda5390e32258b777a3"
 const CharacterCreationJSON = `{
   "metadata": {
     "snapshotId": "srd-5-1-2014-levels-1-5-2026-07-19",
@@ -19,7 +19,7 @@ const CharacterCreationJSON = `{
       "https://www.dnd5eapi.co/api/2014",
       "https://creativecommons.org/licenses/by/4.0/"
     ],
-    "transformation": "Development-time deterministic import from the documented 2014 API. Preserves the T-026 classes, levels, features, spell membership, and bounded progression; adds the exact 9-Race and 4-subrace sets, 38 Race traits, 8 bounded Race and Race-trait creation choices, the complete 237-record SRD equipment catalog, complete details for the existing 169 spells through level 3, 10 calculation rules, and 19 supported always-on feature modifiers. Source fields are normalized, references resolved, arrays sorted by stable ID, schema validated, cross-runtime projections generated, and exact memberships and counts enforced."
+    "transformation": "Development-time deterministic import from the documented 2014 API. Preserves the T-026 classes, levels, features, spell membership, and bounded progression; adds the exact 9-Race and 4-subrace sets, 38 Race traits, 8 bounded Race and Race-trait creation choices, the complete 237-record SRD equipment catalog, complete details for the existing 169 spells through level 3, 10 calculation rules, 19 supported always-on feature modifiers, the six-spell Wizard level-1 spellbook count, and zero replacement allowance at each known-mode acquisition level. Source fields are normalized, references resolved, arrays sorted by stable ID, schema validated, cross-runtime projections generated, and exact memberships and counts enforced."
   },
   "races": [
     {
@@ -983,6 +983,321 @@ const CharacterCreationJSON = `{
       "boundedRule": null,
       "optionValue": null,
       "exclusivityConstraint": null
+    }
+  ],
+  "classChoices": [
+    {
+      "classIndex": "barbarian",
+      "id": "barbarian-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "barbarian-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "bard",
+      "id": "college-of-lore-bonus-proficiencies",
+      "fromLevel": 3,
+      "selectionCountByLevel": {
+        "3": 3,
+        "4": 3,
+        "5": 3
+      },
+      "optionSource": "any-srd-skill-proficiency",
+      "boundedRule": "any-srd-skill-proficiency",
+      "requiredSubclassIndex": "lore",
+      "sourceFeatureIndex": "bonus-proficiencies",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "bard",
+      "id": "bard-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "bard-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "cleric",
+      "id": "cleric-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "cleric-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "druid",
+      "id": "circle-of-the-land-bonus-cantrip",
+      "fromLevel": 2,
+      "selectionCountByLevel": {
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "druid-cantrips",
+      "requiredSubclassIndex": "land",
+      "sourceFeatureIndex": "bonus-cantrip",
+      "options": [
+        {
+          "index": "druidcraft",
+          "name": "Druidcraft"
+        },
+        {
+          "index": "guidance",
+          "name": "Guidance"
+        },
+        {
+          "index": "mending",
+          "name": "Mending"
+        },
+        {
+          "index": "poison-spray",
+          "name": "Poison Spray"
+        },
+        {
+          "index": "produce-flame",
+          "name": "Produce Flame"
+        },
+        {
+          "index": "resistance",
+          "name": "Resistance"
+        },
+        {
+          "index": "shillelagh",
+          "name": "Shillelagh"
+        }
+      ],
+      "allowManual": false
+    },
+    {
+      "classIndex": "druid",
+      "id": "druid-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "druid-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "fighter",
+      "id": "fighter-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "fighter-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "monk",
+      "id": "monk-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "monk-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "paladin",
+      "id": "paladin-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "paladin-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "ranger",
+      "id": "hunter-hunters-prey",
+      "fromLevel": 3,
+      "selectionCountByLevel": {
+        "3": 1,
+        "4": 1,
+        "5": 1
+      },
+      "requiredSubclassIndex": "hunter",
+      "sourceFeatureIndex": "hunters-prey",
+      "options": [
+        {
+          "index": "hunters-prey-colossus-slayer",
+          "name": "Hunter's Prey: Colossus Slayer"
+        },
+        {
+          "index": "hunters-prey-giant-killer",
+          "name": "Hunter's Prey: Giant Killer"
+        },
+        {
+          "index": "hunters-prey-horde-breaker",
+          "name": "Hunter's Prey: Horde Breaker"
+        }
+      ],
+      "allowManual": false
+    },
+    {
+      "classIndex": "ranger",
+      "id": "ranger-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "ranger-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "rogue",
+      "id": "rogue-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "rogue-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "sorcerer",
+      "id": "draconic-ancestor",
+      "fromLevel": 1,
+      "selectionCountByLevel": {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1
+      },
+      "requiredSubclassIndex": "draconic",
+      "sourceFeatureIndex": "dragon-ancestor",
+      "options": [
+        {
+          "index": "draconic-ancestor-black",
+          "name": "Black Dragon"
+        },
+        {
+          "index": "draconic-ancestor-blue",
+          "name": "Blue Dragon"
+        },
+        {
+          "index": "draconic-ancestor-brass",
+          "name": "Brass Dragon"
+        },
+        {
+          "index": "draconic-ancestor-bronze",
+          "name": "Bronze Dragon"
+        },
+        {
+          "index": "draconic-ancestor-copper",
+          "name": "Copper Dragon"
+        },
+        {
+          "index": "draconic-ancestor-gold",
+          "name": "Gold Dragon"
+        },
+        {
+          "index": "draconic-ancestor-green",
+          "name": "Green Dragon"
+        },
+        {
+          "index": "draconic-ancestor-red",
+          "name": "Red Dragon"
+        },
+        {
+          "index": "draconic-ancestor-silver",
+          "name": "Silver Dragon"
+        },
+        {
+          "index": "draconic-ancestor-white",
+          "name": "White Dragon"
+        }
+      ],
+      "allowManual": false
+    },
+    {
+      "classIndex": "sorcerer",
+      "id": "sorcerer-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "sorcerer-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "warlock",
+      "id": "warlock-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "warlock-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
+    },
+    {
+      "classIndex": "wizard",
+      "id": "wizard-ability-score-improvement-1",
+      "fromLevel": 4,
+      "selectionCountByLevel": {
+        "4": 1,
+        "5": 1
+      },
+      "optionSource": "ability-score-improvement",
+      "boundedRule": "ability-score-improvement-or-srd-feat",
+      "sourceFeatureIndex": "wizard-ability-score-improvement-1",
+      "options": [],
+      "allowManual": false
     }
   ],
   "equipmentCategories": [

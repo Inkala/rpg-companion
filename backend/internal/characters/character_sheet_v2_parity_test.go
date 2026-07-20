@@ -74,7 +74,7 @@ func TestCharacterSheetV2SharedCorrectedContractParity(t *testing.T) {
 		Feature            CharacterSheetV2Feature `json:"feature"`
 		Subclass           *RuleSelection          `json:"subclass"`
 		HitPointLevelGains []HitPointLevelGain     `json:"hitPointLevelGains"`
-	}{Defense: sheet.Combat.Defense, ProficiencyBonus: sheet.Combat.ProficiencyBonus, ArmorClass: sheet.Combat.ArmorClass, Spell: sheet.Spellcasting.Spells[0], PreparedSpellIDs: sheet.Spellcasting.PreparedSpellIDs, Feature: sheet.Features[0], Subclass: sheet.Identity.Subclass, HitPointLevelGains: sheet.HitPointProgression.LevelGains}
+	}{Defense: sheet.Combat.Defense, ProficiencyBonus: sheet.Combat.ProficiencyBonus, ArmorClass: sheet.Combat.ArmorClass, Spell: findResolvedSpell(sheet.Spellcasting.Spells, "magic-missile"), PreparedSpellIDs: sheet.Spellcasting.PreparedSpellIDs, Feature: sheet.Features[0], Subclass: sheet.Identity.Subclass, HitPointLevelGains: sheet.HitPointProgression.LevelGains}
 	actual.Attack.ID = sheet.Attacks[0].ID
 	actual.Attack.AttackBonus = sheet.Attacks[0].AttackBonus
 	actual.Attack.AttackBonusInput = sheet.Attacks[0].AttackBonusInput
@@ -86,7 +86,7 @@ func TestCharacterSheetV2SharedCorrectedContractParity(t *testing.T) {
 	if !reflect.DeepEqual(actualValue, expectedValue) {
 		t.Fatalf("corrected contract projection mismatch\nactual: %s\nexpected: %s", raw, fixture.ContractCase.Expected)
 	}
-	want := []string{"RuleSelection", "AbilityScoreInput", "DefenseInput", "HitPointLevelGain", "AttackBonusInput", "CharacterSpellInput", "CharacterFeatureInput", "CharacterEquipmentInput"}
+	want := []string{"RuleSelection", "AbilityScoreInput", "DefenseInput", "HitPointLevelGain", "AttackBonusInput", "SpellSelectionInput", "CharacterFeatureInput", "CharacterEquipmentInput"}
 	if !reflect.DeepEqual(fixture.ContractCase.InvalidUnionKeys, want) {
 		t.Fatal("corrected union coverage is incomplete")
 	}
@@ -304,4 +304,13 @@ func featureModifierIDs(values []rules.FeatureModifier) []string {
 		result[i] = value.ID
 	}
 	return result
+}
+
+func findResolvedSpell(spells []CharacterSheetV2Spell, canonicalIndex string) CharacterSheetV2Spell {
+	for _, spell := range spells {
+		if spell.CanonicalIndex != nil && *spell.CanonicalIndex == canonicalIndex {
+			return spell
+		}
+	}
+	return CharacterSheetV2Spell{}
 }

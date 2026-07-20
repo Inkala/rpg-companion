@@ -77,7 +77,7 @@ describe('CharacterSheetV2 shared TypeScript/Go parity fixture', () => {
   });
 
   it('shares the corrected defense, attack, spell, feature, subclass, HP, and union contract with Go', () => {
-    const request = fixture.contractCase.input as CreateCharacterV2RequestDTO;
+    const request = fixture.contractCase.input as unknown as CreateCharacterV2RequestDTO;
     expect(isCreateCharacterV2Request(request)).toBe(true);
     const sheet = buildCharacterSheetV2(request);
     expect(isCharacterSheetV2(sheet)).toBe(true);
@@ -89,20 +89,20 @@ describe('CharacterSheetV2 shared TypeScript/Go parity fixture', () => {
         id: sheet.attacks[0].id, attackBonus: sheet.attacks[0].attackBonus,
         attackBonusInput: sheet.attacks[0].attackBonusInput, damage: sheet.attacks[0].damage,
       },
-      spell: sheet.spellcasting?.spells[0],
+      spell: sheet.spellcasting.spells.find((spell) => spell.canonicalIndex === 'magic-missile'),
       preparedSpellIds: sheet.spellcasting?.preparedSpellIds,
       feature: sheet.features[0], subclass: sheet.identity.subclass,
       hitPointLevelGains: sheet.hitPointProgression.levelGains,
     }).toEqual(fixture.contractCase.expected);
     expect(fixture.contractCase.invalidUnionKeys).toEqual([
       'RuleSelection', 'AbilityScoreInput', 'DefenseInput', 'HitPointLevelGain',
-      'AttackBonusInput', 'CharacterSpellInput', 'CharacterFeatureInput', 'CharacterEquipmentInput',
+      'AttackBonusInput', 'SpellSelectionInput', 'CharacterFeatureInput', 'CharacterEquipmentInput',
     ]);
   });
 
   it('shares every final manual identity fallback and lossless feature projection with Go', () => {
     for (const entry of fixture.fallbackCases) {
-      const request = entry.input as CreateCharacterV2RequestDTO;
+      const request = entry.input as unknown as CreateCharacterV2RequestDTO;
       expect(isCreateCharacterV2Request(request), entry.id).toBe(true);
       const sheet = buildCharacterSheetV2(request);
       expect(isCharacterSheetV2(sheet), entry.id).toBe(true);

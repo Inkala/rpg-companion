@@ -263,7 +263,7 @@ func validCreateCharacterV2Request() CreateCharacterV2RequestDTO {
 		RuleChoices: []RuleChoiceInput{
 			{RuleID: "human-extra-language", OptionIDs: []string{"dwarvish"}},
 			{RuleID: "fighter-fighting-style", OptionIDs: []string{"fighter-fighting-style-archery"}},
-		}, Attacks: []CharacterAttackInput{}, Spellcasting: nil,
+		}, Attacks: []CharacterAttackInput{}, Spellcasting: &CharacterSpellcastingInput{Mode: "none"},
 		Features: []CharacterFeatureInput{}, Equipment: []CharacterEquipmentInput{}, Other: []CharacterOtherInput{},
 	}
 }

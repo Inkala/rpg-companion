@@ -940,9 +940,14 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: /Help me choose/ }));
     finishStrengthQuiz();
     fireEvent.click(screen.getByRole('button', { name: 'Use Strength melee Fighter' }));
-    fireEvent.change(screen.getByLabelText('Name'), {
+    fillRequiredFighterChoices();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), {
       target: { value: 'Branna Shieldhand' },
     });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Gender' }), {
+      target: { value: 'Female' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
 
     await waitFor(() => {
@@ -2047,9 +2052,14 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: /Help me choose/ }));
     finishStrengthQuiz();
     fireEvent.click(screen.getByRole('button', { name: 'Use Strength melee Fighter' }));
-    fireEvent.change(screen.getByLabelText('Name'), {
+    fillRequiredFighterChoices();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), {
       target: { value: 'Branna Shieldhand' },
     });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Gender' }), {
+      target: { value: 'Female' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
 
     await waitFor(() => {
@@ -2061,6 +2071,72 @@ describe('App', () => {
     expect(successToast).not.toHaveTextContent(fighterCharacter.id);
     expect(screen.queryByRole('button', { name: 'Open Character Reference' })).not.toBeInTheDocument();
     expect(await screen.findByRole('heading', { name: 'Branna Shieldhand' })).toBeInTheDocument();
+  });
+
+  it('preserves a private structured draft through sign-in without placing it in browser state', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.endsWith('/auth/session')) return Promise.resolve(jsonResponse({ error: 'authentication required' }, 401));
+      if (url.endsWith('/auth/sessions') && init?.method === 'POST') return Promise.resolve(jsonResponse({ user: maraUser }));
+      return Promise.resolve(jsonResponse({ error: 'not found' }, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/characters/new');
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Help me choose/ }));
+    finishStrengthQuiz();
+    fireEvent.click(screen.getByRole('button', { name: 'Use Strength melee Fighter' }));
+    fillRequiredFighterChoices();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Private Continuation' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Gender' }), { target: { value: 'Other' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).queryByText('Private Continuation')).not.toBeInTheDocument();
+    expectPrivateDraftAbsentFromBrowserState('Private Continuation');
+    completeSignInForm();
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('heading', { name: 'Review structured character.' })).toBeInTheDocument();
+    expect(screen.getByText('Private Continuation')).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/characters/new');
+  });
+
+  it('preserves the same private draft through registration and the required follow-up sign-in', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:8080');
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      if (url.endsWith('/auth/session')) return Promise.resolve(jsonResponse({ error: 'authentication required' }, 401));
+      if (url.endsWith('/auth/register') && init?.method === 'POST') return Promise.resolve(jsonResponse({ user: maraUser }, 201));
+      if (url.endsWith('/auth/sessions') && init?.method === 'POST') return Promise.resolve(jsonResponse({ user: maraUser }));
+      return Promise.resolve(jsonResponse({ error: 'not found' }, 404));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/characters/new');
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Help me choose/ }));
+    finishStrengthQuiz();
+    fireEvent.click(screen.getByRole('button', { name: 'Use Strength melee Fighter' }));
+    fillRequiredFighterChoices();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Private Registration Draft' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Gender' }), { target: { value: 'Other' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByRole('heading', { name: 'Create account' })).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).queryByText('Private Registration Draft')).not.toBeInTheDocument();
+    expectPrivateDraftAbsentFromBrowserState('Private Registration Draft');
+
+    completeRegistrationForm();
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Create account' }));
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    completeSignInForm();
+    fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('heading', { name: 'Review structured character.' })).toBeInTheDocument();
+    expect(screen.getByText('Private Registration Draft')).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/characters/new');
   });
 
   it('opens saved Character Reference immediately after manual save success', async () => {
@@ -2154,9 +2230,14 @@ const createStrengthCharacterFromInvite = async () => {
   fireEvent.click(screen.getByRole('button', { name: /Help me choose/ }));
   finishStrengthQuiz();
   fireEvent.click(screen.getByRole('button', { name: 'Use Strength melee Fighter' }));
-  fireEvent.change(screen.getByLabelText('Name'), {
+  fillRequiredFighterChoices();
+  fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), {
     target: { value: 'Branna Shieldhand' },
   });
+  fireEvent.change(screen.getByRole('combobox', { name: 'Gender' }), {
+    target: { value: 'Female' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
   fireEvent.click(screen.getByRole('button', { name: 'Save character' }));
 };
 
@@ -2432,54 +2513,32 @@ const finishStrengthQuiz = () => {
 };
 
 const fillValidMinimumManualCharacter = () => {
-  fireEvent.change(screen.getByLabelText('Name'), {
+  fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), {
     target: { value: 'Seren Ashfall' },
   });
-  fireEvent.change(screen.getByLabelText('Class'), {
-    target: { value: 'Ranger' },
+  fireEvent.change(screen.getByRole('combobox', { name: 'Gender' }), {
+    target: { value: 'Female' },
   });
-  fireEvent.change(screen.getByLabelText('Level'), {
-    target: { value: '3' },
+  fireEvent.change(screen.getByRole('combobox', { name: 'Race' }), {
+    target: { value: 'human' },
   });
-  fireEvent.change(screen.getByLabelText('Ancestry'), {
-    target: { value: 'Human' },
+  fireEvent.change(screen.getByRole('combobox', { name: 'Class' }), {
+    target: { value: 'fighter' },
   });
-  fireEvent.change(screen.getByLabelText('Background'), {
-    target: { value: 'Outlander' },
-  });
-  fireEvent.change(screen.getByLabelText('Strength'), {
-    target: { value: '12' },
-  });
-  fireEvent.change(screen.getByLabelText('Dexterity'), {
-    target: { value: '16' },
-  });
-  fireEvent.change(screen.getByLabelText('Constitution'), {
-    target: { value: '14' },
-  });
-  fireEvent.change(screen.getByLabelText('Intelligence'), {
-    target: { value: '10' },
-  });
-  fireEvent.change(screen.getByLabelText('Wisdom'), {
-    target: { value: '15' },
-  });
-  fireEvent.change(screen.getByLabelText('Charisma'), {
-    target: { value: '8' },
-  });
-  fireEvent.change(screen.getByLabelText('Current HP'), {
-    target: { value: '26' },
-  });
-  fireEvent.change(screen.getByLabelText('Maximum HP'), {
-    target: { value: '28' },
-  });
-  fireEvent.change(screen.getByLabelText('Armor Class'), {
-    target: { value: '15' },
-  });
-  fireEvent.change(screen.getByLabelText('Speed'), {
-    target: { value: '30' },
-  });
-  fireEvent.change(screen.getByLabelText('Proficiency bonus'), {
-    target: { value: '2' },
-  });
+  fillRequiredFighterChoices();
+};
+
+const fillRequiredFighterChoices = () => {
+  for (const [label, value] of [
+    ['Human Extra Language (choose 1)', 'elvish'],
+    ['Fighter Fighting Style (choose 1)', 'fighter-fighting-style-defense'],
+  ] as const) {
+    const control = screen.getByRole('listbox', { name: label }) as HTMLSelectElement;
+    const option = [...control.options].find((candidate) => candidate.value === value);
+    if (!option) throw new Error(`Missing ${value} option.`);
+    option.selected = true;
+    fireEvent.change(control);
+  }
 };
 
 const jsonResponse = (body: unknown, status = 200) => {
@@ -2487,6 +2546,17 @@ const jsonResponse = (body: unknown, status = 200) => {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+};
+
+const expectPrivateDraftAbsentFromBrowserState = (draftName: string) => {
+  expect(window.location.href).not.toContain(encodeURIComponent(draftName));
+  expect(JSON.stringify(window.history.state)).not.toContain(draftName);
+  expect(JSON.stringify({ ...window.localStorage })).not.toContain(draftName);
+  expect(JSON.stringify({ ...window.sessionStorage })).not.toContain(draftName);
+  expect(document.cookie).not.toContain(draftName);
+  expect(
+    within(screen.getByRole('region', { name: 'Notifications alt+T' })).queryByText(draftName),
+  ).not.toBeInTheDocument();
 };
 
 const deferred = <T,>() => {

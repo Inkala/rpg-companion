@@ -115,7 +115,7 @@ type CharacterAttackInput struct {
 	Damage      []CharacterDamageInput    `json:"damage"`
 }
 
-type CharacterSpellInput struct {
+type SpellSelectionInput struct {
 	Source            string   `json:"source"`
 	Index             string   `json:"index,omitempty"`
 	ID                string   `json:"id,omitempty"`
@@ -131,7 +131,23 @@ type CharacterSpellInput struct {
 	Ritual            bool     `json:"ritual,omitempty"`
 	Description       string   `json:"description,omitempty"`
 	HigherLevelText   string   `json:"higherLevelText,omitempty"`
-	State             string   `json:"state"`
+	ImportReason      string   `json:"importReason,omitempty"`
+}
+
+type SpellReplacementInput struct {
+	RemoveSpellID string              `json:"removeSpellId"`
+	Add           SpellSelectionInput `json:"add"`
+}
+
+type KnownSpellLevelInput struct {
+	Level        int                     `json:"level"`
+	Learned      []SpellSelectionInput   `json:"learned"`
+	Replacements []SpellReplacementInput `json:"replacements"`
+}
+
+type WizardSpellbookAdditionInput struct {
+	Level  int                   `json:"level"`
+	Spells []SpellSelectionInput `json:"spells"`
 }
 
 type CharacterSpellSlotOverride struct {
@@ -141,9 +157,14 @@ type CharacterSpellSlotOverride struct {
 }
 
 type CharacterSpellcastingInput struct {
-	Spells           []CharacterSpellInput        `json:"spells"`
-	PreparedSpellIDs []string                     `json:"preparedSpellIds"`
-	SlotOverride     []CharacterSpellSlotOverride `json:"slotOverride,omitempty"`
+	Mode             string                         `json:"mode"`
+	Cantrips         []SpellSelectionInput          `json:"cantrips,omitempty"`
+	Levels           []KnownSpellLevelInput         `json:"levels,omitempty"`
+	Prepared         []SpellSelectionInput          `json:"prepared,omitempty"`
+	InitialSpellbook []SpellSelectionInput          `json:"initialSpellbook,omitempty"`
+	Additions        []WizardSpellbookAdditionInput `json:"additions,omitempty"`
+	PreparedSpellIDs []string                       `json:"preparedSpellIds,omitempty"`
+	SlotOverride     []CharacterSpellSlotOverride   `json:"slotOverride,omitempty"`
 }
 
 type CharacterFeatureInput struct {
@@ -244,13 +265,15 @@ type CharacterSheetV2Slot struct {
 }
 
 type CharacterSheetV2Spellcasting struct {
-	Ability              string                  `json:"ability"`
-	SpellSaveDC          ResolvedInt             `json:"spellSaveDC"`
-	SpellAttackBonus     ResolvedInt             `json:"spellAttackBonus"`
-	Slots                []CharacterSheetV2Slot  `json:"slots"`
-	AvailableSpellLevels []int                   `json:"availableSpellLevels"`
-	Spells               []CharacterSheetV2Spell `json:"spells"`
-	PreparedSpellIDs     []string                `json:"preparedSpellIds"`
+	DecisionHistory        CharacterSpellcastingInput `json:"decisionHistory"`
+	Ability                *string                    `json:"ability"`
+	SpellSaveDC            *ResolvedInt               `json:"spellSaveDC"`
+	SpellAttackBonus       *ResolvedInt               `json:"spellAttackBonus"`
+	Slots                  []CharacterSheetV2Slot     `json:"slots"`
+	AvailableSpellLevels   []int                      `json:"availableSpellLevels"`
+	Spells                 []CharacterSheetV2Spell    `json:"spells"`
+	PreparedSpellIDs       []string                   `json:"preparedSpellIds"`
+	AlwaysPreparedSpellIDs []string                   `json:"alwaysPreparedSpellIds"`
 }
 
 type CharacterSheetV2Spell struct {

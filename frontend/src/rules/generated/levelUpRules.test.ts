@@ -60,10 +60,25 @@ describe('generated level-up rules parity', () => {
     })
 
     const byClass = Object.fromEntries(levelUpRules.classes.map((rule) => [rule.index, rule]))
+    expect(byClass.wizard.levels.map(({ spellcasting }) => spellcasting?.initialSpellbookSpells ?? 0)).toEqual([6, 0, 0, 0, 0])
+    expect(levelUpRules.classes.filter(({ index }) => index !== 'wizard').flatMap(({ levels }) =>
+      levels.map(({ spellcasting }) => spellcasting?.initialSpellbookSpells ?? 0),
+    )).toEqual(Array.from({ length: 55 }, () => 0))
+    for (const classIndex of ['bard', 'ranger', 'sorcerer', 'warlock']) {
+      const spellcastingLevels = byClass[classIndex].levels.filter(({ spellcasting }) => spellcasting !== null)
+      expect(spellcastingLevels[0].spellcasting?.replacementLimit).toBe(0)
+      expect(spellcastingLevels.slice(1).every(({ spellcasting }) => spellcasting?.replacementLimit === 1)).toBe(true)
+    }
     expect(byClass.wizard.levels[4].spellcasting).toMatchObject({ slots: [4, 3, 2], wizardSpellbookAdditions: 2 })
     expect(byClass.paladin.levels[4].spellcasting).toMatchObject({ slots: [4, 2, 0] })
     expect(byClass.ranger.levels[4].spellcasting).toMatchObject({ slots: [4, 2, 0] })
     expect(byClass.warlock.levels[4].spellcasting).toMatchObject({ pactSlots: 2, pactSlotLevel: 3 })
+    expect(byClass.warlock.choices.find(({ id }) => id === 'warlock-eldritch-invocations')?.selectionCountByLevel).toEqual({
+      2: 2,
+      3: 2,
+      4: 2,
+      5: 3,
+    })
 
     const choiceIds = levelUpRules.classes.flatMap(({ choices }) => choices.map(({ id }) => id))
     expect(choiceIds).toEqual(expect.arrayContaining([

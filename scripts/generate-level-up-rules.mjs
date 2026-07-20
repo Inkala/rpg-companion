@@ -163,16 +163,34 @@ for (const classIndex of ['paladin', 'ranger']) {
   assert(deepEqual(byClass[classIndex].levels.map((level) => level.spellcasting?.slots ?? [0, 0, 0]), halfCasterSlots), `${classIndex} half-caster slots changed`);
 }
 assert(deepEqual(byClass.warlock.levels.map((level) => [level.spellcasting.pactSlots, level.spellcasting.pactSlotLevel]), [[1, 1], [2, 1], [2, 2], [2, 2], [2, 3]]), 'Warlock Pact Magic changed');
+assert(deepEqual(byClass.wizard.levels.map((level) => level.spellcasting.initialSpellbookSpells), [6, 0, 0, 0, 0]), 'Wizard initial spellbook count changed');
 assert(deepEqual(byClass.wizard.levels.map((level) => level.spellcasting.wizardSpellbookAdditions), [0, 2, 2, 2, 2]), 'Wizard spellbook additions changed');
 for (const classIndex of ['bard', 'ranger', 'sorcerer', 'warlock']) {
-  assert(byClass[classIndex].levels.filter((level) => level.spellcasting).every((level) => level.spellcasting.replacementLimit === 1), `${classIndex} replacement limit changed`);
+  const spellcastingLevels = byClass[classIndex].levels.filter((level) => level.spellcasting);
+  assert(spellcastingLevels[0].spellcasting.replacementLimit === 0 && spellcastingLevels.slice(1).every((level) => level.spellcasting.replacementLimit === 1), `${classIndex} replacement limit changed`);
+}
+for (const classRule of canonical.classes) {
+  for (const level of classRule.levels) {
+    if (!level.spellcasting) continue;
+    const want = classRule.index === 'wizard' && level.level === 1 ? 6 : 0;
+    assert(level.spellcasting.initialSpellbookSpells === want, `${classRule.index} level ${level.level} initial spellbook count changed`);
+    if (level.spellcasting.mode !== 'spellbook-prepared') {
+      assert((level.spellcasting.wizardSpellbookAdditions ?? 0) === 0, `${classRule.index} level ${level.level} has Wizard additions`);
+    }
+    if (!['known', 'pact-known'].includes(level.spellcasting.mode)) {
+      assert(level.spellcasting.replacementLimit === 0, `${classRule.index} level ${level.level} has replacements outside a known mode`);
+    }
+  }
 }
 
 const expectedChecksumLine = `${checksum}  srd-5.1-2014-levels-1-5.json\n`;
 const levelUpProjection = {
   metadata: canonical.metadata,
   supportedTransitions: canonical.supportedTransitions,
-  classes: canonical.classes,
+  classes: canonical.classes.map((classRule) => ({
+    ...classRule,
+    choices: classRule.choices.filter((choice) => !choice.sourceFeatureIndex),
+  })),
   spells: canonical.spells.map((spell) => ({
     index: spell.index,
     name: spell.name,

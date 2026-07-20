@@ -9,6 +9,7 @@ import type {
 } from './characterSheetV2';
 import { isCharacterSheetV1 } from './characterSheetValidation';
 import { buildCharacterSheetV2 } from './characterSheetV2Calculations';
+import { reconstructSpellcastingV2 } from './characterSheetV2SpellProgression';
 
 type PlainObject = Record<string, unknown>;
 
@@ -16,6 +17,7 @@ export type RuleChoiceValidationContext = {
   raceIndex: string | null;
   subraceIndex: string | null;
   classIndex: string | null;
+  subclassIndex?: string | null;
   level: number;
   choices: RuleChoiceInput[];
   requireComplete?: boolean;
@@ -27,6 +29,12 @@ const skillOptions = [
   'skill-history', 'skill-insight', 'skill-intimidation', 'skill-investigation', 'skill-medicine',
   'skill-nature', 'skill-perception', 'skill-performance', 'skill-persuasion', 'skill-religion',
   'skill-sleight-of-hand', 'skill-stealth', 'skill-survival',
+];
+const abilityScoreImprovementOptions = [
+  ...abilities.map((ability) => `ability-score-increase-${ability}-2`),
+  ...abilities.flatMap((first, firstIndex) => abilities.slice(firstIndex + 1)
+    .map((second) => `ability-score-increase-${first}-${second}-1`)),
+  'feat-grappler',
 ];
 const languageOptions = [
   'abyssal', 'celestial', 'common', 'deep-speech', 'draconic', 'dwarvish', 'elvish', 'giant',
@@ -53,7 +61,7 @@ export const isCreateCharacterV2Request = (value: unknown): value is CreateChara
       !validateCombatInput(value.combat) || !array(value.ruleChoices, 0, 32, validateRuleChoice) ||
       !unique(value.ruleChoices.map((choice) => (choice as PlainObject).ruleId)) ||
       !array(value.attacks, 0, 32, validateAttack) || !unique(value.attacks.map((attack) => (attack as PlainObject).id)) ||
-      !(value.spellcasting === null || validateSpellcastingInput(value.spellcasting)) ||
+      !validateSpellcastingInput(value.spellcasting) ||
       !array(value.features, 0, 64, validateFeature) || !unique(value.features.map(inputID)) ||
       !array(value.equipment, 0, 128, validateEquipment) || !unique(value.equipment.map(inputID)) ||
       !array(value.other, 0, 32, validateOther) || !unique(value.other.map((entry) => (entry as PlainObject).id))) return false;
@@ -67,6 +75,7 @@ export const isCreateCharacterV2Request = (value: unknown): value is CreateChara
       raceIndex: raceContext?.raceIndex ?? null,
       subraceIndex: raceContext?.subraceIndex ?? null,
       classIndex: selectedClass.source === 'srd' ? selectedClass.index as string : null,
+      subclassIndex: subclass?.source === 'srd' ? subclass.index as string : null,
       level: identity.level as number,
       choices: value.ruleChoices as RuleChoiceInput[],
       requireComplete: true,
@@ -77,7 +86,8 @@ export const isCreateCharacterV2Request = (value: unknown): value is CreateChara
       selectedClass.source === 'srd' ? selectedClass.index as string : null,
       subclass?.source === 'srd' ? subclass.index as string : null,
       identity.level as number,
-    ) || !validateRequestSemantics(value as unknown as CreateCharacterV2RequestDTO)) return false;
+    ) || !validateRequestSemantics(value as unknown as CreateCharacterV2RequestDTO) ||
+      !validateRequestSpellProgression(value as unknown as CreateCharacterV2RequestDTO)) return false;
     return jsonBytes(value) <= 131_072;
   } catch {
     return false;
@@ -97,7 +107,7 @@ export const isCharacterSheetV2 = (value: unknown): value is CharacterSheetV2 =>
       !validateResolvedHP(value.hitPointProgression) || !validateResolvedCombat(value.combat) ||
       !array(value.ruleChoices, 0, 32, validateRuleChoice) || !unique(value.ruleChoices.map((choice) => (choice as PlainObject).ruleId)) ||
       !array(value.attacks, 0, 32, validateResolvedAttack) || !unique(value.attacks.map((attack) => (attack as PlainObject).id)) ||
-      !(value.spellcasting === null || validateResolvedSpellcasting(value.spellcasting)) ||
+      !validateResolvedSpellcasting(value.spellcasting) ||
       !array(value.features, 0, 64, validateResolvedFeature) || !unique(value.features.map(inputID)) ||
       !array(value.equipment, 0, 128, validateEquipment) || !unique(value.equipment.map(inputID)) ||
       !array(value.other, 0, 32, validateOther) || !unique(value.other.map((entry) => (entry as PlainObject).id)) ||
@@ -126,6 +136,10 @@ export const validateRuleChoices = (context: RuleChoiceValidationContext): strin
     ? characterCreationRules.subraces.find((entry) => entry.index === context.subraceIndex)
     : undefined;
   const selectedClass = context.classIndex ? levelUpRules.classes.find((entry) => entry.index === context.classIndex) : undefined;
+  const classChoices = [
+    ...(selectedClass?.choices ?? []),
+    ...characterCreationRules.classChoices.filter((choice) => choice.classIndex === context.classIndex),
+  ];
   const traitIndexes = new Set([...(race?.traitIndexes ?? []), ...(subrace?.traitIndexes ?? [])]);
   const activeFeatures = new Set<string>();
   for (const level of selectedClass?.levels ?? []) {
@@ -142,9 +156,10 @@ export const validateRuleChoices = (context: RuleChoiceValidationContext): strin
         errors.push(`${raceChoice.id} is required for a complete canonical Race`);
       }
     }
-    for (const classChoice of selectedClass?.choices ?? []) {
+    for (const classChoice of classChoices) {
       const count = classChoice.selectionCountByLevel[String(context.level) as keyof typeof classChoice.selectionCountByLevel] ?? 0;
-      if (context.level >= classChoice.fromLevel && count > 0 && !context.choices.some((choice) => choice.ruleId === classChoice.id)) {
+      const requiredSubclass = 'requiredSubclassIndex' in classChoice ? classChoice.requiredSubclassIndex : null;
+      if (context.level >= classChoice.fromLevel && count > 0 && (!requiredSubclass || requiredSubclass === context.subclassIndex) && !context.choices.some((choice) => choice.ruleId === classChoice.id)) {
         errors.push(`${classChoice.id} is required for a complete canonical Class`);
       }
     }
@@ -152,7 +167,7 @@ export const validateRuleChoices = (context: RuleChoiceValidationContext): strin
 
   for (const choice of context.choices) {
     const raceChoice = characterCreationRules.raceChoices.find((entry) => entry.id === choice.ruleId);
-    const classChoice = selectedClass?.choices.find((entry) => entry.id === choice.ruleId);
+    const classChoice = classChoices.find((entry) => entry.id === choice.ruleId);
     if (!raceChoice && !classChoice) {
       errors.push(`${choice.ruleId} does not belong to the selected Race or Class`);
       continue;
@@ -173,8 +188,10 @@ export const validateRuleChoices = (context: RuleChoiceValidationContext): strin
     }
     if (classChoice) {
       const count = classChoice.selectionCountByLevel[String(context.level) as keyof typeof classChoice.selectionCountByLevel] ?? 0;
-      if (context.level < classChoice.fromLevel) errors.push(`${choice.ruleId} is unavailable at level ${context.level}`);
-      validateSelection(choice, count, classChoice.options.map((option) => option.index), null, classChoice.allowManual, errors);
+      const requiredSubclass = 'requiredSubclassIndex' in classChoice ? classChoice.requiredSubclassIndex : null;
+      if (context.level < classChoice.fromLevel || requiredSubclass && requiredSubclass !== context.subclassIndex) errors.push(`${choice.ruleId} is unavailable at level ${context.level} for this Class or subclass`);
+      const boundedRule = 'boundedRule' in classChoice ? classChoice.boundedRule : null;
+      validateSelection(choice, count, classChoice.options.map((option) => option.index), boundedRule, classChoice.allowManual, errors);
       for (const optionID of choice.optionIds) {
         const option = classChoice.options.find((candidate) => candidate.index === optionID);
         const prerequisiteOption = option as undefined | { minimumLevel?: number; requiredFeatureIndexes?: readonly string[] };
@@ -206,7 +223,8 @@ const validateSelection = (
   if (choice.optionIds.length !== count) errors.push(`${choice.ruleId} must select exactly ${count}`);
   if (!unique(choice.optionIds)) errors.push(`${choice.ruleId} contains duplicate options`);
   const bounded = boundedRule === 'any-srd-skill-proficiency' ? skillOptions
-    : boundedRule === 'any-srd-language-not-already-known' ? languageOptions : allowed;
+    : boundedRule === 'any-srd-language-not-already-known' ? languageOptions
+      : boundedRule === 'ability-score-improvement-or-srd-feat' ? abilityScoreImprovementOptions : allowed;
   if (choice.optionIds.some((option) => !bounded.includes(option))) errors.push(`${choice.ruleId} contains an unavailable option`);
   if (choice.manualNote !== undefined && (!allowManual || !text(choice.manualNote, 1000))) {
     errors.push(`${choice.ruleId} does not allow that manual choice`);
@@ -272,27 +290,44 @@ const validateAttack = (value: unknown): boolean => exact(value, ['id', 'name', 
     typeof damage.dice === 'string' && /^\d{1,2}d\d{1,3}$/u.test(damage.dice) && integer(damage.bonus, -100, 100) && text(damage.type, 200));
 
 const validateSpellcastingInput = (value: unknown): boolean => {
-  if (!exact(value, ['spells', 'preparedSpellIds'], ['slotOverride']) ||
-    !array(value.spells, 0, 128, validateSpell) || !array(value.preparedSpellIds, 0, 128, identifier)) return false;
-  const spells = value.spells as unknown[];
-  const preparedSpellIds = value.preparedSpellIds as string[];
-  return unique(spells.map((spell) => (spell as PlainObject).id)) && unique(preparedSpellIds) &&
-    preparedSpellIds.every((id) => spells.some((spell) => (spell as PlainObject).id === id)) &&
-    optional(value, 'slotOverride', (slots) => array(slots, 0, 3, (slot) => exact(slot, ['level', 'max', 'reason']) &&
-      integer(slot.level, 1, 3) && integer(slot.max, 0, 99) && text(slot.reason, 1000)) && unique(slots.map((slot) => (slot as PlainObject).level)));
+  if (!isObject(value) || !oneOf(value.mode, ['none', 'known', 'prepared', 'pact-known', 'spellbook-prepared'])) return false;
+  if (value.mode === 'none') return exact(value, ['mode']);
+  if (value.mode === 'known' || value.mode === 'pact-known') {
+    return exact(value, ['mode', 'cantrips', 'levels'], ['slotOverride']) &&
+      validateSpellSelections(value.cantrips, 0, 16) && array(value.levels, 1, 5, (entry) => exact(entry, ['level', 'learned', 'replacements']) &&
+        integer(entry.level, 1, 5) && validateSpellSelections(entry.learned, 0, 32) && array(entry.replacements, 0, 1, (replacement) =>
+          exact(replacement, ['removeSpellId', 'add']) && identifier(replacement.removeSpellId) && validateSpellSelection(replacement.add))) &&
+      unique(value.levels.map((entry) => (entry as PlainObject).level)) && validateSlotOverride(value);
+  }
+  if (value.mode === 'prepared') {
+    return exact(value, ['mode', 'cantrips', 'prepared'], ['slotOverride']) && validateSpellSelections(value.cantrips, 0, 16) &&
+      validateSpellSelections(value.prepared, 0, 64) && validateSlotOverride(value);
+  }
+  return exact(value, ['mode', 'cantrips', 'initialSpellbook', 'additions', 'preparedSpellIds'], ['slotOverride']) &&
+    validateSpellSelections(value.cantrips, 0, 16) && validateSpellSelections(value.initialSpellbook, 0, 32) &&
+    array(value.additions, 0, 4, (entry) => exact(entry, ['level', 'spells']) && integer(entry.level, 2, 5) && validateSpellSelections(entry.spells, 0, 8)) &&
+    unique(value.additions.map((entry) => (entry as PlainObject).level)) && array(value.preparedSpellIds, 0, 64, identifier) &&
+    unique(value.preparedSpellIds) && validateSlotOverride(value);
 };
 
-const validateSpell = (value: unknown): boolean => {
-  if (exact(value, ['id', 'source', 'index', 'state'])) {
-    return identifier(value.id) && value.source === 'srd' && identifier(value.index) && oneOf(value.state, ['known', 'prepared', 'spellbook', 'always-prepared']) &&
+const validateSlotOverride = (value: PlainObject): boolean => optional(value, 'slotOverride', (slots) =>
+  array(slots, 0, 3, (slot) => exact(slot, ['level', 'max', 'reason']) && integer(slot.level, 1, 3) &&
+    integer(slot.max, 0, 99) && text(slot.reason, 1000)) && unique(slots.map((slot) => (slot as PlainObject).level)));
+
+const validateSpellSelections = (value: unknown, minimum: number, maximum: number): boolean =>
+  array(value, minimum, maximum, validateSpellSelection) && unique(value.map((spell) => (spell as PlainObject).id));
+
+const validateSpellSelection = (value: unknown): boolean => {
+  if (exact(value, ['id', 'source', 'index'])) {
+    return identifier(value.id) && value.source === 'srd' && identifier(value.index) &&
       characterCreationRules.spells.some((spell) => spell.index === value.index);
   }
-  return exact(value, ['source', 'id', 'name', 'level', 'school', 'castingTime', 'range', 'components', 'duration', 'concentration', 'ritual', 'description', 'state'], ['materialComponent', 'higherLevelText']) &&
+  return exact(value, ['source', 'id', 'name', 'level', 'school', 'castingTime', 'range', 'components', 'duration', 'concentration', 'ritual', 'description', 'importReason'], ['materialComponent', 'higherLevelText']) &&
     value.source === 'manual' && identifier(value.id) && text(value.name, 200) && integer(value.level, 0, 3) &&
-    text(value.school, 200) && text(value.castingTime, 200) && text(value.range, 200) && array(value.components, 0, 3, (entry) => text(entry, 20)) &&
+    text(value.school, 200) && text(value.castingTime, 200) && text(value.range, 200) && array(value.components, 1, 3, (entry) => text(entry, 20)) &&
     optional(value, 'materialComponent', (entry) => text(entry, 1000)) && text(value.duration, 200) && typeof value.concentration === 'boolean' &&
     typeof value.ritual === 'boolean' && text(value.description, 10000) && optional(value, 'higherLevelText', (entry) => text(entry, 5000)) &&
-    oneOf(value.state, ['known', 'prepared', 'spellbook', 'always-prepared']);
+    text(value.importReason, 1000);
 };
 
 const validateFeature = (value: unknown): boolean =>
@@ -366,21 +401,23 @@ const validateResolvedAttack = (value: unknown): boolean => exact(value, ['id', 
     /^\d{1,2}d\d{1,3}$/u.test(damage.dice) && integer(damage.bonus, -100, 100) && text(damage.type, 200));
 
 const validateResolvedSpellcasting = (value: unknown): boolean => exact(value, [
-  'ability', 'spellSaveDC', 'spellAttackBonus', 'slots', 'availableSpellLevels', 'spells', 'preparedSpellIds',
-]) && oneOf(value.ability, ['intelligence', 'wisdom', 'charisma']) && validateResolvedNumber(value.spellSaveDC, 0, 100) &&
-  validateResolvedNumber(value.spellAttackBonus, -100, 100) && array(value.slots, 0, 3, (slot) => exact(slot, ['level', 'max', 'used', 'provenance']) &&
+  'decisionHistory', 'ability', 'spellSaveDC', 'spellAttackBonus', 'slots', 'availableSpellLevels', 'spells', 'preparedSpellIds', 'alwaysPreparedSpellIds',
+]) && validateSpellcastingInput(value.decisionHistory) && (value.ability === null || oneOf(value.ability, ['intelligence', 'wisdom', 'charisma'])) &&
+  (value.spellSaveDC === null || validateResolvedNumber(value.spellSaveDC, 0, 100)) &&
+  (value.spellAttackBonus === null || validateResolvedNumber(value.spellAttackBonus, -100, 100)) && array(value.slots, 0, 3, (slot) => exact(slot, ['level', 'max', 'used', 'provenance']) &&
     integer(slot.level, 1, 3) && integer(slot.max, 0, 99) && integer(slot.used, 0, 99) && (slot.used as number) <= (slot.max as number) && validateProvenance(slot.provenance)) &&
   unique(value.slots.map((slot) => (slot as PlainObject).level)) && array(value.availableSpellLevels, 0, 3, (level) => integer(level, 1, 3)) &&
   unique(value.availableSpellLevels) && array(value.spells, 0, 128, validateResolvedSpell) &&
   unique(value.spells.map((spell) => (spell as PlainObject).id)) && array(value.preparedSpellIds, 0, 128, identifier) && unique(value.preparedSpellIds) &&
-  (value.preparedSpellIds as string[]).every((id) => (value.spells as PlainObject[]).some((spell) => spell.id === id));
+  array(value.alwaysPreparedSpellIds, 0, 128, identifier) && unique(value.alwaysPreparedSpellIds) &&
+  [...value.preparedSpellIds, ...value.alwaysPreparedSpellIds].every((id) => (value.spells as PlainObject[]).some((spell) => spell.id === id));
 
 const validateResolvedSpell = (value: unknown): boolean => exact(value, [
   'id', 'canonicalIndex', 'name', 'level', 'school', 'castingTime', 'range', 'components', 'materialComponent',
   'duration', 'concentration', 'ritual', 'description', 'higherLevelText', 'state', 'provenance',
 ]) && identifier(value.id) && (value.canonicalIndex === null || identifier(value.canonicalIndex)) && text(value.name, 200) &&
   integer(value.level, 0, 3) && text(value.school, 200) && text(value.castingTime, 200) && text(value.range, 200) &&
-  array(value.components, 0, 3, (entry) => text(entry, 20)) && (value.materialComponent === null || text(value.materialComponent, 1000)) &&
+  array(value.components, 1, 3, (entry) => text(entry, 20)) && (value.materialComponent === null || text(value.materialComponent, 1000)) &&
   text(value.duration, 200) && typeof value.concentration === 'boolean' && typeof value.ritual === 'boolean' &&
   text(value.description, 10000) && (value.higherLevelText === null || text(value.higherLevelText, 5000)) &&
   oneOf(value.state, ['known', 'prepared', 'spellbook', 'always-prepared']) && validateProvenance(value.provenance);
@@ -408,7 +445,7 @@ const validateRequestSemantics = (request: CreateCharacterV2RequestDTO): boolean
   const manualClass = request.identity.class.source === 'manual';
   if (manualRace && (request.abilityScores.mode !== 'imported' || request.combat.speedOverride === undefined)) return false;
   if (manualClass && (request.hitPointProgression.maximumOverride === undefined ||
-    request.hitPointProgression.levelGains.length !== 0 || request.spellcasting !== null ||
+    request.hitPointProgression.levelGains.length !== 0 || request.spellcasting.mode !== 'none' ||
     request.attacks.some((attack) => attack.attackBonus.mode === 'calculated' && attack.attackBonus.ability === 'spellcasting'))) return false;
   const classIndex = request.identity.class.source === 'srd' ? request.identity.class.index : null;
   const classRule = classIndex ? levelUpRules.classes.find((entry) => entry.index === classIndex) : undefined;
@@ -458,6 +495,42 @@ const validateRequestSemantics = (request: CreateCharacterV2RequestDTO): boolean
   return request.features.every((feature) => feature.source === 'manual' || traits.has(feature.index) || classFeatures.has(feature.index) || subclassFeatures.has(feature.index));
 };
 
+const validateRequestSpellProgression = (request: CreateCharacterV2RequestDTO): boolean => {
+  if (request.identity.class.source === 'manual') return request.spellcasting.mode === 'none';
+  const classIndex = request.identity.class.index;
+  const classLevel = levelUpRules.classes.find((entry) => entry.index === classIndex)?.levels.find((entry) => entry.level === request.identity.level);
+  const ability = classLevel?.spellcasting?.ability;
+  let abilityModifier = 0;
+  if (ability) {
+    const scores = request.abilityScores.mode === 'imported' ? { ...request.abilityScores.values } : { ...request.abilityScores.base };
+    if (request.abilityScores.mode === 'calculated' && request.identity.race.source === 'srd') {
+      const context = canonicalRaceContext(request.identity.race.index);
+      const race = characterCreationRules.races.find((entry) => entry.index === context?.raceIndex);
+      const subrace = characterCreationRules.subraces.find((entry) => entry.index === context?.subraceIndex);
+      for (const bonus of [...(race?.abilityBonuses ?? []), ...(subrace?.abilityBonuses ?? [])]) scores[bonus.ability] += bonus.bonus;
+      for (const selected of request.ruleChoices.find((choice) => choice.ruleId === 'half-elf-ability-bonuses')?.optionIds ?? []) {
+        scores[selected as keyof typeof scores] += 1;
+      }
+    }
+    abilityModifier = Math.floor((scores[ability] - 10) / 2);
+  }
+  try {
+    reconstructSpellcastingV2({
+      classIndex,
+      subclassIndex: request.identity.subclass?.source === 'srd' ? request.identity.subclass.index : null,
+      level: request.identity.level,
+      abilityModifier,
+      input: request.spellcasting,
+      activeFeatureIds: request.ruleChoices.flatMap((choice) => choice.optionIds),
+      raceGrantedCantripIndexes: request.ruleChoices.find((choice) => choice.ruleId === 'high-elf-cantrip')?.optionIds,
+      classGrantedCantripIndexes: request.ruleChoices.find((choice) => choice.ruleId === 'circle-of-the-land-bonus-cantrip')?.optionIds,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const validateSavedConsistency = (sheet: CharacterSheetV2): boolean => {
   try {
     const request: CreateCharacterV2RequestDTO = {
@@ -479,19 +552,7 @@ const validateSavedConsistency = (sheet: CharacterSheetV2): boolean => {
           ? { mode: 'calculated', ...attack.attackBonusInput }
           : { mode: 'manual-override', value: attack.attackBonus.value, reason: attack.attackBonus.provenance.kind === 'manual-override' ? attack.attackBonus.provenance.reason : 'Imported attack.' },
       })),
-      spellcasting: sheet.spellcasting ? {
-        spells: sheet.spellcasting.spells.map((spell) => spell.canonicalIndex
-          ? { id: spell.id, source: 'srd', index: spell.canonicalIndex, state: spell.state }
-          : { id: spell.id, source: 'manual', name: spell.name, level: spell.level, school: spell.school,
-            castingTime: spell.castingTime, range: spell.range, components: [...spell.components],
-            ...(spell.materialComponent ? { materialComponent: spell.materialComponent } : {}), duration: spell.duration,
-            concentration: spell.concentration, ritual: spell.ritual, description: spell.description,
-            ...(spell.higherLevelText ? { higherLevelText: spell.higherLevelText } : {}), state: spell.state }),
-        preparedSpellIds: [...sheet.spellcasting.preparedSpellIds],
-        slotOverride: sheet.spellcasting.slots.filter((slot) => slot.provenance.kind === 'manual-override').map((slot) => ({
-          level: slot.level, max: slot.max, reason: slot.provenance.kind === 'manual-override' ? slot.provenance.reason : '',
-        })),
-      } : null,
+      spellcasting: structuredClone(sheet.spellcasting.decisionHistory),
       features: sheet.features.map((feature) => feature.source === 'srd'
         ? { source: 'srd', index: feature.canonicalIndex }
         : { source: 'manual', id: feature.id, name: feature.name, category: feature.category, description: feature.description }),
@@ -501,10 +562,11 @@ const validateSavedConsistency = (sheet: CharacterSheetV2): boolean => {
     const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
     return same(sheet.abilityScores, expected.abilityScores) && same(sheet.hitPointProgression, expected.hitPointProgression) &&
       same(sheet.combat, expected.combat) && same(sheet.attacks, expected.attacks) && same(sheet.features, expected.features) &&
-      same(sheet.spellcasting?.ability, expected.spellcasting?.ability) && same(sheet.spellcasting?.spellSaveDC, expected.spellcasting?.spellSaveDC) &&
-      same(sheet.spellcasting?.spellAttackBonus, expected.spellcasting?.spellAttackBonus) && same(sheet.spellcasting?.availableSpellLevels, expected.spellcasting?.availableSpellLevels) &&
-      same(sheet.spellcasting?.spells, expected.spellcasting?.spells) && same(sheet.spellcasting?.preparedSpellIds, expected.spellcasting?.preparedSpellIds) &&
-      same(sheet.spellcasting?.slots.map(slotSource), expected.spellcasting?.slots.map(slotSource));
+      same(sheet.spellcasting.ability, expected.spellcasting.ability) && same(sheet.spellcasting.spellSaveDC, expected.spellcasting.spellSaveDC) &&
+      same(sheet.spellcasting.spellAttackBonus, expected.spellcasting.spellAttackBonus) && same(sheet.spellcasting.availableSpellLevels, expected.spellcasting.availableSpellLevels) &&
+      same(sheet.spellcasting.decisionHistory, expected.spellcasting.decisionHistory) && same(sheet.spellcasting.spells, expected.spellcasting.spells) &&
+      same(sheet.spellcasting.preparedSpellIds, expected.spellcasting.preparedSpellIds) && same(sheet.spellcasting.alwaysPreparedSpellIds, expected.spellcasting.alwaysPreparedSpellIds) &&
+      same(sheet.spellcasting.slots.map(slotSource), expected.spellcasting.slots.map(slotSource));
   } catch {
     return false;
   }
@@ -518,7 +580,9 @@ const canonicalSelectionsResolve = (identity: PlainObject): boolean => {
   const race = identity.race as PlainObject;
   const selectedClass = identity.class as PlainObject;
   const subclass = identity.subclass as PlainObject | null;
-  if (race.source === 'srd' && !canonicalRaceContext(race.index as string)) return false;
+  const raceContext = race.source === 'srd' ? canonicalRaceContext(race.index as string) : null;
+  if (race.source === 'srd' && !raceContext) return false;
+  if (raceContext?.subraceIndex === null && characterCreationRules.races.find((entry) => entry.index === raceContext.raceIndex)?.subraceIndexes.length) return false;
   const classRule = selectedClass.source === 'srd' ? levelUpRules.classes.find((entry) => entry.index === selectedClass.index) : undefined;
   if (selectedClass.source === 'srd' && !classRule) return false;
   if (subclass && classRule && (identity.level as number) < classRule.subclassDecisionLevel) return false;
@@ -529,24 +593,17 @@ const canonicalSelectionsResolve = (identity: PlainObject): boolean => {
 const spellcastingMatchesIdentity = (
   value: unknown,
   classIndex: string | null,
-  subclassIndex: string | null,
+  _subclassIndex: string | null,
   level: number,
 ): boolean => {
-  if (classIndex === null) return value === null;
+  if (!isObject(value)) return false;
+  const decision = isObject(value.decisionHistory) ? value.decisionHistory : value;
+  if (classIndex === null) return decision.mode === 'none';
   const classRule = levelUpRules.classes.find((entry) => entry.index === classIndex);
   const spellcasting = classRule?.levels.find((entry) => entry.level === level)?.spellcasting ?? null;
-  if (spellcasting === null) return value === null;
-  if (!isObject(value)) return false;
-  return (value.spells as unknown[]).every((candidate) => {
-    if (!isObject(candidate)) return false;
-    const canonicalIndex = typeof candidate.canonicalIndex === 'string' ? candidate.canonicalIndex
-      : candidate.source === 'srd' ? candidate.index : null;
-    if (canonicalIndex === null) return true;
-    const spell = characterCreationRules.spells.find((entry) => entry.index === canonicalIndex);
-    if (!spell || (spell.level > 0 && !(spellcasting.availableSpellLevels as readonly number[]).includes(spell.level))) return false;
-    return (spell.classIndexes as readonly string[]).includes(classIndex) || spell.subclassMemberships.some((membership) =>
-      membership.classIndex === classIndex && membership.subclassIndex === subclassIndex && membership.classLevel <= level);
-  });
+  const expectedMode = spellcasting?.mode ?? 'none';
+  if (decision.mode !== expectedMode) return false;
+  return true;
 };
 
 const canonicalRaceContext = (index: string): { raceIndex: string; subraceIndex: string | null } | null => {

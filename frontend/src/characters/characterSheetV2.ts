@@ -64,8 +64,8 @@ export type CharacterAttackInput = {
   damage: Array<{ dice: string; bonus: number; type: string }>;
 };
 
-export type CharacterSpellInput =
-  | { id: string; source: 'srd'; index: string; state: CharacterSpellState }
+export type SpellSelectionInput =
+  | { id: string; source: 'srd'; index: string }
   | {
     source: 'manual';
     id: string;
@@ -81,16 +81,31 @@ export type CharacterSpellInput =
     ritual: boolean;
     description: string;
     higherLevelText?: string;
-    state: CharacterSpellState;
+    importReason: string;
   };
 
 export type CharacterSpellState = 'known' | 'prepared' | 'spellbook' | 'always-prepared';
 
-export type CharacterSpellcastingInput = {
-  spells: CharacterSpellInput[];
-  preparedSpellIds: string[];
-  slotOverride?: Array<{ level: number; max: number; reason: string }>;
+export type SpellReplacementInput = { removeSpellId: string; add: SpellSelectionInput };
+export type KnownSpellLevelInput = {
+  level: number;
+  learned: SpellSelectionInput[];
+  replacements: SpellReplacementInput[];
 };
+export type CharacterSpellSlotOverride = { level: number; max: number; reason: string };
+export type CharacterSpellcastingInput =
+  | { mode: 'none' }
+  | { mode: 'known'; cantrips: SpellSelectionInput[]; levels: KnownSpellLevelInput[]; slotOverride?: CharacterSpellSlotOverride[] }
+  | { mode: 'prepared'; cantrips: SpellSelectionInput[]; prepared: SpellSelectionInput[]; slotOverride?: CharacterSpellSlotOverride[] }
+  | { mode: 'pact-known'; cantrips: SpellSelectionInput[]; levels: KnownSpellLevelInput[]; slotOverride?: CharacterSpellSlotOverride[] }
+  | {
+    mode: 'spellbook-prepared';
+    cantrips: SpellSelectionInput[];
+    initialSpellbook: SpellSelectionInput[];
+    additions: Array<{ level: number; spells: SpellSelectionInput[] }>;
+    preparedSpellIds: string[];
+    slotOverride?: CharacterSpellSlotOverride[];
+  };
 
 export type CharacterFeatureInput =
   | { source: 'srd'; index: string }
@@ -118,7 +133,7 @@ export type CreateCharacterV2RequestDTO = {
   combat: CharacterCombatInput;
   ruleChoices: RuleChoiceInput[];
   attacks: CharacterAttackInput[];
-  spellcasting: CharacterSpellcastingInput | null;
+  spellcasting: CharacterSpellcastingInput;
   features: CharacterFeatureInput[];
   equipment: CharacterEquipmentInput[];
   other: Array<{ id: string; title: string; description: string }>;
@@ -194,7 +209,7 @@ export type CharacterSheetV2 = {
     attackBonus: ResolvedValue<number>;
     attackBonusInput: { ability: 'strength' | 'dexterity' | 'spellcasting'; proficient: boolean } | null;
   }>;
-  spellcasting: CharacterSheetV2Spellcasting | null;
+  spellcasting: CharacterSheetV2Spellcasting;
   features: CharacterSheetV2Feature[];
   equipment: CharacterEquipmentInput[];
   other: Array<{ id: string; title: string; description: string }>;
@@ -202,13 +217,15 @@ export type CharacterSheetV2 = {
 };
 
 export type CharacterSheetV2Spellcasting = {
-  ability: 'intelligence' | 'wisdom' | 'charisma';
-  spellSaveDC: ResolvedValue<number>;
-  spellAttackBonus: ResolvedValue<number>;
+  decisionHistory: CharacterSpellcastingInput;
+  ability: 'intelligence' | 'wisdom' | 'charisma' | null;
+  spellSaveDC: ResolvedValue<number> | null;
+  spellAttackBonus: ResolvedValue<number> | null;
   slots: Array<{ level: number; max: number; used: number; provenance: ValueProvenance }>;
   availableSpellLevels: number[];
   spells: CharacterSheetV2Spell[];
   preparedSpellIds: string[];
+  alwaysPreparedSpellIds: string[];
 };
 
 export type CharacterSheetV2Summary = {

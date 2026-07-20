@@ -11,7 +11,7 @@ same JSON file. Neither runtime calls an external rules API.
 - Snapshot ID: `srd-5-1-2014-levels-1-5-2026-07-19`
 - Schema version: 3
 - Import date: 2026-07-19
-- SHA-256: `545a10e880e568431a492135623ad24dd2f63d77c1e56dab30c56389f3a65423`
+- SHA-256: `cd02323779e76ccd65d0e41d07dc3fa23a91456f738e35d4b3cb083cc316494b`
 - License: Creative Commons Attribution 4.0 International (CC BY 4.0)
 
 The checksum is committed in `rules-data/srd-5.1-2014-levels-1-5.sha256`. Run
@@ -34,7 +34,10 @@ generated-file freshness, frontend/backend parity, and bounded progression invar
   ritual, school, class membership, and supported subclass membership.
 - 44 bounded subclass spell memberships, including always-prepared and expanded-list membership.
 - Full-caster, Paladin/Ranger half-caster, Warlock Pact Magic, known/prepared/replacement, and
-  Wizard spellbook progression through class level 5.
+  Wizard spellbook progression through class level 5. Every spellcasting level records
+  `initialSpellbookSpells`: Wizard level 1 is exactly 6 and every other Class/level is 0. Wizard
+  levels 2 through 5 each add exactly 2 spellbook spells. Initial known-spell acquisition levels
+  permit 0 replacements, while later canonical known-spell levels permit at most 1.
 - 9 SRD races and 4 supported SRD subraces, with base walking speed, ability bonuses, languages,
   traits, and explicit parent/subrace references.
 - 38 SRD race-trait records with complete descriptions, Race/subrace memberships, proficiencies,
@@ -42,6 +45,12 @@ generated-file freshness, frontend/backend parity, and bounded progression invar
 - 8 persistent Race and Race-trait creation choices: Dragonborn ancestry, Dwarf tool proficiency,
   Half-Elf ability bonuses, language, and Skill Versatility, High Elf cantrip and extra language,
   and Human extra language.
+- 16 creation-only Class and subclass choices omitted from the unchanged T-026 Level Up projection:
+  one level-4 Ability Score Improvement choice for each of the 12 Classes, College of Lore bonus
+  proficiencies, Circle of the Land bonus cantrip, Hunter's Prey, and Draconic Ancestor. Each
+  choice retains its canonical Class, required subclass where applicable, source-feature identity,
+  exact count, and bounded option set. The level-4 bounded set permits one +2 ability increase, one
+  package containing two distinct +1 ability increases, or the SRD Grappler feat.
 - 237 SRD equipment records in the exact development-time source membership: 116 adventuring gear,
   13 armor records, 40 mounts and vehicles, 31 tools, and 37 weapons.
 - Adventuring-gear subcategories: 4 ammunition, 5 arcane foci, 4 druidic foci, 7 equipment packs,
@@ -96,7 +105,12 @@ snapshot, not the API, is the production rules authority.
 ## Transformation process
 
 1. Preserve the T-026 class, progression, feature, choice, spell membership, and bounded summary
-   records unchanged.
+   behavior unchanged except for the approved correction that Warlocks retain two Eldritch
+   Invocations at class level 4 and gain their third at class level 5. The additive
+   `initialSpellbookSpells` field makes the existing Wizard
+   starting spellbook rule authoritative for structured creation without changing Level Up output.
+   Creation-only Class choices are projected separately and excluded from the T-026 behavioral
+   projection.
 2. Download the documented 2014 Race, subrace, equipment, and existing bounded spell-detail
    records during development only.
 3. Require the exact source memberships before normalization: 9 races, 4 supported subraces, 237
@@ -109,7 +123,8 @@ snapshot, not the API, is the production rules authority.
    canonical armor and shields carry equipment-derived calculation inputs. Manual equipment
    remains inert.
 6. Sort arrays deterministically, validate exact references and expected record counts, validate
-   the unchanged T-026 behavioral projection checksum, compute the canonical SHA-256, and generate
+   the protected T-026 behavioral projection checksum with the approved T-025 corrections, compute
+   the canonical SHA-256, and generate
    TypeScript and Go representations from the same JSON.
 
 The generator has no network behavior. Its optional `--import-source <path>` mode reads an explicit

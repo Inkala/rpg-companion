@@ -159,6 +159,9 @@
           }
         },
         "optionSource": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "boundedRule": { "enum": ["any-srd-skill-proficiency", "ability-score-improvement-or-srd-feat"] },
+        "requiredSubclassIndex": { "$ref": "#/$defs/identifier" },
+        "sourceFeatureIndex": { "$ref": "#/$defs/identifier" },
         "options": { "type": "array", "items": { "$ref": "#/$defs/choiceOption" } },
         "allowManual": { "type": "boolean" }
       }
@@ -166,7 +169,7 @@
     "standardSpellcasting": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "ability", "cantripsKnown", "spellsKnown", "preparedFormula", "replacementLimit", "wizardSpellbookAdditions", "slots", "availableSpellLevels"],
+      "required": ["mode", "ability", "cantripsKnown", "spellsKnown", "preparedFormula", "replacementLimit", "initialSpellbookSpells", "wizardSpellbookAdditions", "slots", "availableSpellLevels"],
       "properties": {
         "mode": { "enum": ["known", "prepared", "spellbook-prepared"] },
         "ability": { "enum": ["intelligence", "wisdom", "charisma"] },
@@ -174,6 +177,7 @@
         "spellsKnown": { "type": ["integer", "null"], "minimum": 0, "maximum": 20 },
         "preparedFormula": { "type": ["string", "null"] },
         "replacementLimit": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "initialSpellbookSpells": { "type": "integer", "minimum": 0, "maximum": 6 },
         "wizardSpellbookAdditions": { "type": "integer", "minimum": 0, "maximum": 2 },
         "slots": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "integer", "minimum": 0, "maximum": 4 } },
         "availableSpellLevels": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 3 } }
@@ -182,13 +186,14 @@
     "pactSpellcasting": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "ability", "cantripsKnown", "spellsKnown", "replacementLimit", "pactSlots", "pactSlotLevel", "availableSpellLevels"],
+      "required": ["mode", "ability", "cantripsKnown", "spellsKnown", "replacementLimit", "initialSpellbookSpells", "pactSlots", "pactSlotLevel", "availableSpellLevels"],
       "properties": {
         "mode": { "const": "pact-known" },
         "ability": { "const": "charisma" },
         "cantripsKnown": { "type": "integer", "minimum": 0, "maximum": 20 },
         "spellsKnown": { "type": "integer", "minimum": 0, "maximum": 20 },
-        "replacementLimit": { "const": 1 },
+        "replacementLimit": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "initialSpellbookSpells": { "const": 0 },
         "pactSlots": { "type": "integer", "minimum": 0, "maximum": 4 },
         "pactSlotLevel": { "type": "integer", "minimum": 0, "maximum": 3 },
         "availableSpellLevels": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 3 } }

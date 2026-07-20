@@ -2,8 +2,8 @@
 package rules
 
 const SnapshotID = "srd-5-1-2014-levels-1-5-2026-07-19"
-const Checksum = "545a10e880e568431a492135623ad24dd2f63d77c1e56dab30c56389f3a65423"
-const ProjectionChecksum = "95f31f0a24305b1ef8eac6df91b49335c8a415bfebacef92705c377e78f81426"
+const Checksum = "cd02323779e76ccd65d0e41d07dc3fa23a91456f738e35d4b3cb083cc316494b"
+const ProjectionChecksum = "8beb04d68cde88996ae2e558aeffff5a43ca2795bfb67332b021b0f51bb9f7af"
 const CanonicalJSON = `{
   "metadata": {
     "snapshotId": "srd-5-1-2014-levels-1-5-2026-07-19",
@@ -19,7 +19,7 @@ const CanonicalJSON = `{
       "https://www.dnd5eapi.co/api/2014",
       "https://creativecommons.org/licenses/by/4.0/"
     ],
-    "transformation": "Development-time deterministic import from the documented 2014 API. Preserves the T-026 classes, levels, features, spell membership, and bounded progression; adds the exact 9-Race and 4-subrace sets, 38 Race traits, 8 bounded Race and Race-trait creation choices, the complete 237-record SRD equipment catalog, complete details for the existing 169 spells through level 3, 10 calculation rules, and 19 supported always-on feature modifiers. Source fields are normalized, references resolved, arrays sorted by stable ID, schema validated, cross-runtime projections generated, and exact memberships and counts enforced."
+    "transformation": "Development-time deterministic import from the documented 2014 API. Preserves the T-026 classes, levels, features, spell membership, and bounded progression; adds the exact 9-Race and 4-subrace sets, 38 Race traits, 8 bounded Race and Race-trait creation choices, the complete 237-record SRD equipment catalog, complete details for the existing 169 spells through level 3, 10 calculation rules, 19 supported always-on feature modifiers, the six-spell Wizard level-1 spellbook count, and zero replacement allowance at each known-mode acquisition level. Source fields are normalized, references resolved, arrays sorted by stable ID, schema validated, cross-runtime projections generated, and exact memberships and counts enforced."
   },
   "supportedTransitions": [
     {
@@ -304,7 +304,8 @@ const CanonicalJSON = `{
             "cantripsKnown": 2,
             "spellsKnown": 4,
             "preparedFormula": null,
-            "replacementLimit": 1,
+            "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               2,
@@ -341,6 +342,7 @@ const CanonicalJSON = `{
             "spellsKnown": 5,
             "preparedFormula": null,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               3,
@@ -377,6 +379,7 @@ const CanonicalJSON = `{
             "spellsKnown": 6,
             "preparedFormula": null,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -408,6 +411,7 @@ const CanonicalJSON = `{
             "spellsKnown": 7,
             "preparedFormula": null,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -445,6 +449,7 @@ const CanonicalJSON = `{
             "spellsKnown": 8,
             "preparedFormula": null,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -537,6 +542,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               2,
@@ -579,6 +585,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               3,
@@ -609,6 +616,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -640,6 +648,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -677,6 +686,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -793,6 +803,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               2,
@@ -829,6 +840,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               3,
@@ -852,6 +864,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -889,6 +902,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -913,6 +927,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -1339,6 +1354,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+floor(classLevel/2))",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               2,
@@ -1387,6 +1403,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+floor(classLevel/2))",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               3,
@@ -1417,6 +1434,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+floor(classLevel/2))",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               3,
@@ -1447,6 +1465,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+floor(classLevel/2))",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -1590,7 +1609,8 @@ const CanonicalJSON = `{
             "cantripsKnown": null,
             "spellsKnown": 2,
             "preparedFormula": null,
-            "replacementLimit": 1,
+            "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               2,
@@ -1627,6 +1647,7 @@ const CanonicalJSON = `{
             "spellsKnown": 3,
             "preparedFormula": null,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               3,
@@ -1657,6 +1678,7 @@ const CanonicalJSON = `{
             "spellsKnown": 3,
             "preparedFormula": null,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               3,
@@ -1687,6 +1709,7 @@ const CanonicalJSON = `{
             "spellsKnown": 4,
             "preparedFormula": null,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -2016,7 +2039,8 @@ const CanonicalJSON = `{
             "cantripsKnown": 4,
             "spellsKnown": 2,
             "preparedFormula": null,
-            "replacementLimit": 1,
+            "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               2,
@@ -2059,6 +2083,7 @@ const CanonicalJSON = `{
             "spellsKnown": 3,
             "preparedFormula": null,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               3,
@@ -2089,6 +2114,7 @@ const CanonicalJSON = `{
             "spellsKnown": 4,
             "preparedFormula": null,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -2120,6 +2146,7 @@ const CanonicalJSON = `{
             "spellsKnown": 5,
             "preparedFormula": null,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -2144,6 +2171,7 @@ const CanonicalJSON = `{
             "spellsKnown": 6,
             "preparedFormula": null,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 0,
             "slots": [
               4,
@@ -2193,7 +2221,7 @@ const CanonicalJSON = `{
           "selectionCountByLevel": {
             "2": 2,
             "3": 2,
-            "4": 3,
+            "4": 2,
             "5": 3
           },
           "options": [
@@ -2375,7 +2403,8 @@ const CanonicalJSON = `{
             "ability": "charisma",
             "cantripsKnown": 2,
             "spellsKnown": 2,
-            "replacementLimit": 1,
+            "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "pactSlots": 1,
             "pactSlotLevel": 1,
             "availableSpellLevels": [
@@ -2401,6 +2430,7 @@ const CanonicalJSON = `{
             "cantripsKnown": 2,
             "spellsKnown": 3,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "pactSlots": 2,
             "pactSlotLevel": 1,
             "availableSpellLevels": [
@@ -2426,6 +2456,7 @@ const CanonicalJSON = `{
             "cantripsKnown": 2,
             "spellsKnown": 4,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "pactSlots": 2,
             "pactSlotLevel": 2,
             "availableSpellLevels": [
@@ -2452,6 +2483,7 @@ const CanonicalJSON = `{
             "cantripsKnown": 3,
             "spellsKnown": 5,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "pactSlots": 2,
             "pactSlotLevel": 2,
             "availableSpellLevels": [
@@ -2471,6 +2503,7 @@ const CanonicalJSON = `{
             "cantripsKnown": 3,
             "spellsKnown": 6,
             "replacementLimit": 1,
+            "initialSpellbookSpells": 0,
             "pactSlots": 2,
             "pactSlotLevel": 3,
             "availableSpellLevels": [
@@ -2542,6 +2575,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 6,
             "wizardSpellbookAdditions": 0,
             "slots": [
               2,
@@ -2572,6 +2606,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 2,
             "slots": [
               3,
@@ -2595,6 +2630,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 2,
             "slots": [
               4,
@@ -2626,6 +2662,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 2,
             "slots": [
               4,
@@ -2650,6 +2687,7 @@ const CanonicalJSON = `{
             "spellsKnown": null,
             "preparedFormula": "max(1,abilityModifier+classLevel)",
             "replacementLimit": 0,
+            "initialSpellbookSpells": 0,
             "wizardSpellbookAdditions": 2,
             "slots": [
               4,
