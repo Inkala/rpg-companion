@@ -2,6 +2,10 @@
 
 Status: approved
 
+Spell-progression correction status: approved. Slice 4 may resume only after the canonical,
+TypeScript, and Go contracts are reconciled. The correction is approved but not implemented by
+this documentation checkpoint.
+
 ## Goal
 
 Replace the free-text CharacterSheetV1 creation contract with structured, rules-assisted character
@@ -58,8 +62,9 @@ records, and keep ordinary-save and Party-invite outcomes unchanged.
 
 The deployed T-026 snapshot already supplies all 12 classes, class levels 1 through 5, hit dice,
 fixed-average HP, proficiency bonuses, subclass decision levels and SRD subclasses, class features,
-class choices, spell progression, class spell membership, and 169 cantrips/spells through spell
-level 3.
+class choices, spellcasting modes, final per-level counts and slots, class spell membership, and 169
+cantrips/spells through spell level 3. It does not yet supply the Wizard level-1 initial spellbook
+count or a complete acquisition/replacement history contract.
 
 T-025 must extend that same source with:
 
@@ -119,9 +124,9 @@ T-025 must extend that same source with:
 - Class and Subclass features must be manual entries with imported provenance.
 - Canonical Class choices and canonical Class/Subclass features are invalid.
 - Subclass is either `null` or a bounded manual name and receives no automation.
-- In the current bounded V2 contract, `spellcasting` must be `null` for a manual Class. Automated
-  spellcasting remains unavailable unless a separately approved imported spellcasting contract is
-  added later.
+- In the current bounded V2 contract, a manual Class uses the exact `spellcasting.mode: "none"`
+  variant. Automated spellcasting remains unavailable unless a separately approved imported
+  spellcasting contract is added later.
 
 ### Manual Race and manual Class
 
@@ -227,11 +232,41 @@ exceptional attack uses a bounded manual override value and reason.
 - Selecting an SRD spell fills its name, level, school, casting time, range, components, duration,
   material component when present, concentration/ritual flags, complete normalized
   description/effect, and higher-level text when present.
-- Spell slots are stored separately by spell level.
-- Known, prepared, spellbook, subclass, and Pact Magic states remain explicit.
+- Spell slots are stored separately by spell level and are never inferred from spell-selection
+  decisions. A slot override changes only slots and requires its own bounded reason.
+- The request uses an exact mode-specific spell-progression union. It does not send a trusted final
+  canonical spell list. The backend reconstructs the final list from persisted Class, Subclass,
+  level, canonical progression, and bounded player decisions.
+- Non-spellcasting levels use the explicit `none` variant and reject class spell decisions. This
+  includes Barbarian, Fighter, Monk, and Rogue through level 5 and level-1 Paladin and Ranger.
+- `known` progression records selected cantrips plus one decision record for every class level from
+  the first spellcasting level through the selected level. The first record selects exactly the
+  initial known-spell count and has no replacement. Every later record selects exactly the increase
+  in `spellsKnown` and records zero or one replacement according to the canonical limit.
+- `pact-known` uses the same explicit learned/replacement history while validating Warlock Pact
+  Magic slot count, slot level, spell level, and class membership independently.
+- `prepared` progression records selected cantrips and the final prepared choices. The exact count
+  follows the canonical prepared formula. Canonical always-prepared subclass spells are derived by
+  the server, added automatically, and excluded from the normal prepared count.
+- `spellbook-prepared` requires exactly six selected level-1 Wizard spells in the initial spellbook,
+  exactly two legal Wizard spellbook additions for every level from 2 through the selected level,
+  selected cantrips, and final prepared IDs that are a subset of the reconstructed spellbook.
+- Every replacement records its class level, the stable ID of the spell removed from the prior
+  resulting set, and one bounded replacement spell. The server rejects missing, future, duplicate,
+  same-spell, unavailable-level, wrong-Class, and excessive replacements.
+- Cantrip selection count, initial known-spell count, spells learned at later levels, prepared
+  count, Wizard additions, and replacement limits come only from the canonical progression.
+- Race- or Subclass-granted canonical spells are derived from validated rule choices and canonical
+  membership. They do not consume learned/prepared limits unless the SRD rule says so.
 - Manual spell entry requires the same visible fields: name, level, school, casting time, range,
   components, optional material component, duration, concentration, ritual, complete description,
-  optional higher-level text, and explicit spell state. It uses imported provenance.
+  optional higher-level text, and a bounded import reason. It uses imported provenance and occupies
+  a normal learned, prepared, spellbook, or replacement selection. It cannot declare itself
+  always-prepared, alter slots, exceed a count, or bypass class-level availability silently.
+- The persisted V2 sheet retains the validated mode-specific decision history, independently
+  resolved slots and overrides, the reconstructed final spell collection, complete display
+  metadata and provenance, prepared IDs, and automatically derived always-prepared IDs. Complete
+  sheet validation reruns reconstruction and rejects any final-state mismatch.
 
 ### Features and traits
 
@@ -307,6 +342,22 @@ exceptional attack uses a bounded manual override value and reason.
 - All controls are keyboard operable, have visible focus, and meet the 44px target requirement.
 - Dynamic subclass, override, spell, and equipment controls announce meaningful changes without
   causing disruptive focus movement.
+
+## Slice 4 correction gate
+
+The following observed Slice 4 regressions remain required work and are not accepted as completed:
+
+- HP method and rolled-HP controls meet the 44px target.
+- Canonical features render with stable unique identifiers rather than display names. Cleric level
+  3 produces no duplicate React key.
+- Calculated versus Imported ability mode is grouped in its own semantic fieldset with a legend.
+- Desktop creation-step navigation uses the approved persistent behavior without obstructing zoom
+  or mobile layouts.
+- Spell, equipment, override, and other relevant dynamic changes use restrained accessible live
+  announcements.
+- Long closed native-select values at 320px use the best accessible native-control treatment and
+  do not create horizontal overflow.
+- Browser validation is repeated from a fresh server after all implementation edits have stopped.
 
 ## Out of scope
 

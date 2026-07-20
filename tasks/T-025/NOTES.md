@@ -2,6 +2,9 @@
 
 Status: approved
 
+Spell-progression correction status: approved. This note records the approved blocking contract
+correction; it does not claim implementation or validation.
+
 ## Certain findings
 
 - T-026 is deployed and provides one canonical SRD 5.1/2014 JSON source, JSON Schema, checksum,
@@ -22,6 +25,15 @@ Status: approved
   They require regression coverage, not replacement flows.
 - Current T-026 Level up is built around CharacterSheetV1. Shipping V2 creation without V2 Level up
   compatibility would regress the deployed feature for newly created characters.
+- The current canonical Wizard level-1 projection has `wizardSpellbookAdditions: 0` and no field for
+  the six selected level-1 spellbook spells. Levels 2 through 5 correctly project two additions.
+- Known-spell projections expose final `spellsKnown` and a replacement limit, while the approved V2
+  request carries only final spell entries, prepared IDs, and slot overrides. That final state
+  cannot prove what was learned or replaced at each level.
+- SRD 5.1 requires a level-1 Wizard spellbook to contain six chosen level-1 Wizard spells and grants
+  two legal Wizard spellbook additions at each later Wizard level.
+- A final canonical spell list sent by the client is not an authoritative progression contract and
+  must be replaced before Slice 4 can complete.
 
 ## Product requirements recorded as certain
 
@@ -106,14 +118,67 @@ sheet as truth.
 - Manual Race with canonical Class is supported through imported final ability scores and a required
   Speed override. Race automation is disabled while valid canonical Class automation remains.
 - Manual Class uses universal proficiency, requires a maximum-HP override, supports only generally
-  valid defense modes, rejects canonical Class/Subclass automation, and has null spellcasting in the
-  current bounded contract.
+  valid defense modes, rejects canonical Class/Subclass automation, and uses the exact `none`
+  spellcasting variant in the current bounded contract.
 - Combined manual Race/Class requires all applicable imported values and overrides. Missing inputs
   fail safely; the server does not invent rules.
 - Persisted features are an exact canonical/manual union. Manual features retain their original ID,
   name, user-entered category, description, and imported provenance without substitution.
 - Slice 2 includes TypeScript/Go build, validation, failure, exact-key, round-trip,
   persisted-sheet, and parity coverage for these paths.
+
+## Awaiting-approval spell-progression correction
+
+Recommended contract: exact mode-specific progression inputs, not one universal spell history.
+
+- `known`: selected cantrips plus one level record from spellcasting acquisition through the
+  selected level. The first record contains the initial known set and no replacement. Later records
+  contain the exact learned-count delta and at most the canonical replacement limit.
+- `prepared`: selected cantrips and the current formula-bounded prepared set. Canonical
+  always-prepared subclass spells are derived separately and do not consume the normal limit.
+- `pact-known`: known-spell history plus independent Pact Magic slot-count and slot-level
+  validation.
+- `spellbook-prepared`: selected cantrips, six initial level-1 Wizard spells, exactly two additions
+  at each later level, and a final prepared subset of the reconstructed spellbook.
+- `none`: rejects class spell decisions and slot overrides. Separately validated Race-granted
+  spells may still be derived from rule choices.
+
+Manual/imported spells provide complete visible metadata and a bounded import reason. They occupy a
+normal selection slot and obey count and available-level limits. They cannot claim automatic grant
+status, change slots, or appear as unbounded extras. Copied Wizard spellbook extras beyond canonical
+creation progression remain an approval question rather than being smuggled into the final list.
+
+The server reconstructs the final set in level order, resolves canonical metadata, applies
+replacement removals only to the prior set, adds canonical Race/subclass grants, derives prepared
+and always-prepared IDs, and validates slots independently. The persisted sheet retains the
+validated history and final resolved entries so complete-sheet validation can reconstruct and
+compare them exactly.
+
+## Open Slice 4 QA regressions
+
+- HP method and rolled-HP controls are not yet proven at 44px.
+- Canonical feature rows need stable unique IDs. Display-name keys produce a duplicate Cleric level
+  3 React key.
+- Calculated versus Imported ability mode needs a semantic fieldset and legend.
+- Desktop step navigation needs the approved persistent behavior without obstructing browser zoom
+  or constrained mobile layouts.
+- Spell, equipment, override, and other relevant dynamic changes need restrained accessible live
+  announcements.
+- Long values in closed native selects need a 320px no-overflow treatment that preserves native
+  accessibility.
+- Browser validation must be rerun from a fresh server after implementation edits stop.
+
+## Approved spell correction decisions
+
+- The exact `none`, `known`, `prepared`, `pact-known`, and `spellbook-prepared` request/history union
+  and server-authoritative reconstruction are approved.
+- Canonical `initialSpellbookSpells` is six for Wizard level 1 and zero everywhere else. Wizard
+  levels 2 through 5 retain exactly two additions per gained level.
+- Persisted CharacterSheetV2 retains the validated decision history.
+- Manual/imported spells consume normal limits, require complete metadata and a reason, never alter
+  slots, and never claim automatic-grant status.
+- Copied or found Wizard spellbook entries beyond normal creation progression remain deferred.
+  T-025 does not add an open-ended spellbook import or editing path.
 
 ## Risks
 

@@ -2,6 +2,9 @@
 
 Status: approved
 
+Spell-progression correction status: approved. Slice 4 remains blocked until this amendment is
+implemented across the canonical data, TypeScript, Go, and server-authoritative V2 builder.
+
 ## Parallel-work assessment
 
 - Classification: Red.
@@ -25,11 +28,16 @@ The deployed canonical snapshot supplies:
 - levels 1 through 5, hit die, fixed-average HP, proficiency, ASI flags, class features, and bounded
   class choices;
 - one SRD subclass per class and each subclass decision level, including Ranger Hunter;
-- full-caster, half-caster, Pact Magic, known/prepared/replacement, and Wizard spellbook progression;
+- full-caster, half-caster, Pact Magic, known/prepared mode indicators, final per-level counts,
+  replacement limits, and Wizard additions for levels 2 through 5;
 - 169 SRD cantrips and spells through spell level 3;
 - spell name, level, school, casting time, range, component codes, duration, concentration, ritual,
   class membership, subclass membership, and normalized summary;
 - deterministic schema, checksum, TypeScript generation, Go generation, and attribution checks.
+
+The reusable projection is incomplete for authoritative creation history: Wizard level 1 lacks its
+six-spell initial spellbook count, and final known-spell counts plus replacement limits cannot prove
+which spell was learned or replaced at each level.
 
 ### Data T-025 must add to the same source
 
@@ -177,7 +185,7 @@ type CreateCharacterV2RequestDTO = {
   };
   ruleChoices: RuleChoiceInput[];
   attacks: CharacterAttackInput[];
-  spellcasting: CharacterSpellcastingInput | null;
+  spellcasting: CharacterSpellcastingInput;
   features: CharacterFeatureInput[];
   equipment: CharacterEquipmentInput[];
   other: Array<{ id: string; title: string; description: string }>;
@@ -209,12 +217,11 @@ type CharacterAttackInput = {
   damage: Array<{ dice: string; bonus: number; type: string }>;
 };
 
-type CharacterSpellInput =
+type SpellSelectionInput =
   | {
       id: string;
       source: 'srd';
       index: string;
-      state: 'known' | 'prepared' | 'spellbook' | 'always-prepared';
     }
   | {
       id: string;
@@ -231,14 +238,48 @@ type CharacterSpellInput =
       ritual: boolean;
       description: string;
       higherLevelText?: string;
-      state: 'known' | 'prepared' | 'spellbook' | 'always-prepared';
+      importReason: string;
     };
 
-type CharacterSpellcastingInput = {
-  spells: CharacterSpellInput[];
-  preparedSpellIds: string[];
-  slotOverride?: Array<{ level: number; max: number; reason: string }>;
+type SpellReplacementInput = {
+  removeSpellId: string;
+  add: SpellSelectionInput;
 };
+
+type KnownSpellLevelInput = {
+  level: number;
+  learned: SpellSelectionInput[];
+  replacements: SpellReplacementInput[];
+};
+
+type CharacterSpellcastingInput =
+  | { mode: 'none' }
+  | {
+      mode: 'known';
+      cantrips: SpellSelectionInput[];
+      levels: KnownSpellLevelInput[];
+      slotOverride?: Array<{ level: number; max: number; reason: string }>;
+    }
+  | {
+      mode: 'prepared';
+      cantrips: SpellSelectionInput[];
+      prepared: SpellSelectionInput[];
+      slotOverride?: Array<{ level: number; max: number; reason: string }>;
+    }
+  | {
+      mode: 'pact-known';
+      cantrips: SpellSelectionInput[];
+      levels: KnownSpellLevelInput[];
+      slotOverride?: Array<{ level: number; max: number; reason: string }>;
+    }
+  | {
+      mode: 'spellbook-prepared';
+      cantrips: SpellSelectionInput[];
+      initialSpellbook: SpellSelectionInput[];
+      additions: Array<{ level: number; spells: SpellSelectionInput[] }>;
+      preparedSpellIds: string[];
+      slotOverride?: Array<{ level: number; max: number; reason: string }>;
+    };
 
 type CharacterFeatureInput =
   | { source: 'srd'; index: string }
@@ -284,6 +325,17 @@ type CharacterSheetV2Spell = {
   provenance: ValueProvenance;
 };
 
+type CharacterSheetV2Spellcasting = {
+  decisionHistory: CharacterSpellcastingInput;
+  ability: 'intelligence' | 'wisdom' | 'charisma' | null;
+  slots: ResolvedValue<Array<{ level: number; max: number }>>;
+  spellSaveDC: ResolvedValue<number> | null;
+  spellAttackBonus: ResolvedValue<number> | null;
+  spells: CharacterSheetV2Spell[];
+  preparedSpellIds: string[];
+  alwaysPreparedSpellIds: string[];
+};
+
 type CharacterSheetV2Feature =
   | {
       id: string;
@@ -307,8 +359,127 @@ type CharacterSheetV2Feature =
 ```
 
 Canonical spell inputs are resolved into every `CharacterSheetV2Spell` field from generated rules.
-Manual spell inputs provide the same visible fields and persist imported provenance. Prepared spell
-IDs must reference IDs in the persisted spell collection.
+Manual inputs provide the same visible fields plus an import reason and persist imported
+provenance. They occupy a normal bounded selection and cannot declare an automatic grant or alter
+slot progression. Prepared IDs must reference IDs in the server-reconstructed collection.
+
+### Canonical spell-progression amendment
+
+The existing canonical level projection keeps the four exact modes already present: `known`,
+`prepared`, `pact-known`, and `spellbook-prepared`. It adds one uniform integer field to each
+spellcasting level record:
+
+```ts
+initialSpellbookSpells: number;
+```
+
+The value is exactly `6` for Wizard level 1 and `0` everywhere else. Wizard levels 2 through 5 keep
+`wizardSpellbookAdditions: 2`. Initial acquisition levels use `replacementLimit: 0`; a later known
+or Pact-known level uses the SRD limit, at most `1`. Existing `cantripsKnown`, `spellsKnown`,
+`preparedFormula`, slots, available spell levels, spell Class membership, and subclass membership
+remain authoritative. The schema and generators reject inconsistent combinations, such as a
+spellbook count on another mode, replacements on prepared/Spellbook modes, or nonzero Wizard
+additions on another Class.
+
+Authority and attribution remain the approved T-025/T-026 sources: the official SRD 5.1 CC PDF at
+`https://media.dndbeyond.com/compendium-images/srd/5.1/SRD_CC_v5.1.pdf`, the official SRD information
+at `https://www.dndbeyond.com/srd/`, and the approved 2014 SRD API documentation at
+`https://5e-bits.github.io/docs/`. The canonical source record, import date, transformation record,
+checksum, generated parity, and CC-BY-4.0 attribution remain mandatory.
+
+This is intentionally a mode-specific progression design rather than one universal history. Known
+and Pact-known Classes need acquisition and replacement history. Prepared Classes make a current
+prepared choice from their available list. Wizards need a reconstructable spellbook plus a
+prepared subset. A universal history would either permit illegal states or add meaningless fields
+to most Classes.
+
+The persisted spellcasting shape retains:
+
+- the exact validated mode and bounded decision history;
+- the canonical slot projection and any independently validated slot overrides;
+- server-resolved spell save DC and attack bonus;
+- the reconstructed final spell entries with complete display metadata and provenance;
+- final prepared IDs and server-derived always-prepared IDs;
+- stable acquisition IDs so every replacement points to a spell that existed immediately before
+  that level.
+
+`CharacterSheetV2.spellcasting` uses `CharacterSheetV2Spellcasting`. Its `decisionHistory` is the
+exact validated discriminated input union, not a client-authored final spell list. The remaining
+fields are server-resolved output and must match reconstruction exactly.
+
+Race-granted cantrips and canonical always-prepared subclass spells are derived from validated
+identity/rule choices and canonical membership. They are merged by the server with explicit
+calculated provenance and do not consume normal selection limits. Manual spells may fill a bounded
+normal selection, but cannot become an automatic grant. Copied or found Wizard spellbook entries
+beyond the six initial spells plus two per later level are explicitly deferred. T-025 does not add
+an open-ended spellbook import or editing path.
+
+### Per-mode state machines
+
+Canonical mode ownership through level 5 is exact:
+
+- `none`: Barbarian, Fighter, Monk, and Rogue at levels 1 through 5, plus Paladin and Ranger at
+  level 1;
+- `known`: Bard and Sorcerer at levels 1 through 5, plus Ranger at levels 2 through 5;
+- `prepared`: Cleric and Druid at levels 1 through 5, plus Paladin at levels 2 through 5;
+- `pact-known`: Warlock at levels 1 through 5;
+- `spellbook-prepared`: Wizard at levels 1 through 5.
+
+`none`:
+
+1. Derive that the selected Class level has no class spellcasting progression.
+2. Reject cantrips, learned spells, prepared choices, replacements, and slot overrides.
+3. Preserve separately derived Race grants without creating class spell slots.
+
+`known`:
+
+1. Validate the exact final cantrip count.
+2. Require one level record from the first spellcasting level through the selected level.
+3. At the first record, require exactly `spellsKnown` selections and no replacement.
+4. At each later record, require exactly the positive `spellsKnown` delta and at most the canonical
+   replacement limit.
+5. Apply each removal to the prior resulting set before adding its replacement. Reject missing or
+   duplicate IDs and wrong-Class or unavailable-level additions.
+
+`pact-known` performs the same selection/replacement steps, then validates Pact slot count and slot
+level rather than normal full-caster slots.
+
+`prepared`:
+
+1. Validate the exact cantrip count when the Class has cantrips.
+2. Derive the prepared limit from the canonical formula and resolved ability modifier.
+3. Require the final normal prepared set to match that count and canonical Class/level membership.
+4. Add canonical always-prepared subclass spells separately and exclude them from the normal count.
+
+Subclass membership with canonical kind `expanded` only expands the eligible selection list and
+still consumes a normal learned/prepared choice. Only canonical kind `always-prepared` is added
+automatically and excluded from the normal prepared limit.
+
+`spellbook-prepared`:
+
+1. Validate the exact cantrip count.
+2. Require six distinct level-1 Wizard spells in `initialSpellbook`.
+3. Require one additions record for every level from 2 through the selected level, each containing
+   exactly two distinct Wizard spells legal at that level.
+4. Reconstruct the spellbook in level order and reject duplicates.
+5. Require prepared IDs to be a legal-level subset of the resulting spellbook and to satisfy the
+   canonical prepared formula.
+
+### Server-authoritative reconstruction
+
+The backend loads the canonical Class/Subclass level projection, validates the exact union keys,
+then processes the selected mode in level order. Every canonical selection must match Class,
+Subclass where applicable, and the available spell levels at that point. Every manual selection
+must carry complete bounded display data, an import reason, a legal level, and occupy the same count
+as a canonical selection. Replacements are applied only to the immediately prior resulting set.
+Slots are derived independently and only then adjusted by a valid slot override.
+
+After reconstruction, the server adds validated canonical Race/subclass grants, resolves complete
+spell metadata and provenance, derives prepared and always-prepared IDs, and builds the persisted
+V2 sheet. Complete-sheet validation reruns the algorithm and compares exact decisions, slots,
+final spell IDs, display metadata, state, and provenance. The request rejects legacy `spells` and
+`preparedSpellIds` final-state keys outside their permitted union variants, so a client cannot
+bypass reconstruction with a tampered final list.
 
 Canonical feature indexes are valid only when their generated owner and availability match the
 selected Race, Class, Subclass, and level. The persisted feature retains both its canonical index
@@ -334,8 +505,8 @@ category `manual`.
 - Subclass is `null` or a bounded manual selection with no automation.
 - Canonical armor, the universal standard-unarmored formula, and manual defense remain available;
   class-owned defense formulas do not.
-- `spellcasting` is `null` in this bounded contract. A future imported spellcasting union requires
-  separate approval.
+- `spellcasting.mode` is `none` in this bounded contract. A future imported spellcasting union
+  requires separate approval.
 
 ### Manual Race and manual Class
 
@@ -513,6 +684,20 @@ existing creation accessibility contract.
 - 390px and 320px: one column, full-width form controls, wrapped provenance text, and 44px actions.
 - Repeating sections use semantic fieldsets and lists, not table layouts.
 - Review content wraps without horizontal scrolling.
+
+## Slice 4 QA correction design
+
+- HP method and rolled-HP controls retain at least a 44px interactive target.
+- Canonical feature lists key rows by stable canonical feature ID plus any required owner/level
+  context, never by display name. Cleric level 3 is the focused duplicate-key regression.
+- Calculated and Imported ability mode radios live in a semantic fieldset with a visible legend.
+- Desktop step navigation remains persistent using non-obstructive layout behavior. It must not
+  cover content at browser zoom or become sticky on constrained mobile layouts.
+- Dynamic spell, equipment, override, and Other changes use concise polite live announcements;
+  validation errors retain assertive behavior without duplicate announcements.
+- Closed native selects constrain to their container at 320px, preserve their accessible native
+  name/value, and avoid horizontal page overflow even when the platform renders a long value.
+- Browser evidence is collected only from a newly started frontend after edits have stopped.
 
 ## Migration decision
 

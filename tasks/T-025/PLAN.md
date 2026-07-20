@@ -2,6 +2,10 @@
 
 Status: approved
 
+Spell-progression correction status: approved. The following work is part of the existing Slice 2
+contract and Slice 4 implementation, not a new sixth slice. Slice 4 resumes only after the canonical
+and V2 spell contracts are reconciled.
+
 ## Objective
 
 Deliver rules-assisted CharacterSheetV2 creation while preserving V1 display compatibility, the
@@ -37,6 +41,12 @@ Estimate: 2 to 3 focused days.
 - Add an exact lossless canonical/manual persisted-feature union.
 - Add frontend and Go calculation helpers driven by generated rules.
 - Add strict V2 parsers and validators with nested exact-union key parity.
+- Correct canonical Wizard level 1 with six initial spellbook selections and use exact
+  mode-specific `none`, `known`, `prepared`, `pact-known`, and `spellbook-prepared` request unions.
+- Replace the trusted final spell-list input with bounded cantrip, per-level learned/replacement,
+  prepared-set, and Wizard spellbook decisions that the server can reconstruct.
+- Persist validated spell decision history beside the resolved display collection so complete-sheet
+  validation and Level up can reproduce the same result.
 - Keep V1 and Mara compatibility tests green.
 - Prove imported scores and other overrides survive source-input changes until explicitly reset.
 - Prove Reset to calculated requires usable base scores and valid canonical Race choices.
@@ -64,6 +74,11 @@ Estimate: 2 to 3 focused days.
 - Implement repeatable Attacks, Spells, Features and traits, Equipment, and Other sections.
 - Add one review step showing all resolved values and provenance.
 - Migrate guided Fighter presets to V2 without changing their recommendation behavior.
+- Implement mode-specific spell decisions rather than a universal state dropdown. Do not infer,
+  preselect, or fabricate learned spells, replacements, spellbook additions, or prepared choices.
+- Correct the recorded 44px HP controls, stable feature keys, semantic ability-mode grouping,
+  persistent desktop step navigation, restrained live announcements, and long native-select
+  overflow regressions.
 
 Estimate: 4 to 6 focused days.
 
@@ -168,6 +183,29 @@ Estimate: 3 to 5 focused days.
 
 No migration file is expected. If one becomes necessary, implementation stops for renewed approval.
 
+### Spell-progression correction ownership
+
+The correction is expected to touch only the existing T-025 ownership areas, principally:
+
+- `rules-data/srd-5.1-2014-levels-1-5.json`;
+- `rules-data/srd-5.1-2014-levels-1-5.schema.json`;
+- `rules-data/srd-5.1-2014-levels-1-5.sha256`;
+- `scripts/generate-level-up-rules.mjs` and its focused tests;
+- `scripts/generate-character-creation-rules.mjs` and its focused tests;
+- generated TypeScript and Go level-up/creation rule projections and parity tests;
+- `frontend/src/characters/characterSheetV2.ts`;
+- `frontend/src/characters/characterSheetV2Validation.ts`;
+- `frontend/src/characters/characterSheetV2Calculations.ts` and focused V2 tests;
+- `backend/internal/characters/character_sheet_v2.go`;
+- `backend/internal/characters/character_sheet_v2_validation.go`;
+- `backend/internal/characters/character_sheet_v2_calculations.go` and focused V2 tests;
+- `frontend/src/character-creation/characterSheetV2Draft.ts` and its tests;
+- `frontend/src/character-creation/StructuredCharacterCreation.tsx` and focused creation tests;
+- the existing character handler/model tests only where request dispatch or exact response parsing
+  must change.
+
+No SQL migration, provider, Party, T-023, or deployment file belongs to this correction.
+
 ## Test matrix
 
 ### Rules and calculations
@@ -191,7 +229,23 @@ No migration file is expected. If one becomes necessary, implementation stops fo
   and the explicit proficiency flag;
 - manual attack bonus persists its bounded value and reason, and no ability is inferred from a name;
 - canonical and manual spells persist every approved display field, explicit state, and provenance;
-- prepared spell IDs reference stored spells;
+- Wizard level 1 requires six distinct level-1 Wizard spellbook choices;
+- every Wizard level from 2 through N requires exactly two legal additions;
+- Wizard prepared IDs are a formula-bounded subset of the reconstructed spellbook;
+- known and Pact-known Classes record exact initial selections, later learned deltas, and at most
+  the canonical replacements at each eligible level;
+- every replacement validates level, prior removal ID, addition, membership, availability,
+  uniqueness, and the canonical limit;
+- prepared Classes validate final prepared count while canonical always-prepared subclass spells
+  are derived and excluded from that count;
+- Pact Magic and half-caster start levels, known/prepared behavior, slots, and available levels are
+  validated independently;
+- non-spellcasters reject class spell progression, while validated Race grants remain derivable;
+- manual/imported spell choices carry complete display data and an import reason, occupy normal
+  limits, and cannot silently alter slots or become always-prepared;
+- frontend and Go reconstruction, exact-union parsing, and final resolved spell output remain in
+  parity;
+- prepared spell IDs reference server-reconstructed stored spells;
 - canonical Race, Class, and Subclass feature ownership and level availability, including rejection
   of valid indexes from the wrong owner;
 - canonical subclass timing, required selection, cross-Class rejection, and Ranger Hunter;
@@ -202,7 +256,8 @@ No migration file is expected. If one becomes necessary, implementation stops fo
 - manual Race with canonical Class accepts imported scores and required Speed override, preserves
   canonical Class automation, and rejects Race automation;
 - manual Class derives universal proficiency, requires maximum-HP override, accepts supported
-  defense modes, rejects Class/Subclass automation, and requires null spellcasting;
+  defense modes, rejects Class/Subclass automation, and requires the exact `none` spellcasting
+  variant;
 - combined manual Race/Class requires imported scores plus Speed and maximum-HP overrides;
 - missing required manual-identity inputs fail without persistence;
 - canonical/manual feature unions round-trip exact IDs, categories, display fields, provenance, and
@@ -236,6 +291,10 @@ No migration file is expected. If one becomes necessary, implementation stops fo
 - no Concept, Notes, or Current HP creation controls;
 - `Other` requires bounded manual input and is not presented as SRD;
 - spell dropdown filtering and automatic metadata population;
+- mode-specific spell editors collect exact cantrip, known, replacement, prepared, Pact, and Wizard
+  spellbook decisions without exposing impossible states;
+- HP method and rolled controls meet 44px, ability mode uses a fieldset/legend, canonical feature
+  keys are stable, dynamic changes announce politely, and long native selects do not overflow;
 - repeatable Attack, Feature, Equipment, and Other rows;
 - provenance labels, override persistence, reset-to-calculated, and review output;
 - first-invalid focus follows rendered document order;
@@ -254,6 +313,49 @@ No migration file is expected. If one becomes necessary, implementation stops fo
   and non-color provenance;
 - screen-reader announcements for dynamic subclass availability and validation summaries;
 - guest preview, authenticated ordinary save, and invite-launched save/join smoke tests.
+- repeat the final browser pass from a fresh server after edits stop; include Cleric level 3 feature
+  rendering and long closed-select values at 320px.
+
+### Exact spell-progression regression names
+
+TypeScript adds the following focused cases, with equivalent fixtures shared by the Go tests:
+
+- `projectsWizardInitialSpellbookAndReplacementLimits`;
+- `reconstructsWizardInitialSixSpellbookChoices`;
+- `requiresTwoWizardAdditionsForEveryLaterLevel`;
+- `requiresWizardPreparedSpellsToBeSpellbookSubset`;
+- `reconstructsKnownSpellLearningAtEverySupportedLevel`;
+- `validatesKnownSpellReplacementHistory`;
+- `validatesPreparedCountExcludingAlwaysPreparedSpells`;
+- `validatesPactMagicSpellAndSlotProgression`;
+- `validatesHalfCasterSpellStartAndAvailability`;
+- `rejectsSpellDecisionsForNonSpellcasters`;
+- `boundsManualImportedSpellSelections`;
+- `rejectsTamperedFinalSpellState`;
+- `matchesGoSpellReconstructionFixtures`;
+- `acceptsMinimumSpellDecisionsForEveryClassAndLevelOneThroughFive`.
+
+Go adds the corresponding exported tests:
+
+- `TestProjectWizardInitialSpellbookAndReplacementLimits`;
+- `TestReconstructWizardInitialSixSpellbookChoices`;
+- `TestRequireTwoWizardAdditionsForEveryLaterLevel`;
+- `TestRequireWizardPreparedSpellsToBeSpellbookSubset`;
+- `TestReconstructKnownSpellLearningAtEverySupportedLevel`;
+- `TestValidateKnownSpellReplacementHistory`;
+- `TestValidatePreparedCountExcludingAlwaysPreparedSpells`;
+- `TestValidatePactMagicSpellAndSlotProgression`;
+- `TestValidateHalfCasterSpellStartAndAvailability`;
+- `TestRejectSpellDecisionsForNonSpellcasters`;
+- `TestBoundManualImportedSpellSelections`;
+- `TestRejectTamperedFinalSpellState`;
+- `TestMatchTypeScriptSpellReconstructionFixtures`;
+- `TestAcceptMinimumSpellDecisionsForEveryClassAndLevelOneThroughFive`.
+
+Replacement fixtures cover the allowed zero-or-one choice and reject excessive count, wrong level,
+missing prior removal, duplicate removal/addition IDs, same-spell replacement, wrong Class,
+unavailable spell level, and duplicate final membership. Prepared fixtures cover formula boundaries,
+automatic subclass grants, and exclusion of always-prepared spells from the normal count.
 
 ## Validation commands
 

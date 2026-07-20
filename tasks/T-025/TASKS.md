@@ -2,6 +2,9 @@
 
 Status: approved
 
+Spell-progression correction status: approved. Do not resume or commit Slice 4 until its Slice 2/3
+contract impact is reconciled.
+
 ## Approval and implementation gate
 
 - [x] Marcela approves the levels 1 through 5 V2 creation boundary.
@@ -30,6 +33,35 @@ Status: approved
 - [ ] Stop for review before commit or Slice 2.
 
 ## Slice 2: CharacterSheetV2 contracts and calculations
+
+### Blocking spell-progression amendment
+
+- [x] Obtain approval for the mode-specific spell-progression correction.
+- [ ] Add canonical `initialSpellbookSpells`, with Wizard level 1 equal to six and every other level
+  equal to zero.
+- [ ] Correct initial-acquisition replacement limits and validate canonical spell-mode invariants.
+- [ ] Replace final spell-list input with exact `none`, `known`, `prepared`, `pact-known`, and
+  `spellbook-prepared` unions.
+- [ ] Add exact cantrip selections, per-level learned spells, per-level replacements, Wizard initial
+  spellbook, Wizard additions, and final prepared decisions.
+- [ ] Persist the validated decision history and reconstruct final spell display entries on the
+  server.
+- [ ] Keep slot projection and slot overrides independent from spell selection.
+- [ ] Reject client-supplied or tampered final canonical spell state.
+- [ ] Test Wizard initial six-spell selection and exactly two additions at each later level.
+- [ ] Test Wizard prepared subset and prepared formula.
+- [ ] Test known spells selected at every supported level and exact learned deltas.
+- [ ] Test replacement count, level, prior removal, addition, membership, availability, and
+  duplication in TypeScript and Go.
+- [ ] Test prepared counts and always-prepared exclusions.
+- [ ] Test Pact Magic known spells, replacements, slot count, and slot level.
+- [ ] Test Paladin and Ranger half-caster start levels, availability, and mode behavior.
+- [ ] Test non-spellcaster rejection while retaining separately derived Race grants.
+- [ ] Test manual/imported spell fields, reasons, normal count participation, and inability to alter
+  slots or claim always-prepared status.
+- [ ] Test frontend/Go canonical data, reconstruction, and final-state parity.
+- [ ] Test authoritative reconstruction and tampered final-state rejection.
+- [ ] Test the valid minimum spell decisions for every Class at every level from 1 through 5.
 
 - [ ] Add exact V2 creation, saved, domain, structured-section, and provenance types.
 - [ ] Replace class-only choices with unified bounded Race/class `ruleChoices`.
@@ -67,7 +99,7 @@ Status: approved
 - [ ] Test manual Race with canonical Class builds with imported scores and Speed override, preserves
   Class automation, and rejects Race automation.
 - [ ] Test manual Class derives universal proficiency, requires maximum-HP override, supports valid
-  defense, rejects Class/Subclass automation, and requires null spellcasting.
+  defense, rejects Class/Subclass automation, and requires the exact `none` spellcasting variant.
 - [ ] Test combined manual Race/Class builds only with imported scores, Speed override, and
   maximum-HP override.
 - [ ] Test missing manual-identity imports or overrides fail safely without persistence.
@@ -97,6 +129,16 @@ Status: approved
 - [ ] Populate SRD spell metadata from the local generated rules.
 - [ ] Convert guided Fighter presets and manual entry to V2.
 - [ ] Add a complete review step.
+- [ ] Replace the universal spell-state dropdown with the approved mode-specific decision UI.
+- [ ] Make HP method and rolled-HP controls at least 44px.
+- [ ] Use stable canonical feature IDs as React keys and prove Cleric level 3 has no duplicate key.
+- [ ] Group Calculated versus Imported ability mode in a semantic fieldset with a legend.
+- [ ] Implement persistent desktop creation-step navigation without obstructing zoom or mobile.
+- [ ] Add restrained accessible live announcements for spell, equipment, override, and relevant
+  Other changes.
+- [ ] Prevent long closed-select values from causing horizontal overflow at 320px while retaining
+  accessible native controls.
+- [ ] Repeat browser validation from a fresh server after implementation edits stop.
 - [ ] Stop for review before commit or Slice 5.
 
 ## Slice 5: reference and integration completion
