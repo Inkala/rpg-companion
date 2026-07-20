@@ -87,7 +87,7 @@ func validateStoredV2Parity(character Character, sheet CharacterSheetV2) error {
 	maximumHP := sheet.HitPointProgression.Maximum.Value
 	if character.Name != sheet.Identity.Name || character.ClassName != className || !sameOptionalString(character.SubclassName, subclassName) ||
 		character.Level != sheet.Identity.Level || character.Ancestry != raceName || character.Background != sheet.Identity.Background ||
-		character.AbilityScores != persistedAbilityScores(sheet) || character.HitPoints.Max != maximumHP || character.HitPoints.Current != maximumHP ||
+		character.AbilityScores != persistedAbilityScores(sheet) || character.HitPoints.Max != maximumHP || character.HitPoints.Current < 0 || character.HitPoints.Current > maximumHP ||
 		character.ArmorClass != sheet.Combat.ArmorClass.Value || character.SpeedFt != sheet.Combat.SpeedFt.Value {
 		return errInvalidStoredCharacter
 	}

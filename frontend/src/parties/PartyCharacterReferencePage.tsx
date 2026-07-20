@@ -1,14 +1,16 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import type { CharacterDTO } from '../characters/apiTypes';
+import type { SavedCharacterDTO } from '../characters/apiTypes';
 import { CharacterReference } from '../characters/CharacterReference';
 import { characterSheetToReference } from '../characters/characterSheetToReference';
 import { isCharacterSheetV1 } from '../characters/characterSheetValidation';
+import { parseCharacterSheetDocument } from '../characters/characterSheetV2Validation';
+import { characterSheetV2ToReference } from '../characters/characterSheetV2ToReference';
 import './parties.css';
 
 type LoadPartyCharacter = (
   partyId: string,
   characterId: string,
-) => Promise<CharacterDTO>;
+) => Promise<SavedCharacterDTO>;
 
 type PartyCharacterReferencePageProps = {
   partyId: string;
@@ -29,7 +31,7 @@ type CharacterRequestKey = {
 
 type CharacterState = CharacterRequestKey & (
   | { status: 'loading' }
-  | { status: 'loaded'; character: CharacterDTO }
+  | { status: 'loaded'; character: SavedCharacterDTO }
   | { status: 'error' }
 );
 
@@ -129,7 +131,8 @@ export const PartyCharacterReferencePage = ({
     );
   }
 
-  if (!isCharacterSheetV1(visibleState.character.referencePayload)) {
+  const parsedSheet = parseCharacterSheetDocument(visibleState.character.referencePayload);
+  if (parsedSheet === null) {
     return (
       <PartyCharacterStateLayout title="Character Reference unavailable" onBack={onBack}>
         <p>This character does not have supported reference data.</p>
@@ -139,7 +142,9 @@ export const PartyCharacterReferencePage = ({
 
   return (
     <CharacterReference
-      character={characterSheetToReference(visibleState.character.referencePayload)}
+      character={isCharacterSheetV1(parsedSheet)
+        ? characterSheetToReference(parsedSheet)
+        : characterSheetV2ToReference(parsedSheet, visibleState.character.hitPoints)}
       onBack={onBack}
       backLabel="Back to party"
     />

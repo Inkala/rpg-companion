@@ -623,6 +623,22 @@
   background: rgba(158, 54, 54, 0.08);
 }
 
+.structured-errors__link {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  max-width: 100%;
+  box-sizing: border-box;
+  align-items: center;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.structured-errors__link:focus-visible {
+  outline: 3px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
 .structured-add-row,
 .repeatable-actions,
 .structured-creation__actions,

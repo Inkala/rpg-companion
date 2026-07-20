@@ -16,6 +16,7 @@ import {
   resetToCalculated,
 } from './characterSheetV2Calculations';
 import type { CharacterSheetV2, CreateCharacterV2RequestDTO } from './characterSheetV2';
+import { buildTestCharacterSheetV2 } from './characterSheetV2TestFixtures';
 
 describe('CharacterSheetV2 contract', () => {
   it('keeps Mara valid through the strict discriminated parser', () => {
@@ -32,6 +33,27 @@ describe('CharacterSheetV2 contract', () => {
     const sheet = validSheet();
     expect(isCharacterSheetV2(sheet)).toBe(true);
     expect(parseCharacterSheetDocument(sheet)?.schemaVersion).toBe('CharacterSheetV2');
+  });
+
+  it('accepts a valid saved V2 document after PostgreSQL JSONB reorders object keys', () => {
+    const normalized = reverseObjectKeys(validSheet()) as CharacterSheetV2;
+
+    expect(isCharacterSheetV2(normalized)).toBe(true);
+    expect(parseCharacterSheetDocument(normalized)?.schemaVersion).toBe('CharacterSheetV2');
+  });
+
+  it.each([
+    ['display line', (sheet: CharacterSheetV2) => { sheet.summary.displayLine = 'Misrepresented hero'; }],
+    ['landing concept', (sheet: CharacterSheetV2) => { sheet.summary.landingConcept = 'Invented concept'; }],
+    ['featured ability', (sheet: CharacterSheetV2) => { sheet.summary.featuredAbilities[0] = 'Invented feature'; }],
+    ['featured ability order', (sheet: CharacterSheetV2) => { sheet.summary.featuredAbilities.reverse(); }],
+    ['section label', (sheet: CharacterSheetV2) => { sheet.summary.referenceSections[0].label = 'Invented section'; }],
+    ['section order', (sheet: CharacterSheetV2) => { sheet.summary.referenceSections.reverse(); }],
+  ] as const)('rejects tampered generated summary: %s', (_name, mutate) => {
+    const sheet = buildTestCharacterSheetV2('Ari', 2);
+    expect(isCharacterSheetV2(sheet)).toBe(true);
+    mutate(sheet);
+    expect(isCharacterSheetV2(sheet)).toBe(false);
   });
 
   it('rejects unknown fields, malformed unions, unsafe text, excessive arrays, duplicate IDs, and invalid dice', () => {
@@ -111,6 +133,12 @@ describe('CharacterSheetV2 contract', () => {
     })).toEqual([]);
   });
 });
+
+const reverseObjectKeys = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(reverseObjectKeys);
+  if (value === null || typeof value !== 'object') return value;
+  return Object.fromEntries(Object.entries(value).reverse().map(([key, entry]) => [key, reverseObjectKeys(entry)]));
+};
 
 describe('CharacterSheetV2 calculations', () => {
   it('floors negative ability modifiers', () => {

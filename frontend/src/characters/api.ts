@@ -5,6 +5,7 @@ import type {
   CharacterSummaryDTO,
   CreateCharacterRequestDTO,
   LevelUpCharacterRequestDTO,
+  SavedCharacterDTO,
 } from './apiTypes';
 import type { CharacterV2DTO, CreateCharacterV2RequestDTO } from './characterSheetV2';
 
@@ -38,15 +39,15 @@ export function createCharacter(
   });
 }
 
-export const getCharacterById = async (id: string): Promise<CharacterDTO> => {
-  return characterRequest<CharacterDTO>(`/characters/${id}`);
+export const getCharacterById = async (id: string): Promise<SavedCharacterDTO> => {
+  return characterRequest<SavedCharacterDTO>(`/characters/${id}`);
 };
 
 export const levelUpCharacter = async (
   id: string,
   decisions: LevelUpCharacterRequestDTO,
-): Promise<CharacterDTO> => {
-  return characterRequest<CharacterDTO>(`/characters/${id}/level-up`, {
+): Promise<SavedCharacterDTO> => {
+  return characterRequest<SavedCharacterDTO>(`/characters/${id}/level-up`, {
     method: 'PATCH',
     body: JSON.stringify(decisions),
   });

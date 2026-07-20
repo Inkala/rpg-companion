@@ -1,4 +1,4 @@
-import type { CharacterDTO } from '../characters/apiTypes';
+import type { SavedCharacterDTO } from '../characters/apiTypes';
 import type {
   CreatePartyRequestDTO,
   CreatePartyResponseDTO,
@@ -114,8 +114,8 @@ export const createPartiesApiClient = ({
   const getPartyCharacter = (
     partyId: string,
     characterId: string,
-  ): Promise<CharacterDTO> => {
-    return request<CharacterDTO>(
+  ): Promise<SavedCharacterDTO> => {
+    return request<SavedCharacterDTO>(
       `/parties/${encodeURIComponent(partyId)}/characters/${encodeURIComponent(characterId)}`,
       getRequestInit(),
     );

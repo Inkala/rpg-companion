@@ -135,6 +135,26 @@ describe('CharacterCreationPage structured V2 flow', () => {
     }
   });
 
+  it('uses 44px shared error-summary targets in Name, Gender, Race, and Class document order', async () => {
+    startManual();
+    fireEvent.click(screen.getByRole('button', { name: 'Review character' }));
+
+    const alert = screen.getByRole('alert');
+    const expected = [
+      ['#field-name', 'Name is required.'],
+      ['#field-gender', 'Gender is required.'],
+      ['#field-racekey', 'Race is required.'],
+      ['#field-classkey', 'Class is required.'],
+    ];
+    const links = within(alert).getAllByRole('link').slice(0, expected.length);
+    expect(links.map((link) => [link.getAttribute('href'), link.textContent])).toEqual(expected);
+    for (const link of links) expect(link).toHaveClass('structured-errors__link');
+
+    const classControl = screen.getByRole('combobox', { name: 'Class' });
+    fireEvent.click(links[3]);
+    await waitFor(() => expect(classControl).toHaveFocus());
+  });
+
   it('shows Ranger Hunter only at the canonical subclass level', () => {
     startManual();
     fireEvent.change(screen.getByRole('combobox', { name: 'Class' }), { target: { value: 'ranger' } });

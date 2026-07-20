@@ -82,11 +82,14 @@ func TestSlice3StoredV2ValidationAcceptsExactTopLevelParityAndRejectsTampering(t
 		t.Fatalf("valid stored V2 character was rejected: %v", err)
 	}
 	for name, mutate := range map[string]func(*Character){
-		"name":          func(value *Character) { value.Name = "Different Name" },
-		"class":         func(value *Character) { value.ClassName = "Wizard" },
-		"race":          func(value *Character) { value.Ancestry = "Elf" },
-		"abilities":     func(value *Character) { value.AbilityScores.Strength++ },
-		"current HP":    func(value *Character) { value.HitPoints.Current-- },
+		"name":                func(value *Character) { value.Name = "Different Name" },
+		"class":               func(value *Character) { value.ClassName = "Wizard" },
+		"race":                func(value *Character) { value.Ancestry = "Elf" },
+		"abilities":           func(value *Character) { value.AbilityScores.Strength++ },
+		"negative current HP": func(value *Character) { value.HitPoints.Current = -1 },
+		"current HP above maximum": func(value *Character) {
+			value.HitPoints.Current = value.HitPoints.Max + 1
+		},
 		"maximum HP":    func(value *Character) { value.HitPoints.Max++ },
 		"armor class":   func(value *Character) { value.ArmorClass++ },
 		"walking speed": func(value *Character) { value.SpeedFt += 5 },

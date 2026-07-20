@@ -202,6 +202,13 @@ func buildLeveledCharacter(character Character, request levelUpRequest) (Charact
 	if validateStoredCharacterForPartyGM(character) != nil {
 		return Character{}, ErrLevelUpUnsupported
 	}
+	parsed, err := parseStoredCharacter(character)
+	if err != nil {
+		return Character{}, ErrLevelUpUnsupported
+	}
+	if parsed.V2 != nil {
+		return buildLeveledCharacterV2(character, *parsed.V2, request)
+	}
 
 	var sheet map[string]any
 	if err := json.Unmarshal(character.ReferencePayload, &sheet); err != nil {

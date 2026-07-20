@@ -250,7 +250,7 @@ export const StructuredCharacterCreation = ({
       </nav>
       {errors.length > 0 ? <div className="structured-errors" role="alert" aria-live="assertive">
         <strong>Review {errors.length} field{errors.length === 1 ? '' : 's'}.</strong>
-        <ul>{errors.map((error) => <li key={`${error.field}-${error.message}`}><a href={`#${fieldControlId(error.field)}`} onClick={(event) => focusErrorField(event, error.field)}>{error.message}</a></li>)}</ul>
+        <ul>{errors.map((error) => <li key={`${error.field}-${error.message}`}><a className="structured-errors__link" href={`#${fieldControlId(error.field)}`} onClick={(event) => focusErrorField(event, error.field)}>{error.message}</a></li>)}</ul>
       </div> : null}
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
       <form ref={formRef} noValidate onSubmit={(event) => { event.preventDefault(); review(); }}>

@@ -76,7 +76,9 @@ func (handler Handler) LevelUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, responseFromCharacter(updated))
+	if err := writeStoredCharacterResponse(w, http.StatusOK, updated, true); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not level up character")
+	}
 }
 
 func (handler Handler) Create(w http.ResponseWriter, r *http.Request) {

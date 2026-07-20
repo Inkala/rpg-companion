@@ -143,14 +143,14 @@ contract impact is reconciled.
 
 ## Slice 5: reference and integration completion
 
-- [ ] Render V2 in owner and GM-read-only Character Reference.
-- [ ] Preserve V1 and Mara rendering.
-- [ ] Adapt T-026 Level up to preserve valid V2 data and provenance.
-- [ ] Regression-test ordinary save navigation instead of reimplementing it.
-- [ ] Regression-test T-028 invite-launched automatic join, retry-only join, stale-result handling,
+- [x] Render V2 in owner and GM-read-only Character Reference.
+- [x] Preserve V1 and Mara rendering.
+- [x] Adapt T-026 Level up to preserve valid V2 data and provenance.
+- [x] Regression-test ordinary save navigation instead of reimplementing it.
+- [x] Regression-test T-028 invite-launched automatic join, retry-only join, stale-result handling,
   and token privacy.
-- [ ] Run focused and complete frontend/backend validation.
-- [ ] Run disposable PostgreSQL validation.
+- [x] Run focused and complete frontend/backend validation.
+- [x] Run disposable PostgreSQL validation.
 - [ ] Run accessibility and browser QA at 320px, 390px, 720px, and desktop.
 - [ ] Run CI, deployment, and public smoke validation.
 - [ ] Stop for final review before PR, merge, or deployment.

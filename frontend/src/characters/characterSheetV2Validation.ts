@@ -559,9 +559,10 @@ const validateSavedConsistency = (sheet: CharacterSheetV2): boolean => {
       equipment: structuredClone(sheet.equipment), other: structuredClone(sheet.other),
     };
     const expected = buildCharacterSheetV2(request);
-    const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
+    const same = jsonSemanticallyEqual;
     return same(sheet.abilityScores, expected.abilityScores) && same(sheet.hitPointProgression, expected.hitPointProgression) &&
       same(sheet.combat, expected.combat) && same(sheet.attacks, expected.attacks) && same(sheet.features, expected.features) &&
+      same(sheet.summary, expected.summary) &&
       same(sheet.spellcasting.ability, expected.spellcasting.ability) && same(sheet.spellcasting.spellSaveDC, expected.spellcasting.spellSaveDC) &&
       same(sheet.spellcasting.spellAttackBonus, expected.spellcasting.spellAttackBonus) && same(sheet.spellcasting.availableSpellLevels, expected.spellcasting.availableSpellLevels) &&
       same(sheet.spellcasting.decisionHistory, expected.spellcasting.decisionHistory) && same(sheet.spellcasting.spells, expected.spellcasting.spells) &&
@@ -575,6 +576,19 @@ const validateSavedConsistency = (sheet: CharacterSheetV2): boolean => {
 const slotSource = (slot: { level: number; max: number; provenance: unknown }) => ({
   level: slot.level, max: slot.max, provenance: slot.provenance,
 });
+
+const jsonSemanticallyEqual = (left: unknown, right: unknown): boolean => {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return Array.isArray(left) && Array.isArray(right) && left.length === right.length &&
+      left.every((entry, index) => jsonSemanticallyEqual(entry, right[index]));
+  }
+  if (!isObject(left) || !isObject(right)) return false;
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  return leftKeys.length === rightKeys.length && leftKeys.every((key) => owns(right, key) &&
+    jsonSemanticallyEqual(left[key], right[key]));
+};
 
 const canonicalSelectionsResolve = (identity: PlainObject): boolean => {
   const race = identity.race as PlainObject;

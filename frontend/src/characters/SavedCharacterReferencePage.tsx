@@ -4,10 +4,12 @@ import { toast } from 'sonner';
 import { LevelUpFlow } from '../level-up/LevelUpFlow';
 import { getLevelUpEligibility } from '../level-up/stateMachine';
 import { getCharacterById, levelUpCharacter } from './api';
-import type { CharacterDTO } from './apiTypes';
+import type { SavedCharacterDTO } from './apiTypes';
 import { CharacterReference } from './CharacterReference';
 import { characterSheetToReference } from './characterSheetToReference';
 import { isCharacterSheetV1 } from './characterSheetValidation';
+import { parseCharacterSheetDocument } from './characterSheetV2Validation';
+import { characterSheetV2ToReference } from './characterSheetV2ToReference';
 import './characters.css';
 
 type SavedCharacterReferencePageProps = {
@@ -21,7 +23,7 @@ type SavedCharacterState =
   | { status: 'signed-out' }
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'loaded'; character: CharacterDTO };
+  | { status: 'loaded'; character: SavedCharacterDTO };
 
 export const SavedCharacterReferencePage = ({
   characterId,
@@ -103,7 +105,8 @@ export const SavedCharacterReferencePage = ({
     );
   }
 
-  if (!isCharacterSheetV1(state.character.referencePayload)) {
+  const parsedSheet = parseCharacterSheetDocument(state.character.referencePayload);
+  if (parsedSheet === null) {
     return (
       <SavedCharacterStateLayout
         title="Character Reference is not available yet"
@@ -113,15 +116,17 @@ export const SavedCharacterReferencePage = ({
     );
   }
 
-  const sheet = state.character.referencePayload;
   const eligibility = getLevelUpEligibility(state.character);
+  const reference = isCharacterSheetV1(parsedSheet)
+    ? characterSheetToReference(parsedSheet)
+    : characterSheetV2ToReference(parsedSheet, state.character.hitPoints);
 
   const closeLevelUp = () => {
     setIsLevelUpOpen(false);
     window.setTimeout(() => levelUpTriggerRef.current?.focus(), 0);
   };
 
-  const handleLevelUpSuccess = (updated: CharacterDTO) => {
+  const handleLevelUpSuccess = (updated: SavedCharacterDTO) => {
     setState({ status: 'loaded', character: updated });
     setIsLevelUpOpen(false);
     toast.success('Character leveled up.');
@@ -138,7 +143,7 @@ export const SavedCharacterReferencePage = ({
   return (
     <>
       <CharacterReference
-        character={characterSheetToReference(sheet)}
+        character={reference}
         onBack={onBack}
         backLabel="Back to My characters"
         primaryAction={eligibility.eligible ? (
@@ -159,7 +164,7 @@ export const SavedCharacterReferencePage = ({
       {isLevelUpOpen && eligibility.eligible ? (
         <LevelUpFlow
           character={state.character}
-          sheet={sheet}
+          sheet={eligibility.sheet}
           onClose={closeLevelUp}
           onSubmit={(request) => levelUpCharacter(state.character.id, request)}
           onSuccess={handleLevelUpSuccess}

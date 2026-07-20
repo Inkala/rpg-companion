@@ -134,6 +134,41 @@ type SpellSelectionInput struct {
 	ImportReason      string   `json:"importReason,omitempty"`
 }
 
+func (input SpellSelectionInput) MarshalJSON() ([]byte, error) {
+	if input.Source == "srd" {
+		return json.Marshal(struct {
+			ID     string `json:"id"`
+			Source string `json:"source"`
+			Index  string `json:"index"`
+		}{input.ID, input.Source, input.Index})
+	}
+	if input.Source == "manual" {
+		return json.Marshal(struct {
+			ID                string   `json:"id"`
+			Source            string   `json:"source"`
+			Name              string   `json:"name"`
+			Level             int      `json:"level"`
+			School            string   `json:"school"`
+			CastingTime       string   `json:"castingTime"`
+			Range             string   `json:"range"`
+			Components        []string `json:"components"`
+			MaterialComponent string   `json:"materialComponent,omitempty"`
+			Duration          string   `json:"duration"`
+			Concentration     bool     `json:"concentration"`
+			Ritual            bool     `json:"ritual"`
+			Description       string   `json:"description"`
+			HigherLevelText   string   `json:"higherLevelText,omitempty"`
+			ImportReason      string   `json:"importReason"`
+		}{
+			input.ID, input.Source, input.Name, input.Level, input.School, input.CastingTime, input.Range,
+			nonNilStrings(input.Components), input.MaterialComponent, input.Duration, input.Concentration,
+			input.Ritual, input.Description, input.HigherLevelText, input.ImportReason,
+		})
+	}
+	type raw SpellSelectionInput
+	return json.Marshal(raw(input))
+}
+
 type SpellReplacementInput struct {
 	RemoveSpellID string              `json:"removeSpellId"`
 	Add           SpellSelectionInput `json:"add"`
@@ -165,6 +200,69 @@ type CharacterSpellcastingInput struct {
 	Additions        []WizardSpellbookAdditionInput `json:"additions,omitempty"`
 	PreparedSpellIDs []string                       `json:"preparedSpellIds,omitempty"`
 	SlotOverride     []CharacterSpellSlotOverride   `json:"slotOverride,omitempty"`
+}
+
+func (input CharacterSpellcastingInput) MarshalJSON() ([]byte, error) {
+	switch input.Mode {
+	case "none":
+		return json.Marshal(struct {
+			Mode string `json:"mode"`
+		}{Mode: input.Mode})
+	case "known", "pact-known":
+		return json.Marshal(struct {
+			Mode         string                       `json:"mode"`
+			Cantrips     []SpellSelectionInput        `json:"cantrips"`
+			Levels       []KnownSpellLevelInput       `json:"levels"`
+			SlotOverride []CharacterSpellSlotOverride `json:"slotOverride,omitempty"`
+		}{input.Mode, nonNilSpellSelections(input.Cantrips), nonNilKnownSpellLevels(input.Levels), input.SlotOverride})
+	case "prepared":
+		return json.Marshal(struct {
+			Mode         string                       `json:"mode"`
+			Cantrips     []SpellSelectionInput        `json:"cantrips"`
+			Prepared     []SpellSelectionInput        `json:"prepared"`
+			SlotOverride []CharacterSpellSlotOverride `json:"slotOverride,omitempty"`
+		}{input.Mode, nonNilSpellSelections(input.Cantrips), nonNilSpellSelections(input.Prepared), input.SlotOverride})
+	case "spellbook-prepared":
+		return json.Marshal(struct {
+			Mode             string                         `json:"mode"`
+			Cantrips         []SpellSelectionInput          `json:"cantrips"`
+			InitialSpellbook []SpellSelectionInput          `json:"initialSpellbook"`
+			Additions        []WizardSpellbookAdditionInput `json:"additions"`
+			PreparedSpellIDs []string                       `json:"preparedSpellIds"`
+			SlotOverride     []CharacterSpellSlotOverride   `json:"slotOverride,omitempty"`
+		}{input.Mode, nonNilSpellSelections(input.Cantrips), nonNilSpellSelections(input.InitialSpellbook), nonNilWizardAdditions(input.Additions), nonNilStrings(input.PreparedSpellIDs), input.SlotOverride})
+	default:
+		type raw CharacterSpellcastingInput
+		return json.Marshal(raw(input))
+	}
+}
+
+func nonNilSpellSelections(values []SpellSelectionInput) []SpellSelectionInput {
+	if values == nil {
+		return []SpellSelectionInput{}
+	}
+	return values
+}
+
+func nonNilKnownSpellLevels(values []KnownSpellLevelInput) []KnownSpellLevelInput {
+	if values == nil {
+		return []KnownSpellLevelInput{}
+	}
+	return values
+}
+
+func nonNilWizardAdditions(values []WizardSpellbookAdditionInput) []WizardSpellbookAdditionInput {
+	if values == nil {
+		return []WizardSpellbookAdditionInput{}
+	}
+	return values
+}
+
+func nonNilStrings(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }
 
 type CharacterFeatureInput struct {

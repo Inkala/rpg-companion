@@ -325,7 +325,7 @@ func requestFromSheet(sheet CharacterSheetV2) CreateCharacterV2RequestDTO {
 }
 
 func sameAuthoritativeV2(actual, expected CharacterSheetV2) bool {
-	if !reflect.DeepEqual(actual.AbilityScores, expected.AbilityScores) || !reflect.DeepEqual(actual.HitPointProgression, expected.HitPointProgression) || !reflect.DeepEqual(actual.Combat, expected.Combat) || !reflect.DeepEqual(actual.Attacks, expected.Attacks) || !reflect.DeepEqual(actual.Features, expected.Features) {
+	if !reflect.DeepEqual(actual.AbilityScores, expected.AbilityScores) || !reflect.DeepEqual(actual.HitPointProgression, expected.HitPointProgression) || !reflect.DeepEqual(actual.Combat, expected.Combat) || !reflect.DeepEqual(actual.Attacks, expected.Attacks) || !reflect.DeepEqual(actual.Features, expected.Features) || !reflect.DeepEqual(actual.Summary, expected.Summary) {
 		return false
 	}
 	if (actual.Spellcasting == nil) != (expected.Spellcasting == nil) {
@@ -335,12 +335,19 @@ func sameAuthoritativeV2(actual, expected CharacterSheetV2) bool {
 		return true
 	}
 	left, right := *actual.Spellcasting, *expected.Spellcasting
+	if len(left.Slots) != len(right.Slots) {
+		return false
+	}
 	for index := range left.Slots {
-		if index < len(right.Slots) {
-			left.Slots[index].Used = 0
-			right.Slots[index].Used = 0
+		leftSlot, rightSlot := left.Slots[index], right.Slots[index]
+		leftSlot.Used = 0
+		rightSlot.Used = 0
+		if !reflect.DeepEqual(leftSlot, rightSlot) {
+			return false
 		}
 	}
+	left.Slots = nil
+	right.Slots = nil
 	return reflect.DeepEqual(left, right)
 }
 
