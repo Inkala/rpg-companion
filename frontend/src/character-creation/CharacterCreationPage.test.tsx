@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createCharacter } from '../characters/api';
+import { levelUpRules } from '../rules/generated/levelUpRules';
 import { CharacterCreationPage } from './CharacterCreationPage';
 
 const createCharacterMock = vi.mocked(createCharacter);
@@ -454,24 +455,29 @@ describe('CharacterCreationPage structured V2 flow', () => {
     expect(screen.getAllByText('Domain Spells', { selector: '.canonical-list li' })).toHaveLength(2);
   });
 
-  it('renders canonical feature lists without duplicate-key warnings for every Class through level five', () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    startManual();
-    const classSelect = screen.getByRole('combobox', { name: 'Class' }) as HTMLSelectElement;
-    const classes = [...classSelect.options].map((option) => option.value).filter((value) => value !== 'manual');
-    for (const classIndex of classes) {
-      fireEvent.change(classSelect, { target: { value: classIndex } });
-      for (let level = 1; level <= 5; level += 1) {
-        fireEvent.change(screen.getByRole('combobox', { name: 'Level' }), { target: { value: String(level) } });
-        const subclass = screen.queryByRole('combobox', { name: 'Subclass' }) as HTMLSelectElement | null;
-        const firstSubclass = subclass ? [...subclass.options].find((option) => option.value !== '') : undefined;
-        if (subclass && firstSubclass) fireEvent.change(subclass, { target: { value: firstSubclass.value } });
+  it.each(levelUpRules.classes.map(({ index, name }) => [name, index] as const))(
+    'renders canonical feature lists without duplicate-key warnings for %s through level five',
+    (_className, classIndex) => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      try {
+        startManual();
+        const classSelect = screen.getByRole('combobox', { name: 'Class' }) as HTMLSelectElement;
+        fireEvent.change(classSelect, { target: { value: classIndex } });
+        for (let level = 1; level <= 5; level += 1) {
+          fireEvent.change(screen.getByRole('combobox', { name: 'Level' }), { target: { value: String(level) } });
+          const subclass = screen.queryByRole('combobox', { name: 'Subclass' }) as HTMLSelectElement | null;
+          const firstSubclass = subclass ? [...subclass.options].find((option) => option.value !== '') : undefined;
+          if (subclass && firstSubclass) fireEvent.change(subclass, { target: { value: firstSubclass.value } });
+        }
+        const duplicateKeyWarnings = consoleError.mock.calls.filter((arguments_) =>
+          arguments_.some((value) => String(value).includes('same key')),
+        );
+        expect(duplicateKeyWarnings).toEqual([]);
+      } finally {
+        consoleError.mockRestore();
       }
-    }
-    const duplicateKeyWarnings = consoleError.mock.calls.filter((arguments_) => arguments_.some((value) => String(value).includes('same key')));
-    consoleError.mockRestore();
-    expect(duplicateKeyWarnings).toEqual([]);
-  });
+    },
+  );
 
   it('shows a structured attack and complete manual feature details on review', () => {
     startManual();
