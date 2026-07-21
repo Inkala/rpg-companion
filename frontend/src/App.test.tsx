@@ -447,7 +447,8 @@ describe('App', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
-    expect(await screen.findByRole('heading', { name: 'Party invite unavailable' })).toHaveFocus();
+    const unavailableHeading = await screen.findByRole('heading', { name: 'Party invite unavailable' });
+    await waitFor(() => expect(unavailableHeading).toHaveFocus());
     expect(screen.getByRole('button', { name: 'Try another code' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Go to My parties' })).toBeInTheDocument();
     expect(document.body).not.toHaveTextContent(code);
