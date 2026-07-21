@@ -452,3 +452,29 @@ Consequences:
 T-020 Slice 1 must add exact-key privacy tests and PostgreSQL membership-scoping tests. Slice 2 must
 preserve modified-click link behavior, avoid nested interactive elements, and keep Party detail,
 invite, join, and Character Reference behavior unchanged.
+
+## 2026-07-20: Use Playwright for browser regression coverage
+
+Context:
+Repeated manual browser QA is costly and slow, while Hunin now has several critical cross-page
+journeys involving authentication, structured character creation, Level Up, Party invitations,
+responsive behavior, and accessibility.
+
+Decision:
+Add Playwright with `@axe-core/playwright` as the browser regression foundation after T-025 and
+T-029 integrate. The harness uses a disposable PostgreSQL 17 database and loopback-only application
+servers. Initial required coverage targets Chromium desktop and mobile. Pull requests run a bounded
+smoke suite and `main` runs the complete Chromium suite. Firefox and WebKit remain optional until the
+Chromium foundation is stable. No production test endpoint, committed authenticated state, or
+production data access is permitted.
+
+Reason:
+Automating stable user journeys makes regressions reproducible and reduces dependence on repeated,
+token-intensive manual QA while retaining focused human review for genuinely visual or exploratory
+work.
+
+Consequences:
+T-030 owns the test harness, isolated fixtures, privacy-safe failure artifacts, accessibility and
+responsive assertions, CI jobs, and validation documentation. The smoke job becomes required only
+after ten consecutive stable runs, and T-030 closes only after three consecutive clean full-suite
+runs. Any required product-code hook must stop for renewed approval.
