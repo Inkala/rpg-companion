@@ -61,9 +61,15 @@ describe('JoinPartyPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Join a party' })).toBeInTheDocument();
     expect(screen.getByText('Enter the invitation code shared by your GM.')).toBeInTheDocument();
+    expect(screen.queryByText('Party invite')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Eight letters or numbers, shown as XXXX-XXXX.'),
+    ).not.toBeInTheDocument();
     const input = screen.getByRole('textbox', { name: 'Invitation code' });
     expect(input).toHaveAttribute('autocomplete', 'off');
     expect(input).toHaveAttribute('spellcheck', 'false');
+    expect(input).not.toHaveAttribute('aria-invalid');
+    expect(input).not.toHaveAttribute('aria-describedby');
     await waitFor(() => expect(input).toHaveFocus());
     expect(screen.queryByText('This party invite is unavailable.')).not.toBeInTheDocument();
 
@@ -81,14 +87,41 @@ describe('JoinPartyPage', () => {
     renderPage({ token: null, onSubmitCode });
 
     const input = screen.getByRole('textbox', { name: 'Invitation code' });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-invalid');
+    expect(input).not.toHaveAttribute('aria-describedby');
     fireEvent.change(input, { target: { value: 'ABCI-1234' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
 
     expect(onSubmitCode).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    const error = screen.getByRole('alert');
+    expect(error).toHaveTextContent(
       'Enter the eight-character invitation code using letters and numbers.',
     );
+    expect(error).toHaveAttribute('id', 'party-invite-code-error');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAttribute('aria-describedby', 'party-invite-code-error');
     expect(input).toHaveFocus();
+
+    fireEvent.change(input, { target: { value: 'ABCD-EFGH' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-invalid');
+    expect(input).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('exposes scoped layout hooks for one labelled input area and one shared action row', () => {
+    const { container } = renderPage({ token: null });
+
+    const input = screen.getByRole('textbox', { name: 'Invitation code' });
+    const form = input.closest('form');
+    expect(form).toHaveClass('party-invite-code-form');
+    expect(input.closest('.party-invite-code-form__field')).not.toBeNull();
+    expect(input.closest('label')).toHaveClass('form-field');
+
+    const actions = container.querySelector('.party-invite-code-form__actions');
+    expect(actions).not.toBeNull();
+    expect(within(actions as HTMLElement).getByRole('button', { name: 'Continue' })).toBeInTheDocument();
+    expect(within(actions as HTMLElement).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
   it('reveals no invite details and performs no requests while signed out', () => {
