@@ -5,18 +5,50 @@ import { buildGeneratedFighterCharacterSheet } from '../character-creation/gener
 import { CharactersApiError } from '../characters/api';
 import type { CharacterDTO, LevelUpCharacterRequestDTO } from '../characters/apiTypes';
 import type { CharacterSheetV1 } from '../characters/characterSheet';
+import { testCharacterV2DTO } from '../characters/characterSheetV2TestFixtures';
 import {
   LevelUpFlow,
+  LevelUpClassChoiceStep,
   LevelUpReviewStep,
   buildLevelUpReview,
   buildLevelUpRequest,
   eligibleLevelUpSpells,
   validateLevelUpDraft,
+  createLevelUpDraft,
 } from './LevelUpFlow';
-import { buildLevelUpPlan } from './stateMachine';
+import { buildLevelUpPlan, getLevelUpEligibility } from './stateMachine';
 import { completeDraftFor, viableCharacterAt } from './levelUpTestFixtures';
 
 describe('LevelUpFlow', () => {
+  it('keeps V2 level-four choices and review inputs inside the bounded contract', () => {
+    const character = testCharacterV2DTO('Bounded V2 Hero', 3);
+    const eligibility = getLevelUpEligibility(character);
+    if (!eligibility.eligible) throw new Error(`unexpected V2 ineligibility: ${eligibility.reason}`);
+    render(
+      <LevelUpFlow
+        character={character}
+        sheet={eligibility.sheet}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        onSuccess={vi.fn()}
+        onReload={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.getByRole('heading', { name: 'Choose an Ability Score Improvement' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Record a manual feat note')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Strength: 15'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByLabelText(/I reviewed the values that will be retained/));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(screen.queryByText('Explicit typed overrides (optional)')).not.toBeInTheDocument();
+    expect(screen.getByText('Armor Class').closest('.level-up-review-row')).toHaveTextContent(/Proposed:\s*\d+/);
+    expect(screen.getByText('Speed').closest('.level-up-review-row')).toHaveTextContent(/Proposed:\s*\d+ ft/);
+    expect(screen.getByText('Attacks').closest('.level-up-review-row')).toHaveTextContent('Proposed: No represented attacks');
+  });
   it('submits once synchronously, keeps the sheet out of the DTO, and renders the server result', async () => {
     const character = eligibleFighter();
     let resolveSubmit: ((value: CharacterDTO) => void) | undefined;
@@ -146,6 +178,74 @@ describe('LevelUpFlow', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Enter a whole-number d10 roll');
     await waitFor(() => expect(screen.getByLabelText('Hit die roll')).toHaveFocus());
+  });
+
+  it('requires an explicit Fighter subclass selection and preserves it when returning Back', async () => {
+    const character = eligibleFighter(2);
+    renderFlow(character);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    const champion = screen.getByRole('radio', { name: /Use SRD Champion/ });
+    const manual = screen.getByRole('radio', { name: /Retain a reviewed manual subclass/ });
+    expect(champion).not.toBeChecked();
+    expect(manual).not.toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.getByRole('heading', { name: 'Choose a subclass' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose a subclass.');
+    await waitFor(() => expect(champion).toHaveFocus());
+
+    fireEvent.click(champion);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByRole('radio', { name: /Use SRD Champion/ })).toBeChecked();
+  });
+
+  it('starts a fresh Fighter subclass flow unselected after a prior explicit choice', () => {
+    const first = eligibleFighter(2);
+    const rendered = renderFlow(first);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('radio', { name: /Use SRD Champion/ }));
+    expect(screen.getByRole('radio', { name: /Use SRD Champion/ })).toBeChecked();
+    rendered.unmount();
+
+    renderFlow({ ...eligibleFighter(2), id: '44444444-4444-4444-4444-444444444444' });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(screen.getByRole('radio', { name: /Use SRD Champion/ })).not.toBeChecked();
+  });
+
+  it('does not preselect the representative Druid subclass at its canonical timing', () => {
+    const character = viableCharacterAt('Druid', 1);
+    renderFlow(character);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(screen.getByRole('heading', { name: 'Choose a subclass' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Use SRD Land/ })).not.toBeChecked();
+  });
+
+  it('renders only eligible level-two Warlock invocations without preselecting one', () => {
+    const character = viableCharacterAt('Warlock', 1);
+    const sheet = character.referencePayload as CharacterSheetV1;
+    const plan = buildLevelUpPlan(character, sheet);
+    const draft = createLevelUpDraft();
+    render(
+      <LevelUpClassChoiceStep
+        plan={plan}
+        sheet={sheet}
+        draft={draft}
+        updateDraft={vi.fn()}
+        errors={[]}
+      />,
+    );
+
+    expect(screen.queryByRole('checkbox', { name: /Book of Ancient Secrets/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /Voice of the Chain Master/ })).not.toBeInTheDocument();
+    const invocations = screen.getAllByRole('checkbox');
+    expect(invocations.length).toBeGreaterThan(0);
+    for (const invocation of invocations) expect(invocation).not.toBeChecked();
   });
 
   it('reviews reliable proficiency-derived skills while preserving manual exceptions', () => {
@@ -415,8 +515,8 @@ const advanceFromPrerequisitesToReview = () => {
 const renderFlow = (
   character: CharacterDTO,
   overrides: Partial<{
-    onSubmit: (request: Parameters<React.ComponentProps<typeof LevelUpFlow>['onSubmit']>[0]) => Promise<CharacterDTO>;
-    onSuccess: (character: CharacterDTO) => void;
+    onSubmit: React.ComponentProps<typeof LevelUpFlow>['onSubmit'];
+    onSuccess: React.ComponentProps<typeof LevelUpFlow>['onSuccess'];
     onReload: () => void;
   }> = {},
 ) => render(

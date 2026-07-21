@@ -12,45 +12,22 @@ import (
 )
 
 const (
-	maxCharacterNameRunes    = 80
-	maxCharacterCoreRunes    = 64
-	maxAbilityScore          = 30
-	maxHitPoints             = 9999
-	maxArmorClass            = 100
-	maxSpeedFt               = 1000
-	maxReferencePayloadBytes = 65536
+	maxCharacterNameRunes            = 80
+	maxCharacterCoreRunes            = 64
+	maxAbilityScore                  = 30
+	maxHitPoints                     = 9999
+	maxArmorClass                    = 100
+	maxSpeedFt                       = 1000
+	maxV1ReferencePayloadBytes       = 65536
+	maxV2RequestPayloadBytes         = 131072
+	maxV2StoredReferencePayloadBytes = 262144
 )
 
 var errInvalidStoredCharacter = errors.New("stored character is invalid")
 
 func validateStoredCharacterForPartyGM(character Character) error {
-	if len(character.ReferencePayload) == 0 || len(character.ReferencePayload) > maxReferencePayloadBytes {
-		return errInvalidStoredCharacter
-	}
-	if !isJSONObject(character.ReferencePayload) {
-		return errInvalidStoredCharacter
-	}
-
-	validationErrors := validateCharacterSheetV1Envelope(
-		character.ReferencePayload,
-		characterSheetExpectedValues{
-			Name:          character.Name,
-			Ancestry:      character.Ancestry,
-			Background:    character.Background,
-			ClassName:     character.ClassName,
-			SubclassName:  character.SubclassName,
-			Level:         character.Level,
-			AbilityScores: character.AbilityScores,
-			HitPoints:     character.HitPoints,
-			ArmorClass:    character.ArmorClass,
-			SpeedFt:       character.SpeedFt,
-		},
-	)
-	if len(validationErrors) > 0 {
-		return errInvalidStoredCharacter
-	}
-
-	return nil
+	_, err := parseStoredCharacter(character)
+	return err
 }
 
 func characterFromRequest(request createCharacterRequest, now time.Time) (Character, error) {
@@ -125,7 +102,7 @@ func characterFromRequest(request createCharacterRequest, now time.Time) (Charac
 		validationErrors = append(validationErrors, "referencePayload is required")
 	} else if !isJSONObject(*request.ReferencePayload) {
 		validationErrors = append(validationErrors, "referencePayload must be a JSON object")
-	} else if len(*request.ReferencePayload) > maxReferencePayloadBytes {
+	} else if len(*request.ReferencePayload) > maxV1ReferencePayloadBytes {
 		validationErrors = append(validationErrors, "referencePayload must be at most 65536 bytes")
 	} else if envelopeErrors := validateCharacterSheetV1Envelope(*request.ReferencePayload, characterSheetExpectedValues{
 		Name:          name,

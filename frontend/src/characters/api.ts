@@ -5,7 +5,9 @@ import type {
   CharacterSummaryDTO,
   CreateCharacterRequestDTO,
   LevelUpCharacterRequestDTO,
+  SavedCharacterDTO,
 } from './apiTypes';
+import type { CharacterV2DTO, CreateCharacterV2RequestDTO } from './characterSheetV2';
 
 type ErrorResponse = {
   error?: string;
@@ -26,24 +28,26 @@ export const listCharacterSummaries = async (): Promise<CharacterSummaryDTO[]> =
   return response.characters;
 };
 
-export const createCharacter = async (
-  character: CreateCharacterRequestDTO,
-): Promise<CharacterDTO> => {
-  return characterRequest<CharacterDTO>('/characters', {
+export function createCharacter(character: CreateCharacterV2RequestDTO): Promise<CharacterV2DTO>;
+export function createCharacter(character: CreateCharacterRequestDTO): Promise<CharacterDTO>;
+export function createCharacter(
+  character: CreateCharacterRequestDTO | CreateCharacterV2RequestDTO,
+): Promise<CharacterDTO | CharacterV2DTO> {
+  return characterRequest<CharacterDTO | CharacterV2DTO>('/characters', {
     method: 'POST',
     body: JSON.stringify(character),
   });
-};
+}
 
-export const getCharacterById = async (id: string): Promise<CharacterDTO> => {
-  return characterRequest<CharacterDTO>(`/characters/${id}`);
+export const getCharacterById = async (id: string): Promise<SavedCharacterDTO> => {
+  return characterRequest<SavedCharacterDTO>(`/characters/${id}`);
 };
 
 export const levelUpCharacter = async (
   id: string,
   decisions: LevelUpCharacterRequestDTO,
-): Promise<CharacterDTO> => {
-  return characterRequest<CharacterDTO>(`/characters/${id}/level-up`, {
+): Promise<SavedCharacterDTO> => {
+  return characterRequest<SavedCharacterDTO>(`/characters/${id}/level-up`, {
     method: 'PATCH',
     body: JSON.stringify(decisions),
   });

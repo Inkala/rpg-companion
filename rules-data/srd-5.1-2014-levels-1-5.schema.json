@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://hunin.app/schemas/srd-5.1-2014-levels-1-5.schema.json",
-  "title": "Hunin bounded SRD 5.1 level-up rules",
+  "title": "Hunin bounded SRD 5.1 level-up and character-creation rules",
   "type": "object",
   "additionalProperties": false,
-  "required": ["metadata", "supportedTransitions", "classes", "spells"],
+  "required": ["metadata", "supportedTransitions", "classes", "races", "subraces", "raceTraits", "raceChoices", "equipmentCategories", "equipment", "spells", "calculationRules", "featureModifiers"],
   "properties": {
     "metadata": { "$ref": "#/$defs/metadata" },
     "supportedTransitions": {
@@ -19,22 +19,68 @@
       "maxItems": 12,
       "items": { "$ref": "#/$defs/class" }
     },
+    "races": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": { "$ref": "#/$defs/race" }
+    },
+    "subraces": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/subrace" }
+    },
+    "raceTraits": {
+      "type": "array",
+      "minItems": 38,
+      "maxItems": 38,
+      "items": { "$ref": "#/$defs/raceTrait" }
+    },
+    "raceChoices": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/raceChoice" }
+    },
+    "equipmentCategories": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": { "$ref": "#/$defs/equipmentCategory" }
+    },
+    "equipment": {
+      "type": "array",
+      "minItems": 237,
+      "maxItems": 237,
+      "items": { "$ref": "#/$defs/equipment" }
+    },
     "spells": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 169,
+      "maxItems": 169,
       "items": { "$ref": "#/$defs/spell" }
+    },
+    "calculationRules": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/calculationRule" }
+    },
+    "featureModifiers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/featureModifier" }
     }
   },
   "$defs": {
     "identifier": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 200 },
     "nonEmpty": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "longText": { "type": "string", "minLength": 1, "maxLength": 20000 },
     "metadata": {
       "type": "object",
       "additionalProperties": false,
       "required": ["snapshotId", "schemaVersion", "ruleset", "importedAt", "license", "attribution", "sources", "transformation"],
       "properties": {
         "snapshotId": { "$ref": "#/$defs/identifier" },
-        "schemaVersion": { "const": 1 },
+        "schemaVersion": { "const": 3 },
         "ruleset": { "const": "D&D 5E 2014 SRD 5.1" },
         "importedAt": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
         "license": { "const": "CC-BY-4.0" },
@@ -113,6 +159,9 @@
           }
         },
         "optionSource": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "boundedRule": { "enum": ["any-srd-skill-proficiency", "ability-score-improvement-or-srd-feat"] },
+        "requiredSubclassIndex": { "$ref": "#/$defs/identifier" },
+        "sourceFeatureIndex": { "$ref": "#/$defs/identifier" },
         "options": { "type": "array", "items": { "$ref": "#/$defs/choiceOption" } },
         "allowManual": { "type": "boolean" }
       }
@@ -120,7 +169,7 @@
     "standardSpellcasting": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "ability", "cantripsKnown", "spellsKnown", "preparedFormula", "replacementLimit", "wizardSpellbookAdditions", "slots", "availableSpellLevels"],
+      "required": ["mode", "ability", "cantripsKnown", "spellsKnown", "preparedFormula", "replacementLimit", "initialSpellbookSpells", "wizardSpellbookAdditions", "slots", "availableSpellLevels"],
       "properties": {
         "mode": { "enum": ["known", "prepared", "spellbook-prepared"] },
         "ability": { "enum": ["intelligence", "wisdom", "charisma"] },
@@ -128,6 +177,7 @@
         "spellsKnown": { "type": ["integer", "null"], "minimum": 0, "maximum": 20 },
         "preparedFormula": { "type": ["string", "null"] },
         "replacementLimit": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "initialSpellbookSpells": { "type": "integer", "minimum": 0, "maximum": 6 },
         "wizardSpellbookAdditions": { "type": "integer", "minimum": 0, "maximum": 2 },
         "slots": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "integer", "minimum": 0, "maximum": 4 } },
         "availableSpellLevels": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 3 } }
@@ -136,13 +186,14 @@
     "pactSpellcasting": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode", "ability", "cantripsKnown", "spellsKnown", "replacementLimit", "pactSlots", "pactSlotLevel", "availableSpellLevels"],
+      "required": ["mode", "ability", "cantripsKnown", "spellsKnown", "replacementLimit", "initialSpellbookSpells", "pactSlots", "pactSlotLevel", "availableSpellLevels"],
       "properties": {
         "mode": { "const": "pact-known" },
         "ability": { "const": "charisma" },
         "cantripsKnown": { "type": "integer", "minimum": 0, "maximum": 20 },
         "spellsKnown": { "type": "integer", "minimum": 0, "maximum": 20 },
-        "replacementLimit": { "const": 1 },
+        "replacementLimit": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "initialSpellbookSpells": { "const": 0 },
         "pactSlots": { "type": "integer", "minimum": 0, "maximum": 4 },
         "pactSlotLevel": { "type": "integer", "minimum": 0, "maximum": 3 },
         "availableSpellLevels": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 3 } }
@@ -194,10 +245,228 @@
         "requiredFeatureIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }
       }
     },
+    "abilityBonus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ability", "bonus"],
+      "properties": {
+        "ability": { "enum": ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"] },
+        "bonus": { "type": "integer", "minimum": 1, "maximum": 2 }
+      }
+    },
+    "race": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "name", "speedFt", "ignoresHeavyArmorSpeedPenalty", "abilityBonuses", "languageIndexes", "traitIndexes", "subraceIndexes", "sourceUrl"],
+      "properties": {
+        "index": { "$ref": "#/$defs/identifier" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "speedFt": { "type": "integer", "minimum": 5, "maximum": 100 },
+        "ignoresHeavyArmorSpeedPenalty": { "type": "boolean" },
+        "abilityBonuses": { "type": "array", "items": { "$ref": "#/$defs/abilityBonus" } },
+        "languageIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "traitIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "subraceIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "sourceUrl": { "type": "string", "pattern": "^https://www\\.dnd5eapi\\.co/api/2014/races/" }
+      }
+    },
+    "subrace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "name", "raceIndex", "description", "abilityBonuses", "traitIndexes", "sourceUrl"],
+      "properties": {
+        "index": { "$ref": "#/$defs/identifier" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "raceIndex": { "$ref": "#/$defs/identifier" },
+        "description": { "$ref": "#/$defs/nonEmpty" },
+        "abilityBonuses": { "type": "array", "items": { "$ref": "#/$defs/abilityBonus" } },
+        "traitIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "sourceUrl": { "type": "string", "pattern": "^https://www\\.dnd5eapi\\.co/api/2014/subraces/" }
+      }
+    },
+    "raceTrait": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "name", "description", "raceIndexes", "subraceIndexes", "proficiencyIndexes", "optionIndexes", "sourceUrl"],
+      "properties": {
+        "index": { "$ref": "#/$defs/identifier" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "$ref": "#/$defs/longText" },
+        "raceIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "subraceIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "proficiencyIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "optionIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "sourceUrl": { "type": "string", "pattern": "^https://www\\.dnd5eapi\\.co/api/2014/traits/" }
+      }
+    },
+    "raceChoice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceOwnerType", "sourceOwnerIndex", "selectionCount", "optionType", "allowedOptionIndexes", "boundedRule", "optionValue", "exclusivityConstraint"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "sourceOwnerType": { "enum": ["race", "race-trait"] },
+        "sourceOwnerIndex": { "$ref": "#/$defs/identifier" },
+        "selectionCount": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "optionType": { "enum": ["ability-bonus", "language", "race-trait", "skill-proficiency", "spell", "tool-proficiency"] },
+        "allowedOptionIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "boundedRule": { "type": ["string", "null"], "enum": ["any-srd-language-not-already-known", "any-srd-skill-proficiency", null] },
+        "optionValue": { "type": ["integer", "null"], "minimum": 1, "maximum": 2 },
+        "exclusivityConstraint": { "type": ["string", "null"], "enum": ["distinct-options", null] }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["quantity", "unit"],
+      "properties": {
+        "quantity": { "type": "number", "minimum": 0 },
+        "unit": { "enum": ["cp", "sp", "gp", "pp"] }
+      }
+    },
+    "quantityUnit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["quantity", "unit"],
+      "properties": {
+        "quantity": { "type": "number", "minimum": 0 },
+        "unit": { "type": "string", "minLength": 1, "maxLength": 40 }
+      }
+    },
+    "equipmentContent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "quantity"],
+      "properties": {
+        "index": { "$ref": "#/$defs/identifier" },
+        "quantity": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    },
+    "damage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dice", "type"],
+      "properties": {
+        "dice": { "type": "string", "pattern": "^[0-9]+(?:d[0-9]+)?$" },
+        "type": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "distanceRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["normal", "long"],
+      "properties": {
+        "normal": { "type": ["integer", "null"], "minimum": 0 },
+        "long": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "weapon": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "rangeType", "categoryRange", "damage", "twoHandedDamage", "range", "throwRange", "propertyIndexes"],
+      "properties": {
+        "category": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "rangeType": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "categoryRange": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "damage": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/damage" }] },
+        "twoHandedDamage": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/damage" }] },
+        "range": { "$ref": "#/$defs/distanceRange" },
+        "throwRange": { "$ref": "#/$defs/distanceRange" },
+        "propertyIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }
+      }
+    },
+    "armor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "baseArmorClass", "dexterityBonus", "maximumDexterityBonus", "strengthMinimum", "stealthDisadvantage", "shieldBonus"],
+      "properties": {
+        "category": { "enum": ["Light", "Medium", "Heavy", "Shield"] },
+        "baseArmorClass": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "dexterityBonus": { "type": "boolean" },
+        "maximumDexterityBonus": { "type": ["integer", "null"], "minimum": 0, "maximum": 10 },
+        "strengthMinimum": { "type": "integer", "minimum": 0, "maximum": 20 },
+        "stealthDisadvantage": { "type": "boolean" },
+        "shieldBonus": { "type": "integer", "minimum": 0, "maximum": 5 }
+      }
+    },
+    "equipmentSubtype": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "name"],
+      "properties": {
+        "index": { "$ref": "#/$defs/identifier" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
+    "vehicle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["categoryIndex", "category", "speed", "capacity"],
+      "properties": {
+        "categoryIndex": { "enum": ["mounts-and-other-animals", "tack-harness-and-drawn-vehicles", "waterborne-vehicles"] },
+        "category": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "speed": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/quantityUnit" }] },
+        "capacity": { "type": ["string", "null"], "maxLength": 100 }
+      }
+    },
+    "equipment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "name", "categoryIndex", "cost", "weight", "quantity", "description", "special", "contents", "gear", "tool", "vehicle", "weapon", "armor", "sourceUrl"],
+      "properties": {
+        "index": { "$ref": "#/$defs/identifier" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "categoryIndex": { "enum": ["adventuring-gear", "armor", "mounts-and-vehicles", "tools", "weapon"] },
+        "cost": { "$ref": "#/$defs/cost" },
+        "weight": { "type": ["number", "null"], "minimum": 0 },
+        "quantity": { "type": ["integer", "null"], "minimum": 1, "maximum": 100 },
+        "description": { "type": "array", "items": { "$ref": "#/$defs/nonEmpty" } },
+        "special": { "type": "array", "items": { "$ref": "#/$defs/nonEmpty" } },
+        "contents": { "type": "array", "items": { "$ref": "#/$defs/equipmentContent" } },
+        "gear": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/equipmentSubtype" }] },
+        "tool": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/equipmentSubtype" }] },
+        "vehicle": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/vehicle" }] },
+        "weapon": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/weapon" }] },
+        "armor": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/armor" }] },
+        "sourceUrl": { "type": "string", "pattern": "^https://www\\.dnd5eapi\\.co/api/2014/equipment/" }
+      }
+    },
+    "equipmentCategory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["index", "name", "equipmentIndexes"],
+      "properties": {
+        "index": { "$ref": "#/$defs/identifier" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "equipmentIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }
+      }
+    },
+    "calculationRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "description"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "description": { "$ref": "#/$defs/nonEmpty" }
+      }
+    },
+    "featureModifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceIndex", "kind", "value", "formula", "conditions"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "sourceIndex": { "$ref": "#/$defs/identifier" },
+        "kind": { "enum": ["armor-class-formula", "armor-class-bonus", "initiative-half-proficiency", "maximum-hit-points-per-character-level", "maximum-hit-points-per-class-level", "skill-proficiency", "skill-choice", "skill-expertise-choice", "speed-bonus"] },
+        "value": { "type": ["integer", "null"], "minimum": 0, "maximum": 20 },
+        "formula": { "type": ["string", "null"], "maxLength": 100 },
+        "conditions": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }
+      }
+    },
     "spell": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["index", "name", "level", "school", "castingTime", "actionType", "range", "duration", "concentration", "ritual", "components", "summary", "classIndexes", "subclassMemberships", "sourceUrl"],
+      "required": ["index", "name", "level", "school", "castingTime", "actionType", "range", "duration", "concentration", "ritual", "components", "material", "description", "higherLevel", "summary", "classIndexes", "subclassMemberships", "sourceUrl"],
       "properties": {
         "index": { "$ref": "#/$defs/identifier" },
         "name": { "type": "string", "minLength": 1, "maxLength": 200 },
@@ -210,6 +479,9 @@
         "concentration": { "type": "boolean" },
         "ritual": { "type": "boolean" },
         "components": { "type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": { "enum": ["V", "S", "M"] } },
+        "material": { "type": ["string", "null"], "maxLength": 2000 },
+        "description": { "$ref": "#/$defs/longText" },
+        "higherLevel": { "type": ["string", "null"], "maxLength": 5000 },
         "summary": { "$ref": "#/$defs/nonEmpty" },
         "classIndexes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
         "subclassMemberships": { "type": "array", "items": { "$ref": "#/$defs/subclassMembership" } },

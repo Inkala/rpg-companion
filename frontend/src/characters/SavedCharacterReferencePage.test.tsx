@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { getCharacterById, levelUpCharacter } from './api';
 import { SavedCharacterReferencePage } from './SavedCharacterReferencePage';
 import { buildGeneratedFighterCharacterSheet } from '../character-creation/generatedFighterBuilds';
+import { testCharacterV2DTO, testWizardV2DTO } from './characterSheetV2TestFixtures';
 
 const getCharacterByIdMock = vi.mocked(getCharacterById);
 const levelUpCharacterMock = vi.mocked(levelUpCharacter);
@@ -79,6 +80,97 @@ describe('SavedCharacterReferencePage', () => {
     expect(screen.getByText('Strength melee Fighter - Soldier')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Actions/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Level up' })).toBeInTheDocument();
+  });
+
+  it('renders a complete CharacterSheetV2 reference and offers bounded owner Level Up', async () => {
+    getCharacterByIdMock.mockResolvedValue(testCharacterV2DTO());
+
+    render(
+      <SavedCharacterReferencePage
+        characterId="saved-v2"
+        isSignedIn
+        onBack={vi.fn()}
+        onSignIn={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Aldren Vale' })).toBeInTheDocument();
+    expect(screen.getByText(/Human.*Fighter 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Other.*Soldier/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ability scores/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Equipment/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Level up' })).toBeInTheDocument();
+    const feature = screen.getByRole('button', { name: /Second Wind/ });
+    fireEvent.click(feature);
+    expect(screen.getByRole('dialog', { name: /Second Wind quick reference/ })).toHaveTextContent(/bonus action/i);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(feature).toHaveFocus());
+  });
+
+  it('renders and reopens a saved Wizard with prepared and spellbook states from stable IDs', async () => {
+    const wizard = testWizardV2DTO();
+    getCharacterByIdMock.mockResolvedValue(wizard);
+    const props = {
+      characterId: wizard.id,
+      isSignedIn: true,
+      onBack: vi.fn(),
+      onSignIn: vi.fn(),
+    };
+    const first = render(<SavedCharacterReferencePage {...props} />);
+
+    expect(await screen.findByRole('heading', { name: 'Elara Quill' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Mage Armor metadata')).toHaveTextContent('Prepared');
+    expect(screen.getByLabelText('Magic Missile metadata')).toHaveTextContent('Prepared');
+    expect(screen.getByLabelText('Sleep metadata')).toHaveTextContent('Spellbook');
+    fireEvent.click(screen.getByRole('button', { name: /Mage Armor/ }));
+    expect(screen.getByRole('dialog', { name: 'Mage Armor quick reference' })).toHaveTextContent('StatePrepared');
+    first.unmount();
+
+    render(<SavedCharacterReferencePage {...props} />);
+    expect(await screen.findByLabelText('Mage Armor metadata')).toHaveTextContent('Prepared');
+    expect(getCharacterByIdMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows the supported-cap message and no Level Up button for CharacterSheetV2 level 5', async () => {
+    getCharacterByIdMock.mockResolvedValue(testCharacterV2DTO('Aldren Vale', 5));
+
+    render(
+      <SavedCharacterReferencePage characterId="saved-v2" isSignedIn onBack={vi.fn()} onSignIn={vi.fn()} />,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Aldren Vale' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Level up' })).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('supports characters through level 5');
+  });
+
+  it('submits bounded V2 decisions once and keeps the server-returned sheet in V2', async () => {
+    const initial = testCharacterV2DTO('Aldren Vale', 1);
+    const updated = testCharacterV2DTO('Aldren Vale', 2);
+    getCharacterByIdMock.mockResolvedValue(initial);
+    levelUpCharacterMock.mockResolvedValue(updated);
+
+    render(
+      <SavedCharacterReferencePage characterId="saved-v2" isSignedIn onBack={vi.fn()} onSignIn={vi.fn()} />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Level up' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(screen.getByLabelText(/I reviewed the values that will be retained/));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    const confirm = screen.getByRole('button', { name: 'Confirm level up' });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+
+    expect(await screen.findByText(/Human.*Fighter 2/)).toBeInTheDocument();
+    expect(levelUpCharacterMock).toHaveBeenCalledTimes(1);
+    expect(levelUpCharacterMock.mock.calls[0][1]).toEqual(expect.objectContaining({
+      expectedUpdatedAt: initial.updatedAt,
+      hp: { mode: 'fixed-average' },
+      currentHp: { mode: 'increase-by-gain' },
+    }));
+    expect(levelUpCharacterMock.mock.calls[0][1]).not.toHaveProperty('referencePayload');
+    expect(updated.referencePayload.schemaVersion).toBe('CharacterSheetV2');
   });
 
   it('opens a keyboard-complete one-level flow and restores focus when cancelled', async () => {

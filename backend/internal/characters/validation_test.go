@@ -117,7 +117,7 @@ func TestValidateStoredCharacterForPartyGMRequiresStrictConsistentPayload(t *tes
 		{
 			name: "oversized payload",
 			mutate: func(character Character) Character {
-				character.ReferencePayload = json.RawMessage(`{"padding":"` + strings.Repeat("x", maxReferencePayloadBytes) + `"}`)
+				character.ReferencePayload = json.RawMessage(`{"padding":"` + strings.Repeat("x", maxV2StoredReferencePayloadBytes) + `"}`)
 				return character
 			},
 		},

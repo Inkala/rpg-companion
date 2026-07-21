@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { buildGeneratedFighterCharacterSheet } from '../character-creation/generatedFighterBuilds';
 import type { CharacterDTO } from '../characters/apiTypes';
 import { PartyCharacterReferencePage } from './PartyCharacterReferencePage';
+import { testCharacterV2DTO, testWizardV2DTO } from '../characters/characterSheetV2TestFixtures';
 
 const brannaCharacter = partyCharacterWithPayload(
   'character-1',
@@ -108,6 +109,31 @@ describe('PartyCharacterReferencePage', () => {
     expect(screen.getByRole('button', { name: /Actions/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Back to party' }));
     expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it('maps CharacterSheetV2 into the same read-only reference without Level Up controls', async () => {
+    renderPage({ loadPartyCharacter: vi.fn().mockResolvedValue(testCharacterV2DTO()) });
+
+    expect(await screen.findByRole('heading', { name: 'Aldren Vale' })).toBeInTheDocument();
+    expect(screen.getByText(/Human.*Fighter 1/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ability scores/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Level up' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Level up is unavailable/)).not.toBeInTheDocument();
+  });
+
+  it('renders the same stable-ID Wizard prepared state for an authorized Party GM', async () => {
+    renderPage({ loadPartyCharacter: vi.fn().mockResolvedValue(testWizardV2DTO()) });
+
+    expect(await screen.findByRole('heading', { name: 'Elara Quill' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Mage Armor metadata')).toHaveTextContent('Prepared');
+    expect(screen.getByLabelText('Magic Missile metadata')).toHaveTextContent('Prepared');
+    expect(screen.getByLabelText('Sleep metadata')).toHaveTextContent('Spellbook');
+    const fireBoltSpellMetadata = screen
+      .getAllByLabelText('Fire Bolt metadata')
+      .find((metadata) => metadata.textContent?.includes('Cantrip'));
+    expect(fireBoltSpellMetadata).toHaveTextContent('Known');
+    fireEvent.click(screen.getByRole('button', { name: /Magic Missile/ }));
+    expect(screen.getByRole('dialog', { name: 'Magic Missile quick reference' })).toHaveTextContent('StatePrepared');
   });
 
   it.each(['partyId', 'characterId', 'loader'] as const)(

@@ -78,7 +78,7 @@ INSERT INTO characters (
 		character.UpdatedAt,
 	)
 	if err != nil {
-		return Character{}, mapCharacterCreateError(err)
+		return Character{}, fmt.Errorf("insert character: %w", mapCharacterCreateError(err))
 	}
 
 	return character, nil
@@ -256,8 +256,10 @@ SET
   charisma_score = $11,
   hp_current = $12,
   hp_max = $13,
-  reference_payload = $14::jsonb,
-  updated_at = $15
+  armor_class = $14,
+  speed_ft = $15,
+  reference_payload = $16::jsonb,
+  updated_at = $17
 WHERE id = $1::uuid
   AND owner_subject_id = $2::uuid
 RETURNING updated_at`
@@ -265,7 +267,8 @@ RETURNING updated_at`
 		updated.ID.String(), ownerID.String(), updated.ClassName, updated.SubclassName, updated.Level,
 		updated.AbilityScores.Strength, updated.AbilityScores.Dexterity, updated.AbilityScores.Constitution,
 		updated.AbilityScores.Intelligence, updated.AbilityScores.Wisdom, updated.AbilityScores.Charisma,
-		updated.HitPoints.Current, updated.HitPoints.Max, []byte(updated.ReferencePayload), updated.UpdatedAt,
+		updated.HitPoints.Current, updated.HitPoints.Max, updated.ArmorClass, updated.SpeedFt,
+		[]byte(updated.ReferencePayload), updated.UpdatedAt,
 	).Scan(&updated.UpdatedAt); err != nil {
 		return Character{}, mapCharacterCreateError(err)
 	}

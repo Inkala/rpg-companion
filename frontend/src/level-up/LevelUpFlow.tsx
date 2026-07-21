@@ -8,19 +8,22 @@ import { createPortal } from 'react-dom';
 import { CharactersApiError } from '../characters/api';
 import type {
   AbilityName,
-  CharacterDTO,
   LevelUpCharacterRequestDTO,
   LevelUpClassChoiceInput,
+  SavedCharacterDTO,
 } from '../characters/apiTypes';
 import type { CharacterSheetV1 } from '../characters/characterSheet';
+import { characterCreationRules } from '../rules/generated/characterCreationRules';
 import { levelUpRules } from '../rules/generated/levelUpRules';
 import {
   abilityModifier,
+  activeFeatureIndexesForLevelUpChoices,
   buildLevelUpPlan,
   choiceAlreadyPresent,
   humanizeRuleId,
   optionsForChoice,
   preparedSpellCount,
+  reconcileLevelUpChoiceSelections,
   type CanonicalChoiceRule,
   type CanonicalSpellcastingRule,
   type LevelUpPlan,
@@ -29,11 +32,11 @@ import {
 import './levelUp.css';
 
 type LevelUpFlowProps = {
-  character: CharacterDTO;
+  character: SavedCharacterDTO;
   sheet: CharacterSheetV1;
   onClose: () => void;
-  onSubmit: (request: LevelUpCharacterRequestDTO) => Promise<CharacterDTO>;
-  onSuccess: (character: CharacterDTO) => void;
+  onSubmit: (request: LevelUpCharacterRequestDTO) => Promise<SavedCharacterDTO>;
+  onSuccess: (character: SavedCharacterDTO) => void;
   onReload: () => void;
 };
 
@@ -47,7 +50,7 @@ type Draft = {
   hpRoll: string;
   currentHpMode: 'increase-by-gain' | 'retain' | 'manual';
   manualCurrentHp: string;
-  subclassMode: 'srd' | 'manual';
+  subclassMode: '' | 'srd' | 'manual';
   subclassIndex: string;
   manualSubclassName: string;
   asiMode: 'ability-scores' | 'feat-note';
@@ -139,7 +142,7 @@ export const LevelUpFlow = ({
 }: LevelUpFlowProps) => {
   const plan = useMemo(() => buildLevelUpPlan(character, sheet), [character, sheet]);
   const [stepIndex, setStepIndex] = useState(0);
-  const [draft, setDraft] = useState<Draft>(() => createDraft(plan));
+  const [draft, setDraft] = useState<Draft>(() => createDraft());
   const [errors, setErrors] = useState<FieldError[]>([]);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
@@ -197,7 +200,12 @@ export const LevelUpFlow = ({
   }, [isSubmitting, onClose]);
 
   const updateDraft = <Key extends keyof Draft>(key: Key, value: Draft[Key]) => {
-    setDraft((current) => ({ ...current, [key]: value }));
+    setDraft((current) => ({
+      ...current,
+      [key]: key === 'choices'
+        ? reconcileLevelUpChoiceSelections(plan.classRule, sheet, plan.toLevel, value as Draft['choices'])
+        : value,
+    }));
     setErrors([]);
   };
 
@@ -399,6 +407,7 @@ const PrerequisiteStep = ({ plan, sheet, draft, updateDraft }: StepContext) => {
       ) : item.kind === 'class-choice' ? (
         <ChoiceEditor
           key={item.id}
+          classRule={plan.classRule}
           rule={item.rule}
           level={plan.fromLevel}
           sheet={sheet}
@@ -476,8 +485,14 @@ const SubclassStep = (context: StepContext) => (
 const SubclassFields = ({ plan, draft, updateDraft, prefix }: Pick<StepContext, 'plan' | 'draft' | 'updateDraft'> & { prefix: string }) => (
   <fieldset>
     <legend>{plan.classRule.subclasses[0]?.flavor ?? 'Subclass'}</legend>
-    <RadioCard id={`${prefix}-subclass-srd`} name={`${prefix}-subclass-source`} checked={draft.subclassMode === 'srd'} onChange={() => updateDraft('subclassMode', 'srd')} label={`Use SRD ${plan.classRule.subclasses[0]?.name ?? 'subclass'}`} detail="Canonical SRD 5.1 option." />
-    <RadioCard id={`${prefix}-subclass-manual`} name={`${prefix}-subclass-source`} checked={draft.subclassMode === 'manual'} onChange={() => updateDraft('subclassMode', 'manual')} label="Retain a reviewed manual subclass" detail="Hunin records this choice as needing audit." />
+    <RadioCard id={`${prefix}-subclass-srd`} name={`${prefix}-subclass-source`} checked={draft.subclassMode === 'srd'} onChange={() => {
+      updateDraft('subclassIndex', plan.classRule.subclasses[0]?.index ?? '');
+      updateDraft('subclassMode', 'srd');
+    }} label={`Use SRD ${plan.classRule.subclasses[0]?.name ?? 'subclass'}`} detail="Canonical SRD 5.1 option." />
+    <RadioCard id={`${prefix}-subclass-manual`} name={`${prefix}-subclass-source`} checked={draft.subclassMode === 'manual'} onChange={() => {
+      updateDraft('subclassIndex', '');
+      updateDraft('subclassMode', 'manual');
+    }} label="Retain a reviewed manual subclass" detail="Hunin records this choice as needing audit." />
     {draft.subclassMode === 'manual' ? (
       <label className="level-up-field" htmlFor={`${prefix}-manual-subclass`}>
         Manual subclass name
@@ -487,15 +502,19 @@ const SubclassFields = ({ plan, draft, updateDraft, prefix }: Pick<StepContext, 
   </fieldset>
 );
 
-const AbilityScoreStep = ({ sheet, draft, updateDraft }: StepContext) => {
+const AbilityScoreStep = ({ plan, sheet, draft, updateDraft }: StepContext) => {
   const total = Object.values(draft.abilityIncreases).reduce<number>((sum, value) => sum + (value ?? 0), 0);
   return (
     <section className="level-up-panel">
-      <p>At level 4, increase one score by 2, increase two scores by 1, or record a reviewed feat note.</p>
+      <p>{plan.schemaVersion === 'CharacterSheetV2'
+        ? 'At level 4, increase one score by 2 or increase two scores by 1.'
+        : 'At level 4, increase one score by 2, increase two scores by 1, or record a reviewed feat note.'}</p>
       <fieldset>
         <legend>Level 4 choice</legend>
         <RadioCard id="asi-scores" name="asi-mode" checked={draft.asiMode === 'ability-scores'} onChange={() => updateDraft('asiMode', 'ability-scores')} label="Increase ability scores" />
-        <RadioCard id="asi-feat" name="asi-mode" checked={draft.asiMode === 'feat-note'} onChange={() => updateDraft('asiMode', 'feat-note')} label="Record a manual feat note" detail="The feat catalog is outside this SRD slice." />
+        {plan.schemaVersion === 'CharacterSheetV1' ? (
+          <RadioCard id="asi-feat" name="asi-mode" checked={draft.asiMode === 'feat-note'} onChange={() => updateDraft('asiMode', 'feat-note')} label="Record a manual feat note" detail="The feat catalog is outside this SRD slice." />
+        ) : null}
       </fieldset>
       {draft.asiMode === 'ability-scores' ? (
         <fieldset>
@@ -531,13 +550,14 @@ const AbilityScoreStep = ({ sheet, draft, updateDraft }: StepContext) => {
 const ClassChoiceStep = ({ plan, sheet, draft, updateDraft }: StepContext) => (
   <section className="level-up-panel">
     <p>Choose the canonical class options unlocked at level {plan.toLevel}.</p>
-    {targetChoiceRules(plan, sheet).map((choice) => (
-      <ChoiceEditor key={choice.id} rule={choice} level={plan.toLevel} sheet={sheet} draft={draft} updateDraft={updateDraft} prefix="target" />
+    {targetChoiceRules(plan, sheet, draft).map((choice) => (
+      <ChoiceEditor key={choice.id} classRule={plan.classRule} rule={choice} level={plan.toLevel} sheet={sheet} draft={draft} updateDraft={updateDraft} prefix="target" />
     ))}
   </section>
 );
 
-const ChoiceEditor = ({ rule, level, sheet, draft, updateDraft, prefix }: {
+const ChoiceEditor = ({ classRule, rule, level, sheet, draft, updateDraft, prefix }: {
+  classRule: LevelUpPlan['classRule'];
   rule: CanonicalChoiceRule;
   level: number;
   sheet: CharacterSheetV1;
@@ -546,7 +566,8 @@ const ChoiceEditor = ({ rule, level, sheet, draft, updateDraft, prefix }: {
   prefix: string;
 }) => {
   const value = draft.choices[rule.id] ?? { optionIds: [], manualNote: '' };
-  const options = optionsForChoice(rule, sheet, level);
+  const activeFeatures = activeFeatureIndexesForLevelUpChoices(classRule, sheet, draft.choices);
+  const options = optionsForChoice(rule, sheet, level, activeFeatures);
   const required = rule.selectionCountByLevel[String(level)] ?? 0;
   const update = (next: ChoiceDraft) => updateDraft('choices', { ...draft.choices, [rule.id]: next });
   return (
@@ -561,7 +582,7 @@ const ChoiceEditor = ({ rule, level, sheet, draft, updateDraft, prefix }: {
             checked={value.optionIds.includes(option.index)}
             onChange={(checked) => update({
               optionIds: checked
-                ? [...value.optionIds, option.index]
+                ? required === 1 ? [option.index] : [...value.optionIds, option.index]
                 : value.optionIds.filter((id) => id !== option.index),
               manualNote: '',
             })}
@@ -698,13 +719,15 @@ const SpellCheckboxGroup = ({ legend, prefix, spells, selected, onChange }: {
   </fieldset>
 );
 
-const RetainedStep = ({ sheet, draft, updateDraft }: StepContext) => (
+const RetainedStep = ({ plan, sheet, draft, updateDraft }: StepContext) => (
   <section className="level-up-panel">
-    <p>These values stay exactly as represented because their source cannot be recalculated safely from CharacterSheetV1.</p>
+    <p>{plan.schemaVersion === 'CharacterSheetV2'
+      ? 'Structured values are recalculated server-side from the saved V2 decisions. Manual content remains unchanged.'
+      : 'These values stay exactly as represented because their source cannot be recalculated safely from CharacterSheetV1.'}</p>
     <dl className="level-up-review-list">
-      <ReviewRow label="Armor Class" previous={String(sheet.combat.armorClass.value)} proposed="Retained" reason="Equipment detail is not structured enough for safe recalculation." />
-      <ReviewRow label="Speed" previous={`${sheet.combat.speed[0].feet} ft.`} proposed="Retained" reason="Ancestry and manual movement exceptions stay unchanged." />
-      <ReviewRow label="Attacks" previous={`${sheet.actions.length} represented`} proposed="Retained" reason="Attack ability and proficiency sources are not explicit." />
+      <ReviewRow label="Armor Class" previous={String(sheet.combat.armorClass.value)} proposed={plan.schemaVersion === 'CharacterSheetV2' ? 'Recalculated' : 'Retained'} reason={plan.schemaVersion === 'CharacterSheetV2' ? 'Structured defense and canonical modifiers remain authoritative.' : 'Equipment detail is not structured enough for safe recalculation.'} />
+      <ReviewRow label="Speed" previous={`${sheet.combat.speed[0].feet} ft.`} proposed={plan.schemaVersion === 'CharacterSheetV2' ? 'Recalculated' : 'Retained'} reason={plan.schemaVersion === 'CharacterSheetV2' ? 'Structured Race, equipment, and Class modifiers remain authoritative.' : 'Ancestry and manual movement exceptions stay unchanged.'} />
+      <ReviewRow label="Attacks" previous={`${sheet.actions.length} represented`} proposed={plan.schemaVersion === 'CharacterSheetV2' ? 'Recalculated' : 'Retained'} reason={plan.schemaVersion === 'CharacterSheetV2' ? 'Structured attack ability and proficiency inputs remain authoritative.' : 'Attack ability and proficiency sources are not explicit.'} />
       <ReviewRow label="Equipment" previous={`${sheet.equipment.weapons.length + sheet.equipment.packsAndGear.values.length} represented items`} proposed="Retained" reason="Level up does not edit equipment." />
       <ReviewRow label="Manual and non-SRD content" previous="Preserved" proposed="Preserved" reason="Existing reviewed content is outside canonical automation." />
     </dl>
@@ -720,7 +743,7 @@ const ReviewStep = ({ plan, sheet, draft, updateDraft }: StepContext) => {
       <dl className="level-up-review-list">
         {review.map((item) => <ReviewRow key={item.label} {...item} />)}
       </dl>
-      <fieldset>
+      {plan.schemaVersion === 'CharacterSheetV1' ? <fieldset>
         <legend>Explicit typed overrides (optional)</legend>
         <p className="level-up-help">Leave these blank to use canonical values. Manual overrides are marked as needing audit by the server. The decision summary never authorizes a value.</p>
         {([
@@ -739,7 +762,7 @@ const ReviewStep = ({ plan, sheet, draft, updateDraft }: StepContext) => {
             </label>
           );
         })}
-      </fieldset>
+      </fieldset> : null}
       <section className="level-up-payload-note" aria-label="Submission privacy">
         <h4>What Hunin sends</h4>
         <p>Only these decisions and the saved update timestamp. Class, source level, target level, owner, Party data, and the character sheet are not submitted.</p>
@@ -805,13 +828,13 @@ const ReviewRow = ({ label, previous, proposed, reason }: {
   </div>
 );
 
-const createDraft = (plan: LevelUpPlan): Draft => ({
+const createDraft = (): Draft => ({
   hpMode: 'fixed-average',
   hpRoll: '',
   currentHpMode: 'increase-by-gain',
   manualCurrentHp: '',
-  subclassMode: 'srd',
-  subclassIndex: plan.classRule.subclasses[0]?.index ?? '',
+  subclassMode: '',
+  subclassIndex: '',
   manualSubclassName: '',
   asiMode: 'ability-scores',
   abilityIncreases: {},
@@ -851,7 +874,9 @@ const validateStep = (step: LevelUpStep, draft: Draft, plan: LevelUpPlan, sheet:
   if (step === 'decision-subclass') validateSubclass(draft, errors, 'target');
   if (step === 'decision-asi') {
     if (draft.asiMode === 'feat-note') {
-      if (!draft.featNote.trim()) errors.push({ id: 'feat-note', message: 'Enter the reviewed feat note.' });
+      if (plan.schemaVersion === 'CharacterSheetV2') {
+        errors.push({ id: 'asi-scores', message: 'CharacterSheetV2 requires a bounded ability-score increase.' });
+      } else if (!draft.featNote.trim()) errors.push({ id: 'feat-note', message: 'Enter the reviewed feat note.' });
     } else {
       const values = Object.entries(draft.abilityIncreases);
       const total = values.reduce((sum, [, value]) => sum + (value ?? 0), 0);
@@ -860,11 +885,14 @@ const validateStep = (step: LevelUpStep, draft: Draft, plan: LevelUpPlan, sheet:
     }
   }
   if (step === 'decision-class-specific') {
-    for (const choice of targetChoiceRules(plan, sheet)) validateChoice(choice, plan.toLevel, draft, errors, 'target');
+    for (const choice of targetChoiceRules(plan, sheet, draft)) validateChoice(choice, plan.toLevel, draft, errors, 'target');
   }
   if (step === 'decision-spells') errors.push(...validateSpells(draft, plan, sheet));
   if (step === 'decision-confirm-retained' && !draft.retainedConfirmed) errors.push({ id: 'confirm-retained', message: 'Confirm the retained critical values before continuing.' });
   if (step === 'review') {
+    if (plan.schemaVersion === 'CharacterSheetV2' && Object.values(draft.overrides).some((value) => value !== '')) {
+      errors.push({ id: 'override-proficiencyBonus', message: 'CharacterSheetV2 does not accept unaudited Level Up overrides.' });
+    }
     for (const [name, raw] of Object.entries(draft.overrides)) {
       if (raw === '') continue;
       const value = Number(raw);
@@ -889,7 +917,13 @@ const validateAllSteps = (draft: Draft, plan: LevelUpPlan, sheet: CharacterSheet
 };
 
 const validateSubclass = (draft: Draft, errors: FieldError[], prefix: string) => {
-  if (draft.subclassMode === 'manual' && !draft.manualSubclassName.trim()) errors.push({ id: `${prefix}-manual-subclass`, message: 'Enter the reviewed manual subclass name.' });
+  if (draft.subclassMode === '') {
+    errors.push({ id: `${prefix}-subclass-srd`, message: 'Choose a subclass.' });
+  } else if (draft.subclassMode === 'srd' && !draft.subclassIndex) {
+    errors.push({ id: `${prefix}-subclass-srd`, message: 'Choose a subclass.' });
+  } else if (draft.subclassMode === 'manual' && !draft.manualSubclassName.trim()) {
+    errors.push({ id: `${prefix}-manual-subclass`, message: 'Enter the reviewed manual subclass name.' });
+  }
 };
 
 const validateChoice = (rule: CanonicalChoiceRule, level: number, draft: Draft, errors: FieldError[], prefix: string) => {
@@ -927,8 +961,13 @@ const validateSpells = (draft: Draft, plan: LevelUpPlan, sheet: CharacterSheetV1
   return [];
 };
 
-const buildRequest = (character: CharacterDTO, sheet: CharacterSheetV1, plan: LevelUpPlan, draft: Draft): LevelUpCharacterRequestDTO => {
+const buildRequest = (character: SavedCharacterDTO, sheet: CharacterSheetV1, plan: LevelUpPlan, draft: Draft): LevelUpCharacterRequestDTO => {
+  const allowedChoiceIDs = new Set([
+    ...plan.missingPrerequisites.filter((item) => item.kind === 'class-choice').map((item) => item.id),
+    ...targetChoiceRules(plan, sheet, draft).map((choice) => choice.id),
+  ]);
   const classInputs = plan.classRule.choices.flatMap((choice): LevelUpClassChoiceInput[] => {
+    if (!allowedChoiceIDs.has(choice.id)) return [];
     const value = draft.choices[choice.id];
     if (!value) return [];
     return [{ ruleId: choice.id, optionIds: value.optionIds, ...(value.manualNote.trim() ? { manualNote: value.manualNote.trim() } : {}) }];
@@ -948,8 +987,10 @@ const buildRequest = (character: CharacterDTO, sheet: CharacterSheetV1, plan: Le
   if (needsSubclass) request.subclass = draft.subclassMode === 'srd' ? { source: 'srd', index: draft.subclassIndex } : { source: 'manual', name: draft.manualSubclassName.trim() };
   if (plan.targetRule.abilityScoreImprovement) request.abilityScoreImprovement = draft.asiMode === 'feat-note' ? { mode: 'feat-note', note: draft.featNote.trim() } : { mode: 'ability-scores', increases: draft.abilityIncreases };
   if (plan.targetRule.spellcasting) request.spells = buildSpellChanges(plan, sheet, draft);
-  const overrides = Object.fromEntries(Object.entries(draft.overrides).filter(([, value]) => value !== '').map(([key, value]) => [key, Number(value)]));
-  if (Object.keys(overrides).length > 0) request.overrides = overrides;
+  if (plan.schemaVersion === 'CharacterSheetV1') {
+    const overrides = Object.fromEntries(Object.entries(draft.overrides).filter(([, value]) => value !== '').map(([key, value]) => [key, Number(value)]));
+    if (Object.keys(overrides).length > 0) request.overrides = overrides;
+  }
   return request;
 };
 
@@ -982,7 +1023,7 @@ const buildDecisionSummary = (plan: LevelUpPlan, draft: Draft) => {
   return summary;
 };
 
-const targetChoiceRules = (plan: LevelUpPlan, sheet: CharacterSheetV1) => {
+const targetChoiceRules = (plan: LevelUpPlan, sheet: CharacterSheetV1, draft: Draft) => {
   const missingPrerequisiteIds = new Set(
     plan.missingPrerequisites
       .filter((item) => item.kind === 'class-choice')
@@ -990,9 +1031,23 @@ const targetChoiceRules = (plan: LevelUpPlan, sheet: CharacterSheetV1) => {
   );
   return plan.classRule.choices.filter((choice) =>
     choice.fromLevel <= plan.toLevel &&
+    choiceAppliesToSelectedSubclass(choice, plan, sheet, draft) &&
     !missingPrerequisiteIds.has(choice.id) &&
     !choiceAlreadyPresent(sheet.features, choice, plan.toLevel),
   );
+};
+
+const choiceAppliesToSelectedSubclass = (
+  choice: CanonicalChoiceRule,
+  plan: LevelUpPlan,
+  sheet: CharacterSheetV1,
+  draft: Draft,
+) => {
+  if (!choice.requiredSubclassIndex) return true;
+  const existingName = sheet.identity.classes[0].subclass?.trim().toLowerCase();
+  const existing = plan.classRule.subclasses.find((subclass) => subclass.name.toLowerCase() === existingName)?.index;
+  const selected = existing ?? (draft.subclassMode === 'srd' ? draft.subclassIndex : '');
+  return selected === choice.requiredSubclassIndex;
 };
 
 const eligibleSpells = (plan: LevelUpPlan, sheet: CharacterSheetV1, draft: Draft): CanonicalSpell[] => {
@@ -1032,13 +1087,133 @@ const preparedCountFor = (plan: LevelUpPlan, sheet: CharacterSheetV1, draft: Dra
 };
 
 const proposedMaxHp = (plan: LevelUpPlan, sheet: CharacterSheetV1, draft: Draft) => {
+  if (plan.sourceSheetV2?.hitPointProgression.maximumOverride) {
+    return plan.sourceSheetV2.hitPointProgression.maximumOverride.value;
+  }
   const priorCon = sheet.abilities.scores.constitution;
   const conIncrease = draft.asiMode === 'ability-scores' ? draft.abilityIncreases.constitution ?? 0 : 0;
   const resultingCon = priorCon + conIncrease;
   const priorModifier = abilityModifier(priorCon);
   const resultingModifier = abilityModifier(resultingCon);
   const die = draft.hpMode === 'fixed-average' ? plan.fixedAverageHp : Number(draft.hpRoll || 0);
-  return sheet.combat.hitPoints.max + Math.max(1, die + resultingModifier) + (resultingModifier - priorModifier) * plan.fromLevel;
+  return sheet.combat.hitPoints.max + Math.max(1, die + resultingModifier) +
+    (resultingModifier - priorModifier) * plan.fromLevel + v2PerLevelHitPointBonus(plan, draft);
+};
+
+const v2PerLevelHitPointBonus = (plan: LevelUpPlan, draft: Draft) => {
+  const source = plan.sourceSheetV2;
+  if (!source) return 0;
+  let bonus = source.identity.race.source === 'srd' && source.identity.race.index === 'hill-dwarf' ? 1 : 0;
+  const subclassIndex = source.identity.subclass?.source === 'srd'
+    ? source.identity.subclass.index
+    : draft.subclassMode === 'srd' ? draft.subclassIndex : '';
+  if (plan.classRule.index === 'sorcerer' && subclassIndex === 'draconic') bonus += 1;
+  return bonus;
+};
+
+const v2Initiative = (
+  plan: LevelUpPlan,
+  scores: CharacterSheetV1['abilities']['scores'],
+  proficiency: number,
+) => {
+  const source = plan.sourceSheetV2;
+  if (!source) return null;
+  if (source.combat.initiative.provenance.kind === 'manual-override') return source.combat.initiative.value;
+  const jackOfAllTrades = plan.classRule.index === 'bard' && plan.toLevel >= 2 ? Math.floor(proficiency / 2) : 0;
+  return abilityModifier(scores.dexterity) + jackOfAllTrades;
+};
+
+const v2PassivePerception = (
+  plan: LevelUpPlan,
+  draft: Draft,
+  scores: CharacterSheetV1['abilities']['scores'],
+  proficiency: number,
+) => {
+  const source = plan.sourceSheetV2;
+  if (!source) return null;
+  if (source.combat.passivePerception.provenance.kind === 'manual-override') return source.combat.passivePerception.value;
+  let rank = source.proficiencies.perception;
+  for (const [ruleID, choice] of Object.entries(draft.choices)) {
+    if (!choice.optionIds.includes('skill-perception')) continue;
+    rank = ruleID.includes('expertise') ? 'expertise' : rank === 'none' ? 'proficient' : rank;
+  }
+  return 10 + abilityModifier(scores.wisdom) + (rank === 'expertise' ? proficiency * 2 : rank === 'proficient' ? proficiency : 0);
+};
+
+const v2SelectedChoiceOptions = (plan: LevelUpPlan, draft: Draft) => new Set([
+  ...(plan.sourceSheetV2?.ruleChoices.flatMap((choice) => choice.optionIds) ?? []),
+  ...Object.values(draft.choices).flatMap((choice) => choice.optionIds),
+]);
+
+const v2ProposedArmorClass = (
+  plan: LevelUpPlan,
+  draft: Draft,
+  scores: CharacterSheetV1['abilities']['scores'],
+) => {
+  const source = plan.sourceSheetV2;
+  if (!source) return null;
+  const defense = source.combat.defense;
+  if (source.combat.armorClass.provenance.kind === 'manual-override' || defense.mode === 'manual') {
+    return source.combat.armorClass.value;
+  }
+  const dexterity = abilityModifier(scores.dexterity);
+  const choices = v2SelectedChoiceOptions(plan, draft);
+  const shield = 'shieldIndex' in defense && defense.shieldIndex
+    ? characterCreationRules.equipment.find((entry) => entry.index === defense.shieldIndex)?.armor?.shieldBonus ?? 0
+    : 0;
+  if (defense.mode === 'armor') {
+    const armor = characterCreationRules.equipment.find((entry) => entry.index === defense.armorIndex)?.armor;
+    if (!armor) return source.combat.armorClass.value;
+    const dexterityBonus = armor.dexterityBonus
+      ? Math.min(dexterity, armor.maximumDexterityBonus ?? dexterity)
+      : 0;
+    const styleBonus = choices.has('fighter-fighting-style-defense') ||
+      choices.has('fighting-style-defense') || choices.has('ranger-fighting-style-defense') ? 1 : 0;
+    return armor.baseArmorClass + dexterityBonus + shield + styleBonus;
+  }
+  switch (defense.formulaId) {
+    case 'barbarian-unarmored-defense':
+      return 10 + dexterity + abilityModifier(scores.constitution) + shield;
+    case 'monk-unarmored-defense':
+      return 10 + dexterity + abilityModifier(scores.wisdom);
+    case 'draconic-resilience':
+      return 13 + dexterity + shield;
+    default:
+      return 10 + dexterity + shield;
+  }
+};
+
+const v2ProposedSpeed = (plan: LevelUpPlan) => {
+  const source = plan.sourceSheetV2;
+  if (!source) return null;
+  if (source.combat.speedFt.provenance.kind === 'manual-override') return source.combat.speedFt.value;
+  const wearingArmor = source.equipment.some((entry) => entry.source === 'srd' && entry.equipped &&
+    characterCreationRules.equipment.find((item) => item.index === entry.index)?.armor?.category !== 'Shield');
+  const wearingHeavyArmor = source.equipment.some((entry) => entry.source === 'srd' && entry.equipped &&
+    characterCreationRules.equipment.find((item) => item.index === entry.index)?.armor?.category === 'Heavy');
+  const usingShield = source.equipment.some((entry) => entry.source === 'srd' && entry.equipped && entry.index === 'shield');
+  let speed = source.combat.speedFt.value;
+  if (plan.classRule.index === 'barbarian' && plan.fromLevel < 5 && plan.toLevel >= 5 && !wearingHeavyArmor) speed += 10;
+  if (plan.classRule.index === 'monk' && plan.fromLevel < 2 && plan.toLevel >= 2 && !wearingArmor && !usingShield) speed += 10;
+  return speed;
+};
+
+const v2ProposedAttackBonuses = (
+  plan: LevelUpPlan,
+  scores: CharacterSheetV1['abilities']['scores'],
+  proficiency: number,
+) => {
+  const source = plan.sourceSheetV2;
+  if (!source) return null;
+  if (source.attacks.length === 0) return 'No represented attacks';
+  return source.attacks.map((attack) => {
+    if (attack.attackBonusInput === null) return `${attack.name} ${formatSigned(attack.attackBonus.value)}`;
+    const ability = attack.attackBonusInput.ability === 'spellcasting'
+      ? plan.targetRule.spellcasting?.ability ?? plan.classRule.spellcastingAbility
+      : attack.attackBonusInput.ability;
+    const modifier = ability && ability in scores ? abilityModifier(scores[ability as AbilityName]) : 0;
+    return `${attack.name} ${formatSigned(modifier + (attack.attackBonusInput.proficient ? proficiency : 0))}`;
+  }).join(', ');
 };
 
 const buildReview = (plan: LevelUpPlan, sheet: CharacterSheetV1, draft: Draft) => {
@@ -1048,12 +1223,16 @@ const buildReview = (plan: LevelUpPlan, sheet: CharacterSheetV1, draft: Draft) =
   const resultingScores = resultingAbilityScores(sheet, draft, plan);
   const canonicalProficiency = plan.targetRule.proficiencyBonus;
   const resultingProficiency = numberOverride(draft, 'proficiencyBonus') ?? canonicalProficiency;
-  const canonicalInitiative = abilityModifier(resultingScores.dexterity);
+  const canonicalInitiative = v2Initiative(plan, resultingScores, canonicalProficiency) ?? abilityModifier(resultingScores.dexterity);
   const resultingInitiative = numberOverride(draft, 'initiative') ?? canonicalInitiative;
   const reliableSkillChanges = reliableResultingSkills(plan, sheet, resultingScores, resultingProficiency);
   const perception = reliableSkillChanges.find((skill) => skill.name.trim().toLowerCase() === 'perception');
-  const canonicalPassive = perception ? 10 + perception.proposed : sheet.combat.passivePerception.value;
+  const canonicalPassive = v2PassivePerception(plan, draft, resultingScores, resultingProficiency) ??
+    (perception ? 10 + perception.proposed : sheet.combat.passivePerception.value);
   const resultingPassive = numberOverride(draft, 'passivePerception') ?? canonicalPassive;
+  const v2ArmorClass = v2ProposedArmorClass(plan, draft, resultingScores);
+  const v2Speed = v2ProposedSpeed(plan);
+  const v2Attacks = v2ProposedAttackBonuses(plan, resultingScores, resultingProficiency);
   const rows = [
     { label: 'Class level', previous: String(plan.fromLevel), proposed: String(plan.toLevel), reason: 'Exactly one supported canonical transition.' },
     { label: 'Maximum HP', previous: String(sheet.combat.hitPoints.max), proposed: String(maxHp), reason: 'Hit die choice plus resulting Constitution modifier, including level-4 retroactive adjustment.' },
@@ -1061,9 +1240,9 @@ const buildReview = (plan: LevelUpPlan, sheet: CharacterSheetV1, draft: Draft) =
     { label: 'Proficiency bonus', previous: formatSigned(sheet.combat.proficiencyBonus), proposed: formatSigned(resultingProficiency), reason: numberOverride(draft, 'proficiencyBonus') === null ? 'Canonical proficiency progression.' : 'Explicit typed manual override. The server records audit provenance.' },
     { label: 'Initiative', previous: formatSigned(sheet.combat.initiative), proposed: formatSigned(resultingInitiative), reason: numberOverride(draft, 'initiative') === null ? 'Derived from the resulting Dexterity modifier.' : 'Explicit typed manual override. The server records audit provenance.' },
     { label: 'Passive Perception', previous: auditedNumberText(sheet.combat.passivePerception.value), proposed: auditedNumberText(resultingPassive), reason: numberOverride(draft, 'passivePerception') !== null ? 'Explicit typed manual override with audited-number provenance.' : perception ? 'Derived from the reliable resulting Perception skill modifier.' : 'Retained because automatic calculation is not reliable for this sheet.' },
-    { label: 'Armor Class', previous: String(sheet.combat.armorClass.value), proposed: 'Retained', reason: 'No reliable structured armor recalculation.' },
-    { label: 'Speed', previous: `${sheet.combat.speed[0].feet} ft.`, proposed: 'Retained', reason: 'Existing movement and exceptions are preserved.' },
-    { label: 'Attacks', previous: `${sheet.actions.length} represented`, proposed: 'Retained', reason: 'Attack sources cannot be established safely.' },
+    { label: 'Armor Class', previous: String(sheet.combat.armorClass.value), proposed: v2ArmorClass === null ? 'Retained' : String(v2ArmorClass), reason: v2ArmorClass === null ? 'No reliable structured armor recalculation.' : 'Recalculated from the saved V2 defense, equipment, choices, and resulting abilities.' },
+    { label: 'Speed', previous: `${sheet.combat.speed[0].feet} ft.`, proposed: v2Speed === null ? 'Retained' : `${v2Speed} ft.`, reason: v2Speed === null ? 'Existing movement and exceptions are preserved.' : 'Recalculated from the saved V2 Race, equipment, and active Class features.' },
+    { label: 'Attacks', previous: `${sheet.actions.length} represented`, proposed: v2Attacks ?? 'Retained', reason: v2Attacks === null ? 'Attack sources cannot be established safely.' : 'Structured V2 attack bonuses are recalculated from their ability and proficiency inputs.' },
     { label: 'Equipment', previous: 'Represented equipment', proposed: 'Retained', reason: 'Equipment is outside the approved change set.' },
     { label: 'Manual and non-SRD content', previous: 'Existing content', proposed: 'Preserved', reason: 'Level up appends canonical content without replacing reviewed entries.' },
   ];
@@ -1262,3 +1441,4 @@ export const preparedLevelUpSpellCount = preparedCountFor;
 export const targetLevelUpChoiceRules = targetChoiceRules;
 /* eslint-enable react-refresh/only-export-components */
 export const LevelUpReviewStep = ReviewStep;
+export const LevelUpClassChoiceStep = ClassChoiceStep;

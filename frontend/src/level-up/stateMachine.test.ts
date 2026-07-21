@@ -3,11 +3,14 @@ import { buildGeneratedFighterCharacterSheet } from '../character-creation/gener
 import type { CharacterDTO } from '../characters/apiTypes';
 import type { CharacterSheetV1 } from '../characters/characterSheet';
 import { isCharacterSheetV1 } from '../characters/characterSheetValidation';
+import { testCharacterV2DTO } from '../characters/characterSheetV2TestFixtures';
 import { levelUpRules } from '../rules/generated/levelUpRules';
 import {
   buildLevelUpPlan,
   getLevelUpEligibility,
   levelUpStepsFor,
+  optionsForChoice,
+  reconcileLevelUpChoiceSelections,
 } from './stateMachine';
 import {
   buildLevelUpRequest,
@@ -118,6 +121,33 @@ describe('level-up state machine', () => {
     ]));
   });
 
+  it('includes canonical subclass-bound creation choices needed by V2 Level Up', () => {
+    const druid = characterAt('Druid', 1);
+    const bard = characterAt('Bard', 2);
+    const druidPlan = buildLevelUpPlan(druid, druid.referencePayload as CharacterSheetV1);
+    const bardPlan = buildLevelUpPlan(bard, bard.referencePayload as CharacterSheetV1);
+
+    expect(druidPlan.classRule.choices.find((choice) => choice.id === 'circle-of-the-land-bonus-cantrip')).toEqual(
+      expect.objectContaining({ requiredSubclassIndex: 'land', options: expect.any(Array) }),
+    );
+    expect(bardPlan.classRule.choices.find((choice) => choice.id === 'college-of-lore-bonus-proficiencies')).toEqual(
+      expect.objectContaining({ requiredSubclassIndex: 'lore', options: expect.arrayContaining([
+        expect.objectContaining({ index: 'skill-perception' }),
+      ]) }),
+    );
+    expect(druidPlan.steps).toContain('decision-class-specific');
+    expect(bardPlan.steps).toContain('decision-class-specific');
+  });
+
+  it('adapts a strict CharacterSheetV2 without changing its schema or owner boundary', () => {
+    const character = testCharacterV2DTO('V2 Hero', 1);
+    const eligibility = getLevelUpEligibility(character);
+
+    expect(eligibility).toEqual(expect.objectContaining({ eligible: true, schemaVersion: 'CharacterSheetV2' }));
+    expect(character.referencePayload.schemaVersion).toBe('CharacterSheetV2');
+    expect(character).not.toHaveProperty('ownerSubjectId');
+  });
+
   it.each([
     ['Bard', 'known'],
     ['Cleric', 'prepared'],
@@ -148,8 +178,8 @@ describe('level-up state machine', () => {
     ]));
   });
 
-  it('collects an increased Warlock invocation count as a target-level class choice', () => {
-    const character = characterAt('Warlock', 3);
+  it('collects the third Warlock invocation at target level five', () => {
+    const character = characterAt('Warlock', 4);
     const sheet = character.referencePayload as CharacterSheetV1;
     sheet.identity.classes[0].subclass = 'Fiend';
     character.subclassName = 'Fiend';
@@ -160,6 +190,69 @@ describe('level-up state machine', () => {
     ];
 
     expect(buildLevelUpPlan(character, sheet).steps).toContain('decision-class-specific');
+  });
+
+  it('enforces Warlock invocation feature prerequisites for no boon, Tome, Chain, and Blade', () => {
+    const character = characterAt('Warlock', 2);
+    const sheet = character.referencePayload as CharacterSheetV1;
+    const plan = buildLevelUpPlan(character, sheet);
+    const invocations = plan.classRule.choices.find((choice) => choice.id === 'warlock-eldritch-invocations')!;
+    const optionIDs = (activeFeatureIDs: string[]) => optionsForChoice(invocations, sheet, 2, activeFeatureIDs)
+      .map((option) => option.index);
+
+    expect(optionIDs([])).not.toEqual(expect.arrayContaining([
+      'eldritch-invocation-book-of-ancient-secrets',
+      'eldritch-invocation-voice-of-the-chain-master',
+    ]));
+    expect(optionIDs(['pact-of-the-tome'])).toContain('eldritch-invocation-book-of-ancient-secrets');
+    expect(optionIDs(['pact-of-the-tome'])).not.toContain('eldritch-invocation-voice-of-the-chain-master');
+    expect(optionIDs(['pact-of-the-chain'])).toContain('eldritch-invocation-voice-of-the-chain-master');
+    expect(optionIDs(['pact-of-the-chain'])).not.toContain('eldritch-invocation-book-of-ancient-secrets');
+    expect(optionIDs(['pact-of-the-blade'])).not.toEqual(expect.arrayContaining([
+      'eldritch-invocation-book-of-ancient-secrets',
+      'eldritch-invocation-voice-of-the-chain-master',
+    ]));
+  });
+
+  it('removes boon-incompatible invocations while retaining unrelated valid selections', () => {
+    const character = characterAt('Warlock', 3);
+    const sheet = character.referencePayload as CharacterSheetV1;
+    const plan = buildLevelUpPlan(character, sheet);
+    const tome = {
+      'warlock-pact-boon': { optionIds: ['pact-of-the-tome'], manualNote: '' },
+      'warlock-eldritch-invocations': {
+        optionIds: ['eldritch-invocation-book-of-ancient-secrets', 'eldritch-invocation-devils-sight'],
+        manualNote: '',
+      },
+    };
+    expect(reconcileLevelUpChoiceSelections(plan.classRule, sheet, 3, tome))
+      .toEqual(tome);
+
+    const chain = {
+      ...tome,
+      'warlock-pact-boon': { optionIds: ['pact-of-the-chain'], manualNote: '' },
+    };
+    expect(reconcileLevelUpChoiceSelections(plan.classRule, sheet, 3, chain))
+      .toEqual({
+        ...chain,
+        'warlock-eldritch-invocations': {
+          optionIds: ['eldritch-invocation-devils-sight'],
+          manualNote: '',
+        },
+      });
+
+    const removed = {
+      ...tome,
+      'warlock-pact-boon': { optionIds: [], manualNote: '' },
+    };
+    expect(reconcileLevelUpChoiceSelections(plan.classRule, sheet, 3, removed))
+      .toEqual({
+        ...removed,
+        'warlock-eldritch-invocations': {
+          optionIds: ['eldritch-invocation-devils-sight'],
+          manualNote: '',
+        },
+      });
   });
 
   it.each(levelUpRules.classes.flatMap((classRule) => transitions.map(([from, to]) => [

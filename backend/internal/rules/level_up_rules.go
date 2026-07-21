@@ -55,6 +55,9 @@ type Choice struct {
 	FromLevel             int            `json:"fromLevel"`
 	SelectionCountByLevel map[string]int `json:"selectionCountByLevel"`
 	OptionSource          string         `json:"optionSource"`
+	BoundedRule           string         `json:"boundedRule"`
+	RequiredSubclassIndex string         `json:"requiredSubclassIndex"`
+	SourceFeatureIndex    string         `json:"sourceFeatureIndex"`
 	Options               []ChoiceOption `json:"options"`
 	AllowManual           bool           `json:"allowManual"`
 }
@@ -81,6 +84,7 @@ type Spellcasting struct {
 	SpellsKnown              *int    `json:"spellsKnown"`
 	PreparedFormula          *string `json:"preparedFormula"`
 	ReplacementLimit         int     `json:"replacementLimit"`
+	InitialSpellbookSpells   int     `json:"initialSpellbookSpells"`
 	WizardSpellbookAdditions int     `json:"wizardSpellbookAdditions"`
 	Slots                    []int   `json:"slots"`
 	PactSlots                int     `json:"pactSlots"`

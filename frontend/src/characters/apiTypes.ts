@@ -1,3 +1,5 @@
+import type { CharacterV2DTO } from './characterSheetV2';
+
 export type AbilityScoresDTO = {
   strength: number;
   dexterity: number;
@@ -29,6 +31,8 @@ export type CharacterDTO = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type SavedCharacterDTO = CharacterDTO | CharacterV2DTO;
 
 export type CreateCharacterRequestDTO = {
   name: string;

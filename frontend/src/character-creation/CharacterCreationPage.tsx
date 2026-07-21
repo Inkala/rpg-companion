@@ -20,6 +20,7 @@ import {
   type ManualCharacterEntryDraftV1,
   type ManualCharacterEntryValidationError,
 } from './manualCharacterEntry';
+import { StructuredCharacterCreation, type StructuredCharacterCreationContinuation } from './StructuredCharacterCreation';
 import './characterCreation.css';
 
 type CharacterCreationPageProps = {
@@ -28,6 +29,8 @@ type CharacterCreationPageProps = {
   onSignIn?: () => void;
   onCreateAccount?: () => void;
   onOpenCharacterReference?: (characterId: string) => void;
+  structuredContinuation?: StructuredCharacterCreationContinuation | null;
+  onStructuredContinuationChange?: (continuation: StructuredCharacterCreationContinuation) => void;
 };
 
 type SaveState =
@@ -426,6 +429,8 @@ export const CharacterCreationPage = ({
   onSignIn,
   onCreateAccount,
   onOpenCharacterReference,
+  structuredContinuation,
+  onStructuredContinuationChange,
 }: CharacterCreationPageProps) => {
   const [draft, setDraft] = useState<CharacterCreationDraft>(
     initialCharacterCreationDraft,
@@ -770,6 +775,21 @@ export const CharacterCreationPage = ({
   };
 
   const renderManualForm = () => {
+    if (manualReviewRequest === null) {
+      return (
+        <StructuredCharacterCreation
+          creationSource="manual-transfer"
+          isSignedIn={isSignedIn}
+          onBack={onBack}
+          onSignIn={onSignIn}
+          onCreateAccount={onCreateAccount}
+          onOpenCharacterReference={onOpenCharacterReference}
+          continuation={structuredContinuation}
+          onContinuationChange={onStructuredContinuationChange}
+        />
+      );
+    }
+
     return (
       <section
         ref={manualEntryRef}
@@ -1317,6 +1337,22 @@ export const CharacterCreationPage = ({
       return renderRecommendation();
     }
 
+    if (draft.mode === 'guided') {
+      return (
+        <StructuredCharacterCreation
+          creationSource="guided"
+          buildId={draft.selectedBuild}
+          isSignedIn={isSignedIn}
+          onBack={goBack}
+          onSignIn={onSignIn}
+          onCreateAccount={onCreateAccount}
+          onOpenCharacterReference={onOpenCharacterReference}
+          continuation={structuredContinuation}
+          onContinuationChange={onStructuredContinuationChange}
+        />
+      );
+    }
+
     const build = generatedFighterBuilds[draft.selectedBuild];
     const request = buildGeneratedFighterCreateRequest(draft.selectedBuild, draft.name);
     const sheet = request.referencePayload;
@@ -1474,12 +1510,23 @@ export const CharacterCreationPage = ({
             Start a character draft.
           </h1>
           <p className="creation-shell__copy">
-            Choose how you want to begin. This draft stays in memory only:
-            saving, full review, and manual sheet fields come later.
+            Choose how you want to begin. Both paths create the same structured,
+            reviewable character and save through the authenticated V2 contract.
           </p>
         </div>
 
-        {draft.mode === 'manual' ? (
+        {structuredContinuation ? (
+          <StructuredCharacterCreation
+            creationSource={structuredContinuation.draft.creationSource}
+            isSignedIn={isSignedIn}
+            onBack={structuredContinuation.draft.creationSource === 'guided' ? goBack : onBack}
+            onSignIn={onSignIn}
+            onCreateAccount={onCreateAccount}
+            onOpenCharacterReference={onOpenCharacterReference}
+            continuation={structuredContinuation}
+            onContinuationChange={onStructuredContinuationChange}
+          />
+        ) : draft.mode === 'manual' ? (
           renderManualReview()
         ) : draft.mode === 'guided' ? (
           isShowingReview ? renderReview() : isShowingRecommendation ? renderRecommendation() : renderQuiz()

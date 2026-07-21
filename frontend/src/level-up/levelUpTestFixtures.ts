@@ -67,13 +67,17 @@ export const completeDraftFor = (
   plan: LevelUpPlan,
   sheet: CharacterSheetV1,
 ): LevelUpDraft => {
-  const draft = createLevelUpDraft(plan);
+  const draft = createLevelUpDraft();
   draft.retainedConfirmed = true;
+  if (plan.steps.includes('decision-subclass') || plan.missingPrerequisites.some((item) => item.kind === 'subclass')) {
+    draft.subclassMode = 'srd';
+    draft.subclassIndex = plan.classRule.subclasses[0]?.index ?? '';
+  }
   if (plan.targetRule.abilityScoreImprovement) draft.abilityIncreases = { strength: 2 };
 
   const requiredChoices = [
     ...plan.missingPrerequisites.filter((item) => item.kind === 'class-choice').map((item) => ({ rule: item.rule, level: plan.fromLevel })),
-    ...targetLevelUpChoiceRules(plan, sheet).map((rule) => ({ rule, level: plan.toLevel })),
+    ...targetLevelUpChoiceRules(plan, sheet, draft).map((rule) => ({ rule, level: plan.toLevel })),
   ];
   for (const { rule, level } of requiredChoices) {
     const count = rule.selectionCountByLevel[String(level)] ?? 0;
